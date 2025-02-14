@@ -1,0 +1,142 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* Luxury Travel Website Scrollbar Design */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+  background-color: rgba(241, 245, 249, 0.8);  /* Subtle light background */
+}
+
+::-webkit-scrollbar-track {
+  background: linear-gradient(
+    to right,
+    rgba(241, 245, 249, 0.8),
+    rgba(241, 245, 249, 0.4)
+  );
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    135deg,
+    #2A4365,  /* Deep blue like mountain shadows */
+    #4A5568    /* Slate gray like mountain rocks */
+  );
+  border-radius: 8px;
+  border: 3px solid rgba(241, 245, 249, 0.8);
+  background-clip: padding-box;
+  min-height: 50px;
+  transition: all 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    135deg,
+    #1A365D,  /* Darker blue on hover */
+    #2D3748    /* Darker slate on hover */
+  );
+  border: 2px solid rgba(241, 245, 249, 0.8);
+}
+
+/* Subtle transition when scrolling */
+::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(
+    135deg,
+    #2A4365,
+    #1A365D
+  );
+  border: 2px solid rgba(241, 245, 249, 0.8);
+}
+
+/* For Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2A4365 rgba(241, 245, 249, 0.8);
+}
+
+/* Dark theme version for darker sections */
+.dark-theme {
+  scrollbar-color: #4A5568 #1A202C;
+}
+
+.dark-theme::-webkit-scrollbar {
+  background-color: rgba(26, 32, 44, 0.8);  /* Dark background */
+}
+
+.dark-theme::-webkit-scrollbar-track {
+  background: linear-gradient(
+    to right,
+    rgba(26, 32, 44, 0.8),
+    rgba(26, 32, 44, 0.4)
+  );
+  border: 2px solid transparent;
+}
+
+.dark-theme::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    135deg,
+    #4A5568,
+    #718096
+  );
+  border: 3px solid rgba(26, 32, 44, 0.8);
+}
+
+.dark-theme::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    135deg,
+    #718096,
+    #A0AEC0
+  );
+  border: 2px solid rgba(26, 32, 44, 0.8);
+}
+
+/* For modal and overlay scrollbars */
+.modal-container::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.modal-container::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    135deg,
+    rgba(42, 67, 101, 0.9),
+    rgba(74, 85, 104, 0.9)
+  );
+  backdrop-filter: blur(4px);
+}
+
+/* Ensure smooth scrolling site-wide */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Hide scrollbar for mobile devices while preserving functionality */
+@media (max-width: 768px) {
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    border: 2px solid rgba(241, 245, 249, 0.8);
+  }
+}
