@@ -5,8 +5,8 @@ import { Label } from "./ui/label"
 
 export default function GuideBookingModal({ isOpen, onClose, selectedGuide }) {
   return (
-    <Dialog open={isOpen} onOpenChange={onClose} className="fixed inset-0 z-50 bg-black/50">
-      <DialogContent className="sm:max-w-[500px] bg-white p-6 rounded-lg shadow-xl">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] sm:w-[500px] bg-white p-4 sm:p-6 rounded-lg shadow-xl">
         <DialogHeader className="mb-6">
           <DialogTitle className="text-2xl font-bold text-gray-900">Book Your Guide</DialogTitle>
           <DialogDescription>
@@ -79,4 +79,3 @@ export default function GuideBookingModal({ isOpen, onClose, selectedGuide }) {
     </Dialog>
   )
 }
-
