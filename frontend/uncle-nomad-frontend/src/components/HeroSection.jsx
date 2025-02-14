@@ -19,7 +19,7 @@ export default function HeroSection({ bookingDates, setBookingDates, checkAvaila
           Your Mountain Retreat in Manali
         </h1>
 
-        <Card className="w-full max-w-2xl bg-white/95 backdrop-blur-md shadow-lg">
+        <Card className="w-full max-w-2xl bg-white/50 backdrop-blur-lg shadow-lg   ">
           <CardHeader>
             <CardTitle className="text-2xl text-center">Check Room Availability</CardTitle>
             <CardDescription className="text-center">Find your perfect mountain stay</CardDescription>

@@ -38,23 +38,24 @@ const Header = () => {
           </button>
         </div>
       </div>
+      {/* Aquamorphic Dropdown Menu */}
       <div 
-        className={`md:hidden bg-white overflow-hidden transition-all duration-300 ease-in-out ${
+        className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${
           isMenuOpen ? "max-h-64 opacity-100" : "max-h-0 opacity-0"
         }`}
       >
         <div className="container mx-auto px-4">
-          <nav className="flex flex-col space-y-2 py-2">
-            <a href="#stays" className="text-gray-600 hover:text-brand-purple transition-colors py-2 transform transition-transform duration-200 hover:translate-x-2">
+          <nav className="flex flex-col space-y-2 py-2 bg-transparent shadow-lg rounded-lg p-4">
+            <a href="#stays" className="text-black hover:text-brand-purple transition-colors py-2 transform transition-transform duration-200 hover:translate-x-2">
               Stays
             </a>
-            <a href="#tours" className="text-gray-600 hover:text-brand-purple transition-colors py-2 transform transition-transform duration-200 hover:translate-x-2">
+            <a href="#tours" className="text-black hover:text-brand-purple transition-colors py-2 transform transition-transform duration-200 hover:translate-x-2">
               Tours
             </a>
-            <a href="#guides" className="text-gray-600 hover:text-brand-purple transition-colors py-2 transform transition-transform duration-200 hover:translate-x-2">
+            <a href="#guides" className="text-black hover:text-brand-purple transition-colors py-2 transform transition-transform duration-200 hover:translate-x-2">
               Tour Guides
             </a>
-            <a href="#about" className="text-gray-600 hover:text-brand-purple transition-colors py-2 transform transition-transform duration-200 hover:translate-x-2">
+            <a href="#about" className="text-black hover:text-brand-purple transition-colors py-2 transform transition-transform duration-200 hover:translate-x-2">
               About Us
             </a>
             <Button className="w-full">Contact Us</Button>
