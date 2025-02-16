@@ -19,6 +19,7 @@ export default function BookingModal({
   setError
 }) {
   const [step, setStep] = useState(0)
+  const [validationErrors, setValidationErrors] = useState({})
   
   const selectedRoom = availableRooms.find(room => room._id === Object.keys(bookingForm.selectedRooms)[0])
 
@@ -28,15 +29,38 @@ export default function BookingModal({
       ...prev,
       [name]: value
     }))
+
+    if (validationErrors[name]) {
+      setValidationErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }))
+    }
   }
 
   const handleNumberChange = (e) => {
     const { name, value } = e.target
+    const numValue = Number(value)
+    
+    // Validate number fields
+    if (name === 'numberOfGuests' && (numValue < 1 || isNaN(numValue))) {
+      setValidationErrors(prev => ({
+        ...prev,
+        [name]: 'At least 1 guest is required'
+      }))
+    } else {
+      setValidationErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }))
+    }
+
     setBookingForm(prev => ({
       ...prev,
-      [name]: Number(value)
+      [name]: numValue
     }))
   }
+
 
   const handleCheckboxChange = (e) => {
     const { name, checked } = e.target
@@ -44,6 +68,21 @@ export default function BookingModal({
       ...prev,
       [name]: checked
     }))
+  }
+
+  const validateStep2 = () => {
+    const errors = {}
+    
+    if (!bookingForm.numberOfGuests || bookingForm.numberOfGuests < 1) {
+      errors.numberOfGuests = 'At least 1 guest is required'
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors)
+      return false
+    }
+    
+    return true
   }
 
   const renderStep0 = () => (
@@ -172,7 +211,7 @@ export default function BookingModal({
   const renderStep2 = () => (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="numberOfGuests">Number of Guests</Label>
+        <Label htmlFor="numberOfGuests">Number of Guests *</Label>
         <Input
           id="numberOfGuests"
           name="numberOfGuests"
@@ -181,7 +220,11 @@ export default function BookingModal({
           value={bookingForm.numberOfGuests}
           onChange={handleNumberChange}
           required
+          className={validationErrors.numberOfGuests ? 'border-red-500' : ''}
         />
+        {validationErrors.numberOfGuests && (
+          <p className="text-sm text-red-500 mt-1">{validationErrors.numberOfGuests}</p>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -241,7 +284,11 @@ export default function BookingModal({
           Back
         </Button>
         <Button
-          onClick={handleBookingSubmit}
+          onClick={(e) => {
+            if (validateStep2()) {
+              handleBookingSubmit(e)
+            }
+          }}
           className="w-full bg-brand-purple hover:bg-brand-purple/90"
           disabled={isLoading}
         >
@@ -250,6 +297,7 @@ export default function BookingModal({
       </div>
     </div>
   )
+
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -260,12 +308,7 @@ export default function BookingModal({
           </DialogTitle>
         </DialogHeader>
 
-        {error && (
-          <div className="p-3 mb-4 text-sm text-red-500 bg-red-50 rounded-md border border-red-200">
-            <div className="font-medium">Booking Error</div>
-            <div>{error}</div>
-          </div>
-        )}
+        
 
 
         <div className="space-y-4">
@@ -310,6 +353,12 @@ export default function BookingModal({
           {step === 1 && renderStep1()}
           {step === 2 && renderStep2()}
         </div>
+        {error && (
+          <div className="p-3 mb-4 text-sm text-red-500 bg-red-50 rounded-md border border-red-200">
+            <div className="font-medium">Booking Error</div>
+            <div>{error}</div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   )

@@ -85,83 +85,97 @@ function AvailabilitySection() {
     e.preventDefault();
     setLoading(true);
     try {
-      const [roomId, quantity] = Object.entries(bookingForm.selectedRooms)[0];
-      console.log('room id : ', roomId);
-      const selectedRoom = bookingForm.availableRooms.find(room => 
-        room._id && room._id.toString() === roomId.toString()
-      );
-
       const formatDate = (date) => {
         if (!date) return null;
         const d = new Date(date);
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       };
-
+  
+      // Convert selectedRooms into an array of objects
+      const selectedRoomsArray = Object.entries(bookingForm.selectedRooms)
+        .filter(([_, quantity]) => quantity > 0) // Only include rooms with quantity > 0
+        .map(([roomId, quantity]) => {
+          const selectedRoom = bookingForm.availableRooms.find(
+            room => room._id && room._id.toString() === roomId.toString()
+          );
+  
+          return {
+            roomId: selectedRoom?._id || roomId,
+            quantity,
+            roomType: selectedRoom?.type || 'Room',
+            pricePerNight: selectedRoom?.price || 0,
+          };
+        });
+  
+      // Calculate total price for all selected rooms
+      const totalNights = Math.ceil(
+        (new Date(bookingForm.checkOut) - new Date(bookingForm.checkIn)) / (1000 * 60 * 60 * 24)
+      );
+      const totalPrice = selectedRoomsArray.reduce(
+        (acc, room) => acc + room.pricePerNight * room.quantity * totalNights, 
+        0
+      );
+  
       const bookingData = {
-        roomId: selectedRoom?._id || roomId,
-        quantity: quantity,
+        rooms: selectedRoomsArray,
         guestName: bookingForm.guestName,
         email: bookingForm.email,
         phone: bookingForm.phone,
-        numberOfGuests: bookingForm.numberOfGuests,
-        numberOfChildren: bookingForm.numberOfChildren,
-        mealIncluded: bookingForm.mealIncluded,
-        extraBeds: bookingForm.extraBeds,
-        specialRequests: bookingForm.specialRequests,
+        numberOfGuests: parseInt(bookingForm.numberOfGuests), // Ensure this is a number
+        numberOfChildren: parseInt(bookingForm.numberOfChildren || 0),
+        mealIncluded: Boolean(bookingForm.mealIncluded),
+        extraBeds: parseInt(bookingForm.extraBeds || 0),
+        specialRequests: bookingForm.specialRequests || '',
         checkIn: formatDate(bookingForm.checkIn),
         checkOut: formatDate(bookingForm.checkOut),
-        totalPrice: selectedRoom?.price * Math.ceil((new Date(bookingForm.checkOut) - new Date(bookingForm.checkIn)) / (1000 * 60 * 60 * 24)) || 0
+        totalPrice: totalPrice
       };
 
+      // Validate required fields before submission
+      if (!bookingData.numberOfGuests || bookingData.numberOfGuests < 1) {
+        throw new Error('Please specify the number of guests');
+      }
+      
+      console.log('number of guests : ',bookingData.numberOfGuests)
       const response = await fetch(`${process.env.REACT_APP_API_URL}/api/rooms/book`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(bookingData)
       });
-
+  
       if (!response.ok) {
         const errorData = await response.json();
-        const errorMessage = errorData.message || 'Failed to process booking';
-        throw new Error(errorMessage);
+        throw new Error(errorData.message || 'Failed to process booking');
       }
-
-
+  
       const bookingResponse = await response.json();
-      console.log('-----')
-      console.log(bookingResponse.booking)
-      console.log('----')
+      
       const bookingDetails = {
         id: bookingResponse._id,
-        roomType: selectedRoom?.type || 'Room',
+        rooms: selectedRoomsArray,
         checkIn: bookingResponse.booking.checkIn,
         checkOut: bookingResponse.booking.checkOut,
         totalPrice: bookingResponse.booking.totalPrice
       };
-
+  
       setBookingForm(prev => ({
         ...prev,
         bookingDetails,
         step: 4
       }));
-
+  
       setIsBookingConfirmed(true);
-      setError('')
+      setError('');
       setIsModalOpen(false);
-
+  
     } catch (error) {
       console.error('Booking error:', error);
       setError(error.message || 'An unexpected error occurred. Please try again.');
     } finally {
-
       setLoading(false);
     }
-  };
-
+};
+  
   const renderStep1 = () => (
     <>
       <div className="mb-8">
@@ -210,7 +224,7 @@ function AvailabilitySection() {
         
         <Button 
           variant="custom" 
-          className="bg-brand-purple hover:bg-brand-purple/90"
+          className="bg-brand-purple text-white hover:bg-brand-purple/90"
           onClick={checkAvailability}
         >
           Check Availability
