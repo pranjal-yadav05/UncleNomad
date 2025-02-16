@@ -139,7 +139,8 @@ export default function BookingModal({
       })}
       <Button
         onClick={() => setStep(1)}
-        className="w-full bg-brand-purple hover:bg-brand-purple/90"
+        variant='custom'
+        className="w-full mt-2 mb-2 text-white bg-brand-purple hover:bg-brand-purple/90"
         disabled={Object.keys(bookingForm.selectedRooms).length === 0}
       >
         Next
@@ -198,7 +199,8 @@ export default function BookingModal({
 
         <Button
           onClick={() => setStep(2)}
-          className="w-full bg-brand-purple hover:bg-brand-purple/90"
+          variant='custom'
+          className="w-full text-white  bg-brand-purple hover:bg-brand-purple/90"
           disabled={!bookingForm.guestName || !bookingForm.email || !bookingForm.phone}
         >
           Next
@@ -299,7 +301,7 @@ export default function BookingModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[95vw] sm:max-w-[500px] h-[90vh] sm:h-auto bg-white p-4 sm:p-6 rounded-lg shadow-xl overflow-auto">
+      <DialogContent className="w-[95vw] sm:max-w-[500px] bg-white p-4 rounded-lg shadow-xl overflow-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">
             Booking Details
