@@ -61,7 +61,6 @@ export default function BookingModal({
     }))
   }
 
-
   const handleCheckboxChange = (e) => {
     const { name, checked } = e.target
     setBookingForm(prev => ({
@@ -298,20 +297,16 @@ export default function BookingModal({
     </div>
   )
 
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px] bg-white p-6 rounded-lg shadow-xl">
+      <DialogContent className="w-[95vw] sm:max-w-[500px] h-[90vh] sm:h-auto bg-white p-4 sm:p-6 rounded-lg shadow-xl overflow-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">
             Booking Details
           </DialogTitle>
         </DialogHeader>
 
-        
-
-
-        <div className="space-y-4">
+        <div className="space-y-4 px-2 sm:px-0">
           <div className="text-sm text-gray-500">
             <div className="flex items-center gap-2">
               <CalendarDaysIcon className="h-4 w-4" />
@@ -349,10 +344,13 @@ export default function BookingModal({
             ) : null
           })}
 
-          {step === 0 && renderStep0()}
-          {step === 1 && renderStep1()}
-          {step === 2 && renderStep2()}
+          <div className="overflow-y-auto max-h-[calc(90vh-200px)] sm:max-h-none">
+            {step === 0 && renderStep0()}
+            {step === 1 && renderStep1()}
+            {step === 2 && renderStep2()}
+          </div>
         </div>
+
         {error && (
           <div className="p-3 mb-4 text-sm text-red-500 bg-red-50 rounded-md border border-red-200">
             <div className="font-medium">Booking Error</div>
