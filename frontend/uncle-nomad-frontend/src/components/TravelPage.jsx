@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from "react"
 import Header from "./Header"
 import HeroSection from "./HeroSection"
-import AvailableRooms from "./AvailableRooms"
+import AvailabilitySection from "./AvailabilitySection"
+
 import CuratedExperiences from "./CuratedExperiences"
 import TourGuides from "./TourGuides"
 import AboutSection from "./AboutSection"
@@ -173,15 +174,8 @@ export default function TravelPage() {
           checkAvailability={checkAvailability}
         />
         
-        <div ref={roomsRef}>
-          <AvailableRooms 
-            availableRooms={availableRooms} 
-            handleBookNowClick={handleBookNowClick}
-            checkIn={bookingDates.checkIn}
-            checkOut={bookingDates.checkOut} 
-            isLoading={isCheckingAvailability}
-          />
-        </div>
+        <AvailabilitySection />
+
 
         <CuratedExperiences tours={tours} handleTourBooking={handleTourBooking} isLoading={isLoading.tours}/>
 
@@ -190,15 +184,7 @@ export default function TravelPage() {
         <AboutSection />
       </main>
 
-      <BookingModal
-        isOpen={isBookingModalOpen}
-        onClose={() => setIsBookingModalOpen(false)}
-        selectedRoom={selectedRoom}
-        bookingForm={bookingForm}
-        setBookingForm={setBookingForm}
-        handleBookingSubmit={handleBookingSubmit}
-        isLoading={isLoading.booking}
-      />
+
 
       <TourBookingModal
         isOpen={isTourModalOpen}
@@ -221,4 +207,3 @@ export default function TravelPage() {
     </div>
   )
 }
-

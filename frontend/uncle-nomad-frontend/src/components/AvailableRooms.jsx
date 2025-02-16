@@ -1,6 +1,10 @@
+import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
-import  LoadingSection  from "./LoadingSection"
+import { Input } from "./ui/input"
+import { Label } from "./ui/label"
+import LoadingSection from "./LoadingSection"
+
 
 export default function AvailableRooms({ availableRooms, handleBookNowClick, checkIn, checkOut, isLoading }) {
   if (!isLoading && availableRooms.length === 0) return null
@@ -22,6 +26,15 @@ export default function AvailableRooms({ availableRooms, handleBookNowClick, che
         return <LoadingSection title="Available Rooms" />
       }
 
+  const [selectedRooms, setSelectedRooms] = useState({})
+
+  const handleRoomQuantityChange = (roomId, quantity) => {
+    setSelectedRooms(prev => ({
+      ...prev,
+      [roomId]: Math.max(1, quantity)
+    }))
+  }
+
   return (
     <section className="container mx-auto px-4 py-16">
       <div className="mb-8">
@@ -32,6 +45,7 @@ export default function AvailableRooms({ availableRooms, handleBookNowClick, che
           </p>
         )}
       </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {availableRooms.map((room) => (
           <Card key={room.id}>
@@ -47,11 +61,29 @@ export default function AvailableRooms({ availableRooms, handleBookNowClick, che
               </ul>
               <p className="text-2xl font-bold">₹{room.price}/night</p>
             </CardContent>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label htmlFor={`quantity-${room.id}`}>Number of Rooms</Label>
+                <Input
+                  id={`quantity-${room.id}`}
+                  type="number"
+                  min="1"
+                  value={selectedRooms[room.id] || 1}
+                  onChange={(e) => handleRoomQuantityChange(room.id, e.target.value)}
+                  className="w-20"
+                />
+              </div>
+            </CardContent>
             <CardFooter>
-              <Button onClick={() => handleBookNowClick(room)} className="w-full text-white" variant="custom">
+              <Button 
+                onClick={() => handleBookNowClick({...room, quantity: selectedRooms[room.id] || 1})} 
+                className="w-full text-white" 
+                variant="custom"
+              >
                 Book Now
               </Button>
             </CardFooter>
+
           </Card>
         ))}
       </div>

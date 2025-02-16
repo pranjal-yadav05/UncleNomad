@@ -1,125 +1,315 @@
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog"
-import { Button } from "./ui/button"
-import { Input } from "./ui/input"
-import { Label } from "./ui/label"
-import { Textarea } from "./ui/textarea"
+import { useState } from 'react'
+import { format } from 'date-fns'
+import { CalendarDaysIcon, UserIcon, HomeIcon } from '@heroicons/react/24/outline'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { Label } from './ui/label'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
 
 export default function BookingModal({
   isOpen,
   onClose,
-  selectedRoom,
   bookingForm,
   setBookingForm,
   handleBookingSubmit,
   isLoading,
+  availableRooms,
+  handleRoomSelection,
+  error,
+  setError
 }) {
+  const [step, setStep] = useState(0)
+  
+  const selectedRoom = availableRooms.find(room => room._id === Object.keys(bookingForm.selectedRooms)[0])
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target
+    setBookingForm(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
+
+  const handleNumberChange = (e) => {
+    const { name, value } = e.target
+    setBookingForm(prev => ({
+      ...prev,
+      [name]: Number(value)
+    }))
+  }
+
+  const handleCheckboxChange = (e) => {
+    const { name, checked } = e.target
+    setBookingForm(prev => ({
+      ...prev,
+      [name]: checked
+    }))
+  }
+
+  const renderStep0 = () => (
+    <div className="spacey-4">
+      <h3 className="text-lg font-semibold">Select Rooms</h3>
+      {availableRooms.map(room => {
+        const isDorm = room.type.toLowerCase() === 'dorm'
+        const currentCount = bookingForm.selectedRooms[room._id] || 0
+        const remainingCapacity = isDorm ? room.capacity - currentCount : room.totalRooms - currentCount
+        
+        return (
+          <div key={room._id} className="border p-4 rounded-lg">
+            <div className="flex justify-between items-center">
+              <div>
+                <h4 className="font-medium">
+                  {isDorm ? 'Dorm Bed' : `${room.type} Room`}
+                </h4>
+                <p className="text-sm text-gray-500">
+                  ₹{room.price}/night {isDorm && '(per bed)'}
+                </p>
+                {isDorm && (
+                  <p className="text-sm text-gray-500">
+                    Shared Room - {remainingCapacity} bed{remainingCapacity !== 1 ? 's' : ''} available
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => {
+                    if (currentCount > 0) {
+                      handleRoomSelection(room._id, currentCount - 1)
+                    }
+                  }}
+                  className="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-100"
+                  disabled={currentCount === 0}
+                >
+                  -
+                </button>
+                <span>{currentCount}</span>
+                <button 
+                  onClick={() => {
+                    if (remainingCapacity > 0) {
+                      handleRoomSelection(room._id, currentCount + 1)
+                    }
+                  }}
+                  className="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-100"
+                  disabled={remainingCapacity === 0}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })}
+      <Button
+        onClick={() => setStep(1)}
+        className="w-full bg-brand-purple hover:bg-brand-purple/90"
+        disabled={Object.keys(bookingForm.selectedRooms).length === 0}
+      >
+        Next
+      </Button>
+      <p className="text-sm text-gray-500 mt-2">
+        Note: When booking dorm beds, you're reserving individual beds in a shared space. 
+        Private rooms are booked as complete units.
+      </p>
+    </div>
+  )
+
+  const renderStep1 = () => (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="guestName">Full Name</Label>
+        <Input
+          id="guestName"
+          name="guestName"
+          value={bookingForm.guestName}
+          onChange={handleInputChange}
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="email">Email</Label>
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          value={bookingForm.email}
+          onChange={handleInputChange}
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="phone">Phone Number</Label>
+        <Input
+          id="phone"
+          name="phone"
+          type="tel"
+          value={bookingForm.phone}
+          onChange={handleInputChange}
+          required
+        />
+      </div>
+      <div className="flex gap-2">
+        <Button
+          onClick={() => setStep(0)}
+          variant="outline"
+          className="w-full"
+        >
+          Back
+        </Button>
+
+        <Button
+          onClick={() => setStep(2)}
+          className="w-full bg-brand-purple hover:bg-brand-purple/90"
+          disabled={!bookingForm.guestName || !bookingForm.email || !bookingForm.phone}
+        >
+          Next
+        </Button>
+      </div>
+    </div>
+  )
+
+  const renderStep2 = () => (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="numberOfGuests">Number of Guests</Label>
+        <Input
+          id="numberOfGuests"
+          name="numberOfGuests"
+          type="number"
+          min="1"
+          value={bookingForm.numberOfGuests}
+          onChange={handleNumberChange}
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="numberOfChildren">Number of Children</Label>
+        <Input
+          id="numberOfChildren"
+          name="numberOfChildren"
+          type="number"
+          min="0"
+          value={bookingForm.numberOfChildren}
+          onChange={handleNumberChange}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="extraBeds">Extra Beds</Label>
+        <Input
+          id="extraBeds"
+          name="extraBeds"
+          type="number"
+          min="0"
+          value={bookingForm.extraBeds}
+          onChange={handleNumberChange}
+        />
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <input
+          id="mealIncluded"
+          name="mealIncluded"
+          type="checkbox"
+          checked={bookingForm.mealIncluded}
+          onChange={handleCheckboxChange}
+          className="h-4 w-4 rounded border-gray-300 text-brand-purple focus:ring-brand-purple"
+        />
+        <Label htmlFor="mealIncluded">Include Meals</Label>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="specialRequests">Special Requests</Label>
+        <textarea
+          id="specialRequests"
+          name="specialRequests"
+          value={bookingForm.specialRequests}
+          onChange={handleInputChange}
+          className="w-full p-2 border rounded-md"
+          rows={3}
+        />
+      </div>
+
+      <div className="flex gap-2">
+        <Button
+          onClick={() => setStep(1)}
+          variant="outline"
+          className="w-full"
+        >
+          Back
+        </Button>
+        <Button
+          onClick={handleBookingSubmit}
+          className="w-full bg-brand-purple hover:bg-brand-purple/90"
+          disabled={isLoading}
+        >
+          {isLoading ? 'Booking...' : 'Confirm Booking'}
+        </Button>
+      </div>
+    </div>
+  )
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] sm:w-[500px] max-h-[90vh] bg-white p-4 sm:p-6 rounded-lg shadow-xl overflow-y-auto">
-        <DialogHeader className="mb-6">
-          <DialogTitle className="text-2xl font-bold text-gray-900">Book Your Stay</DialogTitle>
-          <DialogDescription className="text-gray-600">
-            {selectedRoom && (
-              <div className="mt-2">
-                <p className="font-semibold text-gray-900">{selectedRoom.type}</p>
-                <p className="text-brand-purple font-medium">₹{selectedRoom.price} per night</p>
-              </div>
-            )}
-          </DialogDescription>
+      <DialogContent className="sm:max-w-[500px] bg-white p-6 rounded-lg shadow-xl">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-bold">
+            Booking Details
+          </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleBookingSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="guestName" className="text-sm font-medium text-gray-900">
-              Full Name
-            </Label>
-            <Input
-              id="guestName"
-              value={bookingForm.guestName}
-              onChange={(e) => setBookingForm((prev) => ({ ...prev, guestName: e.target.value }))}
-              className="w-full border-gray-200 focus:ring-2 focus:ring-brand-purple"
-              required
-            />
+        {error && (
+          <div className="p-3 mb-4 text-sm text-red-500 bg-red-50 rounded-md border border-red-200">
+            <div className="font-medium">Booking Error</div>
+            <div>{error}</div>
           </div>
+        )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium text-gray-900">
-                Email
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                value={bookingForm.email}
-                onChange={(e) => setBookingForm((prev) => ({ ...prev, email: e.target.value }))}
-                className="w-full border-gray-200 focus:ring-2 focus:ring-brand-purple"
-                required
-              />
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="phone" className="text-sm font-medium text-gray-900">
-                Phone Number
-              </Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={bookingForm.phone}
-                onChange={(e) => setBookingForm((prev) => ({ ...prev, phone: e.target.value }))}
-                className="w-full border-gray-200 focus:ring-2 focus:ring-brand-purple"
-                required
-              />
+        <div className="space-y-4">
+          <div className="text-sm text-gray-500">
+            <div className="flex items-center gap-2">
+              <CalendarDaysIcon className="h-4 w-4" />
+              <span>
+                {format(new Date(bookingForm.checkIn), 'PPP')} - {format(new Date(bookingForm.checkOut), 'PPP')}
+              </span>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="numberOfGuests" className="text-sm font-medium text-gray-900">
-              Number of Guests
-            </Label>
-            <Input
-              id="numberOfGuests"
-              type="number"
-              min="1"
-              max={selectedRoom?.capacity || 1}
-              value={bookingForm.numberOfGuests}
-              onChange={(e) => setBookingForm((prev) => ({ ...prev, numberOfGuests: Number.parseInt(e.target.value) }))}
-              className="w-full border-gray-200 focus:ring-2 focus:ring-brand-purple"
-              required
-            />
-          </div>
+          {bookingForm.numberOfGuests > 0 && (
+            <div className="text-sm text-gray-500">
+              <div className="flex items-center gap-2">
+                <UserIcon className="h-4 w-4" />
+                <span>
+                  {bookingForm.numberOfGuests} guest{bookingForm.numberOfGuests > 1 ? 's' : ''}
+                </span>
+              </div>
+            </div>
+          )}
 
-          <div className="space-y-2">
-            <Label htmlFor="specialRequests" className="text-sm font-medium text-gray-900">
-              Special Requests
-            </Label>
-            <Textarea
-              id="specialRequests"
-              value={bookingForm.specialRequests}
-              onChange={(e) => setBookingForm((prev) => ({ ...prev, specialRequests: e.target.value }))}
-              placeholder="Any special requests or requirements?"
-              className="w-full min-h-[100px] border-gray-200 focus:ring-2 focus:ring-brand-purple resize-none"
-            />
-          </div>
+          {Object.entries(bookingForm.selectedRooms).map(([roomId, count]) => {
+            const room = availableRooms.find(r => r._id === roomId)
+            return count > 0 && room ? (
+              <div key={roomId} className="text-sm text-gray-500">
+                <div className="flex items-center gap-2">
+                  <HomeIcon className="h-4 w-4" />
+                  <span>
+                    {room.type === 'Dorm' ? 
+                      `${count} bed${count !== 1 ? 's' : ''} in Shared Dorm` : 
+                      `${count} Private ${room.type} Room${count > 1 ? 's' : ''}`
+                    }
+                  </span>
+                </div>
+              </div>
+            ) : null
+          })}
 
-          <DialogFooter className="flex gap-3 mt-6">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              className="flex-1 border-gray-200 hover:bg-gray-50"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              variant="custom"
-              disabled={isLoading}
-              className="flex-1 bg-brand-purple hover:bg-brand-purple/90 text-white"
-            >
-              {isLoading ? "Confirming..." : "Confirm Booking"}
-            </Button>
-          </DialogFooter>
-        </form>
+          {step === 0 && renderStep0()}
+          {step === 1 && renderStep1()}
+          {step === 2 && renderStep2()}
+        </div>
       </DialogContent>
     </Dialog>
   )

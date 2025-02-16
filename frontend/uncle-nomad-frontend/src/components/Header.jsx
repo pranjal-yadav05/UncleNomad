@@ -12,21 +12,85 @@ const Header = () => {
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 rounded-lg">
-            <img src="logo3-rm.png" alt="Uncle Nomad Logo" width={200} height={60} />
+            <img
+              onClick={(e) => {
+                e.preventDefault();
+                const section = document.getElementById('hero');
+                if (section) {
+                  const offset = 80;
+                  const elementPosition = section.getBoundingClientRect().top;
+                  const offsetPosition = elementPosition + window.pageYOffset - offset;
+                  window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+                }
+              }}
+             src="logo3-rm.png" alt="Uncle Nomad Logo" width={200} height={60} />
           </div>
           <nav className="hidden md:flex items-center space-x-6">
-            <a href="#stays" className="text-gray-600 hover:text-brand-purple transition-colors">
+            <a 
+              href="#availability" 
+              className="text-gray-600 hover:text-brand-purple transition-colors"
+              onClick={(e) => {
+                e.preventDefault();
+                const section = document.getElementById('availability');
+                if (section) {
+                  const offset = 80;
+                  const elementPosition = section.getBoundingClientRect().top;
+                  const offsetPosition = elementPosition + window.pageYOffset - offset;
+                  window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+                }
+              }}
+            >
               Stays
             </a>
-            <a href="#tours" className="text-gray-600 hover:text-brand-purple transition-colors">
+            <a 
+              href="#tours" 
+              className="text-gray-600 hover:text-brand-purple transition-colors"
+              onClick={(e) => {
+                e.preventDefault();
+                const section = document.getElementById('tours');
+                if (section) {
+                  const offset = 80;
+                  const elementPosition = section.getBoundingClientRect().top;
+                  const offsetPosition = elementPosition + window.pageYOffset - offset;
+                  window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+                }
+              }}
+            >
               Tours
             </a>
-            <a href="#guides" className="text-gray-600 hover:text-brand-purple transition-colors">
+            <a 
+              href="#guides" 
+              className="text-gray-600 hover:text-brand-purple transition-colors"
+              onClick={(e) => {
+                e.preventDefault();
+                const section = document.getElementById('guides');
+                if (section) {
+                  const offset = 80;
+                  const elementPosition = section.getBoundingClientRect().top;
+                  const offsetPosition = elementPosition + window.pageYOffset - offset;
+                  window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+                }
+              }}
+            >
               Tour Guides
             </a>
-            <a href="#about" className="text-gray-600 hover:text-brand-purple transition-colors">
+            <a 
+              href="#about" 
+              className="text-gray-600 hover:text-brand-purple transition-colors"
+              onClick={(e) => {
+                e.preventDefault();
+                const section = document.getElementById('about');
+                if (section) {
+                  const offset = 80;
+                  const elementPosition = section.getBoundingClientRect().top;
+                  const offsetPosition = elementPosition + window.pageYOffset - offset;
+                  window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+                }
+              }}
+            >
               About Us
             </a>
+
             <Button>Contact Us</Button>
           </nav>
           <button 
@@ -46,18 +110,71 @@ const Header = () => {
       >
         <div className="container mx-auto px-4">
           <nav className="flex flex-col space-y-2 py-2 bg-transparent shadow-lg rounded-lg p-4">
-            <a href="#stays" className="text-black hover:text-brand-purple transition-colors py-2 transform transition-transform duration-200 hover:translate-x-2">
+            <a 
+              href="#availability" 
+              className="text-black hover:text-brand-purple transition-colors py-2 transform transition-transform duration-200 hover:translate-x-2"
+              onClick={(e) => {
+                e.preventDefault();
+                const section = document.getElementById('availability');
+                if (section) {
+                  const offset = 80;
+                  const elementPosition = section.getBoundingClientRect().top;
+                  const offsetPosition = elementPosition + window.pageYOffset - offset;
+                  window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+                }
+              }}
+            >
               Stays
             </a>
-            <a href="#tours" className="text-black hover:text-brand-purple transition-colors py-2 transform transition-transform duration-200 hover:translate-x-2">
+            <a 
+              href="#tours" 
+              className="text-black hover:text-brand-purple transition-colors py-2 transform transition-transform duration-200 hover:translate-x-2"
+              onClick={(e) => {
+                e.preventDefault();
+                const section = document.getElementById('tours');
+                if (section) {
+                  const offset = 80;
+                  const elementPosition = section.getBoundingClientRect().top;
+                  const offsetPosition = elementPosition + window.pageYOffset - offset;
+                  window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+                }
+              }}
+            >
               Tours
             </a>
-            <a href="#guides" className="text-black hover:text-brand-purple transition-colors py-2 transform transition-transform duration-200 hover:translate-x-2">
+            <a 
+              href="#guides" 
+              className="text-black hover:text-brand-purple transition-colors py-2 transform transition-transform duration-200 hover:translate-x-2"
+              onClick={(e) => {
+                e.preventDefault();
+                const section = document.getElementById('guides');
+                if (section) {
+                  const offset = 80;
+                  const elementPosition = section.getBoundingClientRect().top;
+                  const offsetPosition = elementPosition + window.pageYOffset - offset;
+                  window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+                }
+              }}
+            >
               Tour Guides
             </a>
-            <a href="#about" className="text-black hover:text-brand-purple transition-colors py-2 transform transition-transform duration-200 hover:translate-x-2">
+            <a 
+              href="#about" 
+              className="text-black hover:text-brand-purple transition-colors py-2 transform transition-transform duration-200 hover:translate-x-2"
+              onClick={(e) => {
+                e.preventDefault();
+                const section = document.getElementById('about');
+                if (section) {
+                  const offset = 80;
+                  const elementPosition = section.getBoundingClientRect().top;
+                  const offsetPosition = elementPosition + window.pageYOffset - offset;
+                  window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+                }
+              }}
+            >
               About Us
             </a>
+
             <Button className="w-full">Contact Us</Button>
           </nav>
         </div>
