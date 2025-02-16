@@ -15,23 +15,23 @@ export default function HeroSection() {
   const mediaItems = [
     { 
       type: 'image', 
-      src: '/hero1.jpeg'
+      src: process.env.PUBLIC_URL + '/hero1.jpeg'
     },
     { 
       type: 'image', 
-      src: '/hero2.jpeg'
+      src: process.env.PUBLIC_URL + '/hero2.jpeg'
     },
     { 
       type: 'image', 
-      src: '/hero3.jpeg'
+      src: process.env.PUBLIC_URL + '/hero3.jpeg'
     },
     { 
       type: 'video', 
-      src: '/video1.mp4'
+      src: process.env.PUBLIC_URL + '/video1.mp4'
     },
     { 
       type: 'video', 
-      src: '/video2.mp4'
+      src: process.env.PUBLIC_URL + '/video2.mp4'
     }
   ];
 
