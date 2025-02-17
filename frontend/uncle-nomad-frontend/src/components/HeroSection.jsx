@@ -49,7 +49,7 @@ export default function HeroSection() {
           autoPlay
           muted
           className='hero-media'
-          preload="auto" // Ensures the video is loaded early
+          preload="metadata"
         />
       ) : (
         <img 
