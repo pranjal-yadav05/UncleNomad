@@ -1,73 +1,65 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from './ui/button';
 import { useNavigate } from 'react-router-dom';
-
-
 import '../App.css';
 import './HeroSection.css';
 
-
-
 export default function HeroSection() {
-
   const [currentIndex, setCurrentIndex] = useState(0);
+  const videoRef = useRef(null);
+
   const mediaItems = [
-    { 
-      type: 'image', 
-      src: process.env.PUBLIC_URL + '/hero1.jpeg'
-    },
-    { 
-      type: 'image', 
-      src: process.env.PUBLIC_URL + '/hero2.jpeg'
-    },
-    { 
-      type: 'image', 
-      src: process.env.PUBLIC_URL + '/hero3.jpeg'
-    },
-    { 
-      type: 'video', 
-      src: process.env.PUBLIC_URL + '/video1.mp4'
-    },
-    { 
-      type: 'video', 
-      src: process.env.PUBLIC_URL + '/video2.mp4'
-    }
+    { type: 'image', src: process.env.PUBLIC_URL + '/hero1.jpeg', duration: 5000 },
+    { type: 'image', src: process.env.PUBLIC_URL + '/hero2.jpeg', duration: 5000 },
+    { type: 'image', src: process.env.PUBLIC_URL + '/hero3.jpeg', duration: 5000 },
+    { type: 'video', src: process.env.PUBLIC_URL + '/video1.mp4' },
+    { type: 'video', src: process.env.PUBLIC_URL + '/video2.mp4' }
   ];
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentIndex((prevIndex) => (prevIndex + 1) % mediaItems.length);
-    }, 5000);
+    let timer;
 
-    return () => clearInterval(interval);
-  }, [mediaItems.length]);
+    if (mediaItems[currentIndex].type === 'image') {
+      // For images, use a fixed duration
+      timer = setTimeout(() => {
+        setCurrentIndex((prevIndex) => (prevIndex + 1) % mediaItems.length);
+      }, mediaItems[currentIndex].duration);
+    } else {
+      // For videos, wait for the video to end before moving to the next
+      const videoElement = videoRef.current;
+      if (videoElement) {
+        videoElement.play();
+        videoElement.onended = () => {
+          setCurrentIndex((prevIndex) => (prevIndex + 1) % mediaItems.length);
+        };
+      }
+    }
+
+    return () => clearTimeout(timer);
+  }, [currentIndex]);
 
   return (
     <div id='hero' className='hero-container'>
       <div className='hero-overlay'></div>
+
       {mediaItems[currentIndex].type === 'video' ? (
-
-
-        <video 
-          src={mediaItems[currentIndex].src} 
-          autoPlay 
-          loop 
-          muted 
+        <video
+          ref={videoRef}
+          src={mediaItems[currentIndex].src}
+          autoPlay
+          muted
           className='hero-media'
-          poster=""
-          preload="metadata"
+          preload="auto" // Ensures the video is loaded early
         />
       ) : (
         <img 
-          src={mediaItems[currentIndex].src} 
-          alt="Uncle Nomad" 
+          src={mediaItems[currentIndex].src}
+          alt="Uncle Nomad"
           className='hero-media'
           loading="lazy"
-          srcSet={`${mediaItems[currentIndex].src} 1200w`}
         />
       )}
-      
+
       <div className='hero-content'>
         <h1>ADVENTURE AWAITS</h1>
         <p>What are you waiting for?</p>
@@ -77,7 +69,7 @@ export default function HeroSection() {
             onClick={() => {
               const availabilitySection = document.getElementById('availability');
               if (availabilitySection) {
-                const offset = 80; // Adjust this value based on your navbar height
+                const offset = 80;
                 const elementPosition = availabilitySection.getBoundingClientRect().top;
                 const offsetPosition = elementPosition + window.pageYOffset - offset;
 
@@ -86,15 +78,13 @@ export default function HeroSection() {
                   behavior: 'smooth'
                 });
               }
-
             }}
           >
             GET STARTED
           </Button>
-
         </div>
       </div>
-      
+
       <div className='carousel-dots'>
         {mediaItems.map((_, index) => (
           <span
