@@ -1,11 +1,19 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "./ui/button"
 import { Menu } from "lucide-react"
+import { useNavigate } from 'react-router-dom'
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    const adminStatus = sessionStorage.getItem('isAdmin')
+    setIsAdmin(adminStatus === 'true')
+  }, [])
 
   return (
     <header className="bg-white/40 backdrop-blur-md shadow-sm sticky top-0 z-50">
@@ -91,6 +99,15 @@ const Header = () => {
               About Us
             </a>
 
+            {isAdmin && (
+              <Button 
+                variant="ghost"
+                onClick={() => navigate('/admin')}
+                className="text-gray-600 hover:text-brand-purple"
+              >
+                Admin
+              </Button>
+            )}
             <Button>Contact Us</Button>
           </nav>
           <button 
@@ -102,7 +119,6 @@ const Header = () => {
           </button>
         </div>
       </div>
-      {/* Aquamorphic Dropdown Menu */}
       <div 
         className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${
           isMenuOpen ? "max-h-64 opacity-100" : "max-h-0 opacity-0"
@@ -175,6 +191,15 @@ const Header = () => {
               About Us
             </a>
 
+            {isAdmin && (
+              <Button 
+                variant="ghost"
+                onClick={() => navigate('/admin')}
+                className="w-full text-gray-600 hover:text-brand-purple"
+              >
+                Admin
+              </Button>
+            )}
             <Button className="w-full">Contact Us</Button>
           </nav>
         </div>

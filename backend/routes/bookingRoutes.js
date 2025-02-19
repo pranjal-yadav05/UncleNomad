@@ -5,6 +5,187 @@ import Booking from '../models/Booking.js';
 
 const router = express.Router();
 
+router.get('/check-availability', async (req, res) => {
+    const { checkIn, checkOut } = req.query;
+   
+    if (!checkIn || !checkOut) {
+        return res.status(400).json({ message: 'Check-in and check-out dates are required' });
+    }
+
+    try {
+        // Get all rooms
+        const rooms = await Room.find();
+        
+        if (!rooms || rooms.length === 0) {
+            return res.status(404).json({ message: 'No rooms found in the system' });
+        }
+       
+        // Get all bookings that overlap with the requested dates
+        const overlappingBookings = await Booking.find({
+            $and: [
+                { checkIn: { $lt: new Date(checkOut) } },
+                { checkOut: { $gt: new Date(checkIn) } }
+            ]
+        }).lean();
+
+        // Calculate availability for each room type
+        const availableRooms = await Promise.all(rooms.map(async (room) => {
+            const roomBookings = overlappingBookings.filter(booking => 
+                booking.roomId && room._id && 
+                booking.roomId.toString() === room._id.toString()
+            );
+
+            let availability = {};
+            
+            if (room.type === 'Dorm') {
+                // For dorm rooms, calculate available beds
+                const bookedBeds = roomBookings.reduce((sum, booking) => 
+                    sum + (booking.numberOfGuests || 0), 0);
+                
+                availability = {
+                    availableBeds: Math.max(0, room.capacity - bookedBeds),
+                    totalBeds: room.capacity
+                };
+            } else {
+                // For other room types, calculate available rooms
+                const bookedRooms = roomBookings.reduce((sum, booking) => 
+                    sum + (booking.quantity || 1), 0);
+                
+                availability = {
+                    availableRooms: Math.max(0, room.totalRooms - bookedRooms),
+                    totalRooms: room.totalRooms
+                };
+            }
+
+            // Convert mongoose document to plain object and add availability
+            const roomObject = room.toObject();
+            return {
+                ...roomObject,
+                availability
+            };
+        }));
+
+        res.json(availableRooms);
+    } catch (error) {
+        console.error('Availability check error:', error);
+        res.status(500).json({ 
+            message: 'Error checking room availability',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
+
+// CRUD Operations
+router.get('/', async (req, res) => {
+    try {
+      const bookings = await Booking.find()
+        .populate({
+          path: 'roomId',
+          select: 'name type price capacity' // Include relevant room fields
+        })
+        .lean()
+        .exec();
+  
+      // Transform the data to include room details
+      const transformedBookings = bookings.map(booking => ({
+        _id: booking._id,
+        guestName: booking.guestName,
+        roomDetails: booking.roomId || {}, // Room details from population
+        checkIn: booking.checkIn,
+        checkOut: booking.checkOut,
+        status: booking.status,
+        numberOfGuests: booking.numberOfGuests,
+        numberOfChildren: booking.numberOfChildren,
+        mealIncluded: booking.mealIncluded,
+        extraBeds: booking.extraBeds,
+        specialRequests: booking.specialRequests,
+        totalPrice: booking.totalPrice,
+        quantity: booking.quantity,
+        email: booking.email,
+        phone: booking.phone
+      }));
+  
+      res.json(transformedBookings);
+    } catch (error) {
+      console.error('Error in GET /bookings:', error);
+      res.status(500).json({ 
+        message: 'Failed to fetch bookings',
+        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      });
+    }
+  });
+  
+  router.get('/:id', async (req, res) => {
+    try {
+      const booking = await Booking.findById(req.params.id)
+        .populate({
+          path: 'roomId',
+          select: 'name type price capacity'
+        })
+        .lean()
+        .exec();
+  
+      if (!booking) {
+        return res.status(404).json({ message: 'Booking not found' });
+      }
+  
+      const transformedBooking = {
+        _id: booking._id,
+        guestName: booking.guestName,
+        roomDetails: booking.roomId || {},
+        checkIn: booking.checkIn,
+        checkOut: booking.checkOut,
+        status: booking.status,
+        numberOfGuests: booking.numberOfGuests,
+        numberOfChildren: booking.numberOfChildren,
+        mealIncluded: booking.mealIncluded,
+        extraBeds: booking.extraBeds,
+        specialRequests: booking.specialRequests,
+        totalPrice: booking.totalPrice,
+        quantity: booking.quantity,
+        email: booking.email,
+        phone: booking.phone
+      };
+  
+      res.json(transformedBooking);
+    } catch (error) {
+      console.error('Error in GET /bookings/:id:', error);
+      res.status(500).json({ 
+        message: 'Failed to fetch booking',
+        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      });
+    }
+  });
+
+router.put('/:id', async (req, res) => {
+  try {
+    const booking = await Booking.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true
+    }).populate('room');
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+    res.json(booking);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+router.delete('/:id', async (req, res) => {
+  try {
+    const booking = await Booking.findByIdAndDelete(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+    res.json({ message: 'Booking deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+
 // Helper function to check date overlap
 const datesOverlap = (start1, end1, start2, end2) => {
     const s1 = new Date(start1).getTime();
@@ -15,60 +196,6 @@ const datesOverlap = (start1, end1, start2, end2) => {
 };
 
 // Check room availability
-router.get('/availability', async (req, res) => {
-    const { checkIn, checkOut } = req.query;
-   
-    if (!checkIn || !checkOut) {
-        return res.status(400).json({ message: 'Check-in and check-out dates are required' });
-    }
-
-    try {
-        // Get all rooms
-        const rooms = await Room.find();
-       
-        // Get all bookings that overlap with the requested dates
-        const overlappingBookings = await Booking.find({
-            $or: [
-                { checkIn: { $lte: new Date(checkOut) }, checkOut: { $gte: new Date(checkIn) } }
-            ]
-        });
-
-        // Calculate availability for each room type
-        const availableRooms = rooms.map(room => {
-            const roomBookings = overlappingBookings.filter(
-                booking => booking.roomId.toString() === room._id.toString()
-            );
-
-            let availability;
-            if (room.type === 'Dorm') {
-                // For dorm, count total booked beds
-                const bookedBeds = roomBookings.reduce((sum, booking) => 
-                    sum + booking.numberOfGuests, 0);
-                availability = {
-                    availableBeds: Math.max(0, room.capacity - bookedBeds),
-                    totalBeds: room.capacity
-                };
-            } else {
-                // For Deluxe and Super Deluxe, count booked rooms
-                const bookedRooms = roomBookings.reduce((sum, booking) => 
-                    sum + (booking.quantity || 1), 0);
-                availability = {
-                    availableRooms: Math.max(0, room.totalRooms - bookedRooms),
-                    totalRooms: room.totalRooms
-                };
-            }
-
-            return {
-                ...room.toObject(),
-                availability
-            };
-        });
-
-        res.json(availableRooms);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-});
 
 // Book a room
 router.post('/book', async (req, res) => {

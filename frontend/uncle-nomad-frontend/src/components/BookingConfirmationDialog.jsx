@@ -41,6 +41,10 @@ export default function BookingConfirmationDialog({ bookingDetails, onClose }) {
                   <span className="text-gray-900 font-semibold">Total Price</span>
                   <span className="text-xl font-bold text-brand-purple">₹{bookingDetails.totalPrice}</span>
                 </div>
+                <div className="flex justify-between items-center pb-2 border-b border-gray-200">
+                  <span className="text-gray-600">Payment Status</span>
+                  <span className="font-medium text-gray-900">pending</span>
+                </div>
               </div>
             </DialogDescription>
           </DialogHeader>

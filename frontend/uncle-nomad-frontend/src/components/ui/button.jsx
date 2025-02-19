@@ -9,7 +9,7 @@ const buttonVariants = cva(
         default: "bg-primary text-primary-foreground hover:bg-primary/90",
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         outline: "border border-input hover:bg-accent hover:text-accent-foreground hover:bg-brand-purple hover:text-white",
-        custom: "bg-brand-purple hover:bg-brand-purple/90", // Your custom variant
+        custom: "bg-brand-purple text-white hover:bg-brand-purple/90", // Your custom variant
       },
       size: {
         default: "h-10 py-2 px-4",

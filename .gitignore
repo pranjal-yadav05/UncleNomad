@@ -5,3 +5,5 @@ backend/.env
 node_modules
 package.json
 package-lock.json
+backend/.env
+backend/.env

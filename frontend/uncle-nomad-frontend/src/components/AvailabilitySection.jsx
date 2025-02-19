@@ -56,7 +56,7 @@ function AvailabilitySection() {
       setLoading(true);
       try {
         const response = await fetch(
-          `${process.env.REACT_APP_API_URL}/api/rooms/availability?checkIn=${checkIn.toISOString()}&checkOut=${checkOut.toISOString()}`
+          `${process.env.REACT_APP_API_URL}/api/bookings/check-availability?checkIn=${checkIn.toISOString()}&checkOut=${checkOut.toISOString()}`
         );
 
         if (!response.ok) {
@@ -65,14 +65,29 @@ function AvailabilitySection() {
         }
 
         const data = await response.json();
+        
+        // Filter out rooms with no availability
+        const availableRooms = data.filter(room => 
+          room.type === 'Dorm' ? room.availability.availableBeds > 0 : room.availability.availableRooms > 0
+        );
+
+        if (availableRooms.length === 0) {
+          throw new Error('No rooms available for the selected dates');
+        }
+
+        console.log('data: ')
+        console.log(availableRooms)
+
         setBookingForm(prev => ({
           ...prev,
-          availableRooms: data,
+          availableRooms,
           step: 2
         }));
+
       } catch (error) {
         console.error('Error fetching available rooms:', error);
-        alert('Failed to check availability. Please try again.');
+        alert(error.message || 'Failed to check availability. Please try again.');
+
       } finally {
         setLoading(false);
       }
@@ -137,7 +152,7 @@ function AvailabilitySection() {
       }
       
       console.log('number of guests : ',bookingData.numberOfGuests)
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/rooms/book`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/bookings/book`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(bookingData)

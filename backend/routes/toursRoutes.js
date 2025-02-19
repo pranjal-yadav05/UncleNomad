@@ -1,16 +1,51 @@
 import express from 'express';
-import Tour from '../models/Tour.js';
-
 const router = express.Router();
 
-// Get all tours
-router.get('/', async (req, res) => {
-    try {
-        const tours = await Tour.find();
-        res.json(tours);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
+import {
+  createTour,
+  getTours,
+  getTourById,
+  updateTour,
+  deleteTour
+} from '../controllers/tourController.js';
+
+// Middleware for validating tour data
+const validateTourData = (req, res, next) => {
+  const { id, title, description, price, duration, groupSize, location } = req.body;
+  if (!id || !title || !description || !price || !duration || !groupSize || !location) {
+    return res.status(400).json({ message: 'All fields are required' });
+  }
+  next();
+};
+
+// Middleware for validating itinerary data
+const validateItinerary = (req, res, next) => {
+  if (req.body.itinerary && Array.isArray(req.body.itinerary)) {
+    for (const day of req.body.itinerary) {
+      if (!day.day || !day.title || !day.description || !day.activities || !day.accommodation) {
+        return res.status(400).json({ message: 'All itinerary fields are required for each day' });
+      }
     }
-});
+  }
+  next();
+};
+
+
+// Create a new tour
+router.post('/', validateTourData, validateItinerary, createTour);
+
+
+// Get all tours
+router.get('/', getTours);
+
+// Get a single tour by ID
+router.get('/:id', getTourById);
+
+// Update a tour
+router.put('/:id', validateTourData, validateItinerary, updateTour);
+
+
+// Delete a tour
+router.delete('/:id', deleteTour);
 
 export default router;

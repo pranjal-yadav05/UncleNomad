@@ -57,12 +57,18 @@
   margin-top: 32px;
 }
 
+
+
 .carousel-dots {
   position: absolute;
   bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   gap: 10px;
+  z-index: 2;
 }
+
 
 .dot {
   width: 10px;

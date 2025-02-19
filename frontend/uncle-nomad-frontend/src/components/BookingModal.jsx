@@ -84,13 +84,36 @@ export default function BookingModal({
     return true
   }
 
+  const validateStep0 = () => {
+    const totalCapacity = availableRooms.reduce((sum, room) => {
+      const isDorm = room.type.toLowerCase() === 'dorm';
+      const currentCount = bookingForm.selectedRooms[room._id] || 0;
+      return sum + (isDorm ? currentCount : room.capacity * currentCount);
+    }, 0);
+
+    if (bookingForm.numberOfGuests > totalCapacity) {
+      setError(`Selected rooms can only accommodate ${totalCapacity} guests. You requested for ${bookingForm.numberOfGuests} guests.`);
+      return false;
+    }
+    return true;
+  }
+
   const renderStep0 = () => (
     <div className="spacey-4">
       <h3 className="text-lg font-semibold">Select Rooms</h3>
+      {error && (
+        <div className="p-3 mb-4 text-sm text-red-500 bg-red-50 rounded-md border border-red-200">
+          <div>{error}</div>
+        </div>
+      )}
+
       {availableRooms.map(room => {
         const isDorm = room.type.toLowerCase() === 'dorm'
         const currentCount = bookingForm.selectedRooms[room._id] || 0
-        const remainingCapacity = isDorm ? room.capacity - currentCount : room.totalRooms - currentCount
+        const remainingCapacity = isDorm ? 
+          room.availability.availableBeds - currentCount : 
+          room.availability.availableRooms - currentCount
+
         
         return (
           <div key={room._id} className="border p-4 rounded-lg">
@@ -104,7 +127,8 @@ export default function BookingModal({
                 </p>
                 {isDorm && (
                   <p className="text-sm text-gray-500">
-                    Shared Room - {remainingCapacity} bed{remainingCapacity !== 1 ? 's' : ''} available
+                  Shared Room - {room.availability.availableBeds} bed{room.availability.availableBeds !== 1 ? 's' : ''} available
+
                   </p>
                 )}
               </div>
@@ -138,13 +162,19 @@ export default function BookingModal({
         )
       })}
       <Button
-        onClick={() => setStep(1)}
+        onClick={() => {
+          if (validateStep0()) {
+            setStep(1);
+            setError('');
+          }
+        }}
         variant='custom'
         className="w-full mt-2 mb-2 text-white bg-brand-purple hover:bg-brand-purple/90"
         disabled={Object.keys(bookingForm.selectedRooms).length === 0}
       >
         Next
       </Button>
+
       <p className="text-sm text-gray-500 mt-2">
         Note: When booking dorm beds, you're reserving individual beds in a shared space. 
         Private rooms are booked as complete units.
@@ -301,7 +331,7 @@ export default function BookingModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[95vw] sm:max-w-[500px] bg-white p-4 rounded-lg shadow-xl overflow-auto">
+      <DialogContent className="w-[95vw] sm:max-w-[500px] bg-white p-4 max-h-[90vh] overflow-y-auto rounded-lg shadow-xl overflow-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">
             Booking Details
@@ -338,7 +368,8 @@ export default function BookingModal({
                   <span>
                     {room.type === 'Dorm' ? 
                       `${count} bed${count !== 1 ? 's' : ''} in Shared Dorm` : 
-                      `${count} Private ${room.type} Room${count > 1 ? 's' : ''}`
+                    `${count} Private ${room.type} Room${count > 1 ? 's' : ''}`
+
                     }
                   </span>
                 </div>
