@@ -7,3 +7,6 @@ package.json
 package-lock.json
 backend/.env
 backend/.env
+frontend/uncle-nomad-frontend/.env
+backend/.env
+frontend/uncle-nomad-frontend/.env

@@ -3,6 +3,7 @@ import { Button } from './ui/button';
 import { useNavigate } from 'react-router-dom';
 import '../App.css';
 import './HeroSection.css';
+import axios from 'axios';
 
 export default function HeroSection() {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -11,13 +12,26 @@ export default function HeroSection() {
   const videoRef = useRef(null);
   const navigate = useNavigate();
 
-  const mediaItems = [
-    { type: 'image', src: process.env.PUBLIC_URL + '/hero1.jpeg', duration: 5000 },
-    { type: 'image', src: process.env.PUBLIC_URL + '/hero2.jpeg', duration: 5000 },
-    { type: 'image', src: process.env.PUBLIC_URL + '/hero3.jpeg', duration: 5000 },
-    { type: 'video', src: process.env.PUBLIC_URL + '/video1.mp4' },
-    { type: 'video', src: process.env.PUBLIC_URL + '/video2.mp4' }
-  ];
+  const [mediaItems, setMediaItems] = useState([]); 
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchMedia = async () => { 
+        console.log('Fetching media...'); // Log the fetch action
+
+        try {
+            const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/media`); // Adjust the endpoint as necessary
+            console.log('Media response:', response.data); // Log the response data
+            setMediaItems(response.data);
+        } catch (error) {
+            console.error('Error fetching media:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    fetchMedia();
+  }, []);
 
   const handleVideoPlay = async () => {
     if (videoRef.current && !isTransitioning) {
@@ -35,7 +49,7 @@ export default function HeroSection() {
     
     // Short delay to ensure DOM updates are complete
     setTimeout(() => {
-      if (mediaItems[newIndex].type === 'video') {
+      if (mediaItems[newIndex]?.type === 'video') {
         handleVideoPlay();
       }
       setIsTransitioning(false);
@@ -72,10 +86,11 @@ export default function HeroSection() {
     let timer;
 
     if (!isTransitioning) {
-      if (mediaItems[currentIndex].type === 'image') {
+      if (mediaItems[currentIndex]?.type === 'image') {
         timer = setTimeout(() => {
           handleMediaTransition((currentIndex + 1) % mediaItems.length);
-        }, mediaItems[currentIndex].duration);
+        }, mediaItems[currentIndex].type === 'image' ? mediaItems[currentIndex].duration * 1000 : 0); // Convert duration to milliseconds
+
       } else if (videoRef.current) {
         videoRef.current.onended = () => {
           handleMediaTransition((currentIndex + 1) % mediaItems.length);
@@ -112,23 +127,29 @@ export default function HeroSection() {
     >
       <div className='hero-overlay'></div>
 
-      {mediaItems[currentIndex].type === 'video' ? (
-        <video
-          key={currentIndex} // Add key to ensure proper remounting
-          ref={videoRef}
-          src={mediaItems[currentIndex].src}
-          autoPlay
-          muted
-          className='hero-media'
-          preload="metadata"
-        />
+      {loading ? ( 
+        <div>Loading...</div> // Show loading message
+      ) : mediaItems.length > 0 && mediaItems[currentIndex] ? (
+        mediaItems[currentIndex].type === 'video' ? (
+          <video
+            key={currentIndex} // Add key to ensure proper remounting
+            ref={videoRef}
+            src={mediaItems[currentIndex].url}
+            autoPlay
+            muted
+            className='hero-media'
+            preload="metadata"
+          />
+        ) : (
+          <img 
+            src={mediaItems[currentIndex].url}
+            alt="Uncle Nomad"
+            className='hero-media'
+            loading="lazy"
+          />
+        )
       ) : (
-        <img 
-          src={mediaItems[currentIndex].src}
-          alt="Uncle Nomad"
-          className='hero-media'
-          loading="lazy"
-        />
+        <div>No media available</div> // Handle case where mediaItems is empty
       )}
 
       <div className='hero-content'>
@@ -168,6 +189,7 @@ export default function HeroSection() {
             }}
           />
         ))}
+
       </div>
     </div>
   );

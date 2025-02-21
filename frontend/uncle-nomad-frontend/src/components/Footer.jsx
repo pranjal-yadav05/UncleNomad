@@ -1,7 +1,12 @@
+import { useState } from 'react'
 import { Button } from "./ui/button"
 import { Link } from "react-router-dom"
+import QueryModal from './QueryModal'
+
 
 const Footer = () => {
+  const [isQueryModalOpen, setIsQueryModalOpen] = useState(false)
+
   return (
     <footer className="bg-gray-900 text-gray-300">
       <div className="container mx-auto px-6 py-6">
@@ -20,30 +25,41 @@ const Footer = () => {
           </p>
           <Button 
             variant="outline" 
+            id='get-in-touch'
             className="bg-transparent text-white hover:bg-white/10 border-white/20"
+            onClick={() => setIsQueryModalOpen(true)}
           >
             Get in Touch
           </Button>
+          <QueryModal 
+            open={isQueryModalOpen} 
+            onClose={() => setIsQueryModalOpen(false)}
+          />
+
         </div>
 
         {/* Links Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center mb-12">
-          {/* Our Properties */}
+          {/* Follow Us */}
           <div className="space-y-6">
-            <h3 className="text-xl font-semibold text-white">Our Properties</h3>
+            <h3 className="text-xl font-semibold text-white">Follow Us</h3>
             <ul className="space-y-4">
-              {['Manali', 'Kasol', 'Rishikesh', 'Dharamshala', 'McLeodganj'].map((location) => (
-                <li key={location}>
-                  <Link 
-                    to="#" 
-                    className="text-gray-400 hover:text-white transition-colors duration-200"
-                  >
-                    {location}
-                  </Link>
-                </li>
-              ))}
+              <li>
+                <a href="https://m.facebook.com/unclenomad.in/" className="text-gray-400 hover:text-white transition-colors duration-200">
+                  <i className="fab fa-facebook-f m-2"></i>
+                  Facebook
+                </a>
+              </li>
+              <li>
+                <a href="https://instagram.com/unclenomad.in" className="text-gray-400 hover:text-white transition-colors duration-200">
+                  <i className="fab fa-instagram m-2"></i>
+                  Instagram
+                </a>
+              </li>
             </ul>
           </div>
+
+
 
           {/* Quick Links */}
           <div className="space-y-6">
@@ -90,23 +106,6 @@ const Footer = () => {
             </ul>
           </div>
         </div>
-
-        {/* Bottom Bar */}
-        {/* <div className="border-t border-gray-800 pt-8">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-sm text-gray-400">
-              © {new Date().getFullYear()} Uncle Nomad. All rights reserved.
-            </p>
-            <div className="flex gap-6">
-              <Link to="#" className="text-sm text-gray-400 hover:text-white transition-colors">
-                Privacy Policy
-              </Link>
-              <Link to="#" className="text-sm text-gray-400 hover:text-white transition-colors">
-                Terms of Service
-              </Link>
-            </div>
-          </div>
-        </div> */}
       </div>
     </footer>
   )

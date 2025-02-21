@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import BookingModal from './BookingModal';
+import PaytmPaymentForm from './PaytmPaymentForm';
 import BookingConfirmationDialog from './BookingConfirmationDialog';
+import CheckingPaymentModal from './CheckingPaymentModal';
 
 const initialBookingForm = {
   step: 1,
@@ -22,6 +24,7 @@ const initialBookingForm = {
 };
 
 function AvailabilitySection() {
+  const [checking, setChecking] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [bookingForm, setBookingForm] = useState(initialBookingForm);
   const [loading, setLoading] = useState(false);
@@ -29,6 +32,8 @@ function AvailabilitySection() {
   const [availableRooms, setAvailableRooms] = useState([]);
   const [error, setError] = useState('');
   const [dateError, setDateError] = useState('');
+  const [paymentData, setPaymentData] = useState(null);
+  const [bookingDetails, setBookingDetails] = useState(null)
 
   const handleDateChange = (e) => {
     const { name, value } = e.target;
@@ -66,17 +71,27 @@ function AvailabilitySection() {
 
         const data = await response.json();
         
-        // Filter out rooms with no availability
-        const availableRooms = data.filter(room => 
-          room.type === 'Dorm' ? room.availability.availableBeds > 0 : room.availability.availableRooms > 0
+        // Process availability data from backend
+        const availableRooms = data.map(room => ({
+          ...room,
+          availability: {
+            availableBeds: room.type === 'Dorm' ? room.availability.availableBeds : null,
+            availableRooms: room.type !== 'Dorm' ? room.availability.availableRooms : null,
+            totalBeds: room.type === 'Dorm' ? room.capacity : null,
+            totalRooms: room.type !== 'Dorm' ? room.totalRooms : null
+          }
+        })).filter(room => 
+          (room.type === 'Dorm' && room.availability.availableBeds > 0) ||
+          (room.type !== 'Dorm' && room.availability.availableRooms > 0)
         );
+
 
         if (availableRooms.length === 0) {
           throw new Error('No rooms available for the selected dates');
         }
 
-        console.log('data: ')
-        console.log(availableRooms)
+        console.log('Available rooms:', availableRooms);
+
 
         setBookingForm(prev => ({
           ...prev,
@@ -95,101 +110,6 @@ function AvailabilitySection() {
       setDateError('please select valid dates')
     }
   };
-
-  const handleBookingSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const formatDate = (date) => {
-        if (!date) return null;
-        const d = new Date(date);
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      };
-  
-      // Convert selectedRooms into an array of objects
-      const selectedRoomsArray = Object.entries(bookingForm.selectedRooms)
-        .filter(([_, quantity]) => quantity > 0) // Only include rooms with quantity > 0
-        .map(([roomId, quantity]) => {
-          const selectedRoom = bookingForm.availableRooms.find(
-            room => room._id && room._id.toString() === roomId.toString()
-          );
-  
-          return {
-            roomId: selectedRoom?._id || roomId,
-            quantity,
-            roomType: selectedRoom?.type || 'Room',
-            pricePerNight: selectedRoom?.price || 0,
-          };
-        });
-  
-      // Calculate total price for all selected rooms
-      const totalNights = Math.ceil(
-        (new Date(bookingForm.checkOut) - new Date(bookingForm.checkIn)) / (1000 * 60 * 60 * 24)
-      );
-      const totalPrice = selectedRoomsArray.reduce(
-        (acc, room) => acc + room.pricePerNight * room.quantity * totalNights, 
-        0
-      );
-  
-      const bookingData = {
-        rooms: selectedRoomsArray,
-        guestName: bookingForm.guestName,
-        email: bookingForm.email,
-        phone: bookingForm.phone,
-        numberOfGuests: parseInt(bookingForm.numberOfGuests), // Ensure this is a number
-        numberOfChildren: parseInt(bookingForm.numberOfChildren || 0),
-        mealIncluded: Boolean(bookingForm.mealIncluded),
-        extraBeds: parseInt(bookingForm.extraBeds || 0),
-        specialRequests: bookingForm.specialRequests || '',
-        checkIn: formatDate(bookingForm.checkIn),
-        checkOut: formatDate(bookingForm.checkOut),
-        totalPrice: totalPrice
-      };
-
-      // Validate required fields before submission
-      if (!bookingData.numberOfGuests || bookingData.numberOfGuests < 1) {
-        throw new Error('Please specify the number of guests');
-      }
-      
-      console.log('number of guests : ',bookingData.numberOfGuests)
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/bookings/book`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(bookingData)
-      });
-  
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to process booking');
-      }
-  
-      const bookingResponse = await response.json();
-      
-      const bookingDetails = {
-        id: bookingResponse._id,
-        rooms: selectedRoomsArray,
-        checkIn: bookingResponse.booking.checkIn,
-        checkOut: bookingResponse.booking.checkOut,
-        totalPrice: bookingResponse.booking.totalPrice
-      };
-  
-      setBookingForm(prev => ({
-        ...prev,
-        bookingDetails,
-        step: 4
-      }));
-  
-      setIsBookingConfirmed(true);
-      setError('');
-      setIsModalOpen(false);
-  
-    } catch (error) {
-      console.error('Booking error:', error);
-      setError(error.message || 'An unexpected error occurred. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-};
   
   const renderStep1 = () => (
     <>
@@ -241,8 +161,9 @@ function AvailabilitySection() {
           variant="custom" 
           className="bg-brand-purple text-white hover:bg-brand-purple/90"
           onClick={checkAvailability}
+          disabled={loading}
         >
-          Check Availability
+          {loading ? "checking..." : "Check Availability"}
         </Button>
       </div>
     </>
@@ -273,21 +194,26 @@ function AvailabilitySection() {
                   ...prev,
                   step: 1
                 }));}}
+              setChecking={setChecking}
               bookingForm={bookingForm}
               setBookingForm={setBookingForm}
-              handleBookingSubmit={handleBookingSubmit}
               isLoading={loading}
+              setIsLoading={setLoading}
               availableRooms={bookingForm.availableRooms}
               handleRoomSelection={handleRoomSelection}
               error={error}
+              setIsModalOpen={setIsModalOpen}
               setError={setError}
+              setIsBookingConfirmed={setIsBookingConfirmed}
+              setBookingDetails={setBookingDetails}
+              bookingDetails={bookingDetails}
             />
           )}
 
           {isBookingConfirmed && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
               <BookingConfirmationDialog
-                bookingDetails={bookingForm.bookingDetails}
+                booking={bookingDetails.booking}
                 onClose={() => {
                   setBookingForm(initialBookingForm);
                   setIsBookingConfirmed(false);
@@ -295,6 +221,29 @@ function AvailabilitySection() {
               />
             </div>
           )}
+
+
+          <CheckingPaymentModal
+            open={checking}
+          />
+
+          {/* {paymentData && (
+            <PaytmPaymentForm 
+            paymentData={paymentData}
+            isLoading={loading}
+            bookingForm={bookingForm}
+            onPaymentSuccess={(response) => {
+              console.log('Payment successful:', response);
+              setIsBookingConfirmed(true);
+              setPaymentData(null); // Clear payment data
+            }}
+            onPaymentFailure={(error) => {
+              console.error('Payment failed:', error);
+              setError(error);
+              setPaymentData(null); // Clear payment data
+            }}
+          />
+          )} */}
         </div>
       </div>
     </Card>

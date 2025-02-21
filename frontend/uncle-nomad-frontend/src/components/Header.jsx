@@ -34,6 +34,22 @@ const Header = () => {
              src="logo3-rm.png" alt="Uncle Nomad Logo" width={200} height={60} />
           </div>
           <nav className="hidden md:flex items-center space-x-6">
+          <a 
+              href="#about" 
+              className="text-gray-600 hover:text-brand-purple transition-colors"
+              onClick={(e) => {
+                e.preventDefault();
+                const section = document.getElementById('about');
+                if (section) {
+                  const offset = 80;
+                  const elementPosition = section.getBoundingClientRect().top;
+                  const offsetPosition = elementPosition + window.pageYOffset - offset;
+                  window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+                }
+              }}
+            >
+              About Us
+            </a>
             <a 
               href="#availability" 
               className="text-gray-600 hover:text-brand-purple transition-colors"
@@ -66,49 +82,32 @@ const Header = () => {
             >
               Tours
             </a>
-            <a 
-              href="#guides" 
-              className="text-gray-600 hover:text-brand-purple transition-colors"
-              onClick={(e) => {
-                e.preventDefault();
-                const section = document.getElementById('guides');
-                if (section) {
-                  const offset = 80;
-                  const elementPosition = section.getBoundingClientRect().top;
-                  const offsetPosition = elementPosition + window.pageYOffset - offset;
-                  window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
-                }
-              }}
-            >
-              Tour Guides
-            </a>
-            <a 
-              href="#about" 
-              className="text-gray-600 hover:text-brand-purple transition-colors"
-              onClick={(e) => {
-                e.preventDefault();
-                const section = document.getElementById('about');
-                if (section) {
-                  const offset = 80;
-                  const elementPosition = section.getBoundingClientRect().top;
-                  const offsetPosition = elementPosition + window.pageYOffset - offset;
-                  window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
-                }
-              }}
-            >
-              About Us
-            </a>
 
-            {isAdmin && (
-              <Button 
-                variant="ghost"
-                onClick={() => navigate('/admin')}
-                className="text-gray-600 hover:text-brand-purple"
-              >
-                Admin
-              </Button>
-            )}
-            <Button>Contact Us</Button>
+            <Button
+              onClick={(e) => {
+                e.preventDefault();
+                const section = document.getElementById('get-in-touch');
+                if (section) {
+                  const offset = 80;
+                  const elementPosition = section.getBoundingClientRect().top;
+                  const offsetPosition = elementPosition + window.pageYOffset - offset;
+                  window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+
+                  // Force reflow to ensure animation works
+                  void section.offsetWidth;
+                  
+                  // Add highlight class and remove after animation
+                  section.classList.add('highlight');
+                  setTimeout(() => {
+                    section.classList.remove('highlight');
+                  }, 2000);
+                }
+              }}
+            >
+              Contact Us
+            </Button>
+
+
           </nav>
           <button 
             className="md:hidden" 
@@ -127,6 +126,22 @@ const Header = () => {
         <div className="container mx-auto px-4">
           <nav className="flex flex-col space-y-2 py-2 bg-transparent shadow-lg rounded-lg p-4">
             <a 
+              href="#about" 
+              className="text-black hover:text-brand-purple transition-colors py-2 transform transition-transform duration-200 hover:translate-x-2"
+              onClick={(e) => {
+                e.preventDefault();
+                const section = document.getElementById('about');
+                if (section) {
+                  const offset = 80;
+                  const elementPosition = section.getBoundingClientRect().top;
+                  const offsetPosition = elementPosition + window.pageYOffset - offset;
+                  window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+                }
+              }}
+            >
+              About Us
+            </a>
+            <a 
               href="#availability" 
               className="text-black hover:text-brand-purple transition-colors py-2 transform transition-transform duration-200 hover:translate-x-2"
               onClick={(e) => {
@@ -158,49 +173,29 @@ const Header = () => {
             >
               Tours
             </a>
-            <a 
-              href="#guides" 
-              className="text-black hover:text-brand-purple transition-colors py-2 transform transition-transform duration-200 hover:translate-x-2"
+            <Button
               onClick={(e) => {
                 e.preventDefault();
-                const section = document.getElementById('guides');
+                const section = document.getElementById('get-in-touch');
                 if (section) {
                   const offset = 80;
                   const elementPosition = section.getBoundingClientRect().top;
-                  const offsetPosition = elementPosition + window.pageYOffset - offset;
+                  const offsetPosition = elementPosition + window.pageYOffset - offset - 200;
                   window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
-                }
-              }}
-            >
-              Tour Guides
-            </a>
-            <a 
-              href="#about" 
-              className="text-black hover:text-brand-purple transition-colors py-2 transform transition-transform duration-200 hover:translate-x-2"
-              onClick={(e) => {
-                e.preventDefault();
-                const section = document.getElementById('about');
-                if (section) {
-                  const offset = 80;
-                  const elementPosition = section.getBoundingClientRect().top;
-                  const offsetPosition = elementPosition + window.pageYOffset - offset;
-                  window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
-                }
-              }}
-            >
-              About Us
-            </a>
 
-            {isAdmin && (
-              <Button 
-                variant="ghost"
-                onClick={() => navigate('/admin')}
-                className="w-full text-gray-600 hover:text-brand-purple"
-              >
-                Admin
-              </Button>
-            )}
-            <Button className="w-full">Contact Us</Button>
+                  // Force reflow to ensure animation works
+                  void section.offsetWidth;
+                  
+                  // Add highlight class and remove after animation
+                  section.classList.add('highlight');
+                  setTimeout(() => {
+                    section.classList.remove('highlight');
+                  }, 2000);
+                }
+              }}
+            >
+              Contact Us
+            </Button>
           </nav>
         </div>
       </div>

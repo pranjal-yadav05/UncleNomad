@@ -18,6 +18,19 @@
   z-index: 1;
 }
 
+.highlight {
+  animation: highlight-animation 2s forwards;
+}
+
+@keyframes highlight-animation {
+  0% {
+    background-color: yellow; /* Change to desired highlight color */
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
 
 .hero-media {
   width: 100%;

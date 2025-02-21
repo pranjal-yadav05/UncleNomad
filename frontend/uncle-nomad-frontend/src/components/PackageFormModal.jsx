@@ -67,6 +67,16 @@ const PackageFormModal = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Package Fields */}
               <div className="space-y-2">
+                <Label htmlFor="title">Package ID</Label>
+                <Input
+                  id="title"
+                  value={newPackage.id}
+                  onChange={(e) => setNewPackage({ ...newPackage, id: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="title">Package Title</Label>
                 <Input
                   id="title"

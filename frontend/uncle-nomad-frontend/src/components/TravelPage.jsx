@@ -13,6 +13,7 @@ import GuideBookingModal from "./GuideBookingModal"
 import BookingConfirmationDialog from "./BookingConfirmationDialog"
 import Footer from "./Footer"
 import TourGuides from "./TourGuides"
+import TourSection from "./TourSection"
 
 export default function TravelPage() {
   const API_URL = process.env.REACT_APP_API_URL;
@@ -41,9 +42,9 @@ export default function TravelPage() {
     specialRequests: "",
   })
   const [bookingConfirmation, setBookingConfirmation] = useState(null)
-  const [selectedTour, setSelectedTour] = useState(null)
+  
   const [selectedGuide, setSelectedGuide] = useState(null)
-  const [isTourModalOpen, setIsTourModalOpen] = useState(false)
+  
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false)
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false)
   const roomsRef = useRef(null)
@@ -152,11 +153,6 @@ export default function TravelPage() {
     }
   }
 
-  const handleTourBooking = (tour) => {
-    setSelectedTour(tour)
-    setIsTourModalOpen(true)
-  }
-
   const handleGuideBooking = (guide) => {
     setSelectedGuide(guide)
     setIsGuideModalOpen(true)
@@ -173,55 +169,17 @@ export default function TravelPage() {
           checkAvailability={checkAvailability}
         />
         
+        <AboutSection />
+
         <AvailabilitySection />
 
-        <div id='tours' className="container mx-auto px-4 py-12">
-          <h2 className="text-2xl font-bold mb-8">Curated Experiences</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {tours.map((tour) => (
-              <TourCard 
-                key={tour._id} 
-                tour={tour}
-                onClick={() => {
-                  setSelectedTour(tour)
-                  setIsTourModalOpen(true)
-                }}
-              />
-            ))}
-          </div>
+        <TourSection
+          setIsBookingModalOpen={setIsBookingModalOpen} 
+          isBookingModalOpen={isBookingModalOpen} 
+          tours={tours}
+        />
 
-          <TourDetailsModal
-            tour={selectedTour}
-            isOpen={isTourModalOpen}
-            onClose={() => setIsTourModalOpen(false)}
-            onBook={() => {
-              setIsTourModalOpen(false)
-              setIsBookingModalOpen(true)
-            }}
-          />
-        </div>
-
-        <TourGuides guides={guides} handleGuideBooking={handleGuideBooking} isLoading={isLoading.guides} />
-
-        <AboutSection />
       </main>
-
-      <TourBookingModal
-        isOpen={isBookingModalOpen}
-        onClose={() => setIsBookingModalOpen(false)}
-        selectedTour={selectedTour}
-      />
-
-      <GuideBookingModal
-        isOpen={isGuideModalOpen}
-        onOpenChange={() => setIsGuideModalOpen(false)}
-        selectedGuide={selectedGuide}
-      />
-
-      <BookingConfirmationDialog
-        bookingConfirmation={bookingConfirmation}
-        onClose={() => setBookingConfirmation(null)}
-      />
 
       <Footer />
     </div>

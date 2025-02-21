@@ -11,8 +11,8 @@ import {
 
 // Middleware for validating tour data
 const validateTourData = (req, res, next) => {
-  const { id, title, description, price, duration, groupSize, location } = req.body;
-  if (!id || !title || !description || !price || !duration || !groupSize || !location) {
+  const { title, description, price, duration, groupSize, location } = req.body;
+  if (!title || !description || !price || !duration || !groupSize || !location) {
     return res.status(400).json({ message: 'All fields are required' });
   }
   next();

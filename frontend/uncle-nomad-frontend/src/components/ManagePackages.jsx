@@ -63,6 +63,8 @@ export default function ManagePackages() {
         ...newPackage,
         price: newPackage.price.toString()
       };
+
+      console.log(newPackage)
       
       const url = editMode ? `${API_URL}/api/tours/${currentPackageId}` : `${API_URL}/api/tours`;
       const method = editMode ? 'PUT' : 'POST';
@@ -113,10 +115,6 @@ export default function ManagePackages() {
           Add New Package
         </Button>
       </div>
-
-
-
-
 
       <PackageFormModal
         isOpen={isModalOpen}

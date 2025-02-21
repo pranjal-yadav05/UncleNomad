@@ -6,6 +6,8 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import BookingFormModal from './BookingFormModal';
+import BookingDetailsModal from './BookingDetailsModal';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from './ui/table';
 
 
 export default function ManageBookings() {
@@ -27,14 +29,14 @@ export default function ManageBookings() {
     status: 'pending'
   });
 
-
+  const [selectedBooking, setSelectedBooking] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [currentBookingId, setCurrentBookingId] = useState(null);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [rooms, setRooms] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
 
   useEffect(() => {
     fetchBookings();
@@ -150,7 +152,8 @@ export default function ManageBookings() {
     }, 0);
 
 
-    setNewBooking(prev => ({ ...prev, totalPrice }));
+    setNewBooking(prev => ({ ...prev, totalPrice }), fetchBookings);
+
 
 
     // Number of guests validation
@@ -180,9 +183,8 @@ export default function ManageBookings() {
       
       fetchBookings();
       setNewBooking({
-        roomId: '',
+        rooms: [],
         guestName: '',
-        quantity: 1,
         email: '',
         phone: '',
         numberOfGuests: 1,
@@ -195,6 +197,7 @@ export default function ManageBookings() {
         totalPrice: 0,
         status: 'pending'
       });
+      
       setEditMode(false);
       setIsModalOpen(false)
       setCurrentBookingId(null);
@@ -266,53 +269,49 @@ export default function ManageBookings() {
           No bookings found.
         </div>
       ) : (
-        <div className="space-y-4">
-          {bookings.map((booking) => (
-            <div key={booking._id} className="bg-white p-4 rounded-lg shadow-md border border-gray-200">
-
-              <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                <div className="space-y-2">
-                  <p className="font-medium">Guest: {booking.guestName}</p>
-                  <p>Room Type: {booking.roomType}</p>
-                  <p>Check-in: {new Date(booking.checkIn).toLocaleDateString()}</p>
-                  <p>Check-out: {new Date(booking.checkOut).toLocaleDateString()}</p>
-                  <p>Status: <span className="capitalize">{booking.status || 'pending'}</span></p>
-                  <p>Guests: {booking.numberOfGuests}</p>
-                  {booking.specialRequests && (
-                    <p className="text-sm text-gray-600">
-                      Special Requests: {booking.specialRequests}
-                    </p>
-                  )}
-                </div>
-                
-                <div className="flex gap-2 flex-wrap">
-
-                  <Button 
-                    onClick={() => handleUpdateBooking(booking._id, 'confirmed')}
-                    disabled={booking.status === 'confirmed'}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    Confirm
-                  </Button>
-                  <Button 
-                    onClick={() => handleUpdateBooking(booking._id, 'cancelled')}
-                    disabled={booking.status === 'cancelled'}
-                    className="bg-yellow-600 hover:bg-yellow-700"
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    variant="destructive"
-                    onClick={() => handleDeleteBooking(booking._id)}
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ))}
+        <div className="overflow-x-auto">
+          <Table className="border border-gray-300">
+            <TableHeader>
+              <TableRow className="bg-gray-100">
+                <TableHead>Guest Name</TableHead>
+                <TableHead>Check-in</TableHead>
+                <TableHead>Check-out</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Total Price</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {bookings.map((booking) => (
+                <TableRow key={booking._id} className="hover:bg-gray-50">
+                  <TableCell>{booking.guestName}</TableCell>
+                  <TableCell>{new Date(booking.checkIn).toLocaleDateString()}</TableCell>
+                  <TableCell>{new Date(booking.checkOut).toLocaleDateString()}</TableCell>
+                  <TableCell className="capitalize">{booking.status}</TableCell>
+                  <TableCell>₹{booking.totalPrice}</TableCell>
+                  <TableCell>
+                    <Button 
+                      onClick={() => {
+                        setSelectedBooking(booking);
+                        setIsDetailsModalOpen(true);
+                      }}
+                    >
+                      View Details
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       )}
+
+      {/* Booking Details Modal */}
+      <BookingDetailsModal 
+        isOpen={isDetailsModalOpen} 
+        onClose={() => setIsDetailsModalOpen(false)} 
+        booking={selectedBooking} 
+      />
     </div>
   );
 }

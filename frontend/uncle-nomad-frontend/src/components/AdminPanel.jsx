@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import ManageBookings from './ManageBookings';
 import ManageRooms from './ManageRooms';
@@ -7,8 +7,8 @@ import AdminCredentialsUpdate from './AdminCredentialsUpdate';
 import { Button } from './ui/button';
 
 
-
 const AdminPanel = () => {
+
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -25,12 +25,16 @@ const AdminPanel = () => {
   }, [navigate]);
 
 
-  const navItems = [
+const navItems = [
     { path: 'bookings', label: 'Manage Bookings' },
     { path: 'rooms', label: 'Manage Rooms' },
     { path: 'packages', label: 'Manage Packages' },
+    { path: 'queries', label: 'Manage Queries' },
+    { path: 'media', label: 'Manage Hero Media' },
     { path: 'credentials', label: 'Update Credentials' }
   ];
+
+
 
 
   return (

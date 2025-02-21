@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import PaymentModal from './PaymentModal'
 import { format } from 'date-fns'
 import { CalendarDaysIcon, UserIcon, HomeIcon } from '@heroicons/react/24/outline'
 import { Button } from './ui/button'
@@ -11,16 +12,25 @@ export default function BookingModal({
   onClose,
   bookingForm,
   setBookingForm,
-  handleBookingSubmit,
   isLoading,
+  setIsLoading,
+  setChecking,
   availableRooms,
   handleRoomSelection,
   error,
-  setError
+  setError,
+  setIsModalOpen,
+  setIsBookingConfirmed,
+  setBookingDetails,
+  bookingDetails
 }) {
+  const [paymentData, setPaymentData] = useState(null)
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
+
   const [step, setStep] = useState(0)
   const [validationErrors, setValidationErrors] = useState({})
-  
+  const [showError, setShowError] = useState(true)
+
   const selectedRoom = availableRooms.find(room => room._id === Object.keys(bookingForm.selectedRooms)[0])
 
   const handleInputChange = (e) => {
@@ -69,21 +79,6 @@ export default function BookingModal({
     }))
   }
 
-  const validateStep2 = () => {
-    const errors = {}
-    
-    if (!bookingForm.numberOfGuests || bookingForm.numberOfGuests < 1) {
-      errors.numberOfGuests = 'At least 1 guest is required'
-    }
-
-    if (Object.keys(errors).length > 0) {
-      setValidationErrors(errors)
-      return false
-    }
-    
-    return true
-  }
-
   const validateStep0 = () => {
     const totalCapacity = availableRooms.reduce((sum, room) => {
       const isDorm = room.type.toLowerCase() === 'dorm';
@@ -101,11 +96,19 @@ export default function BookingModal({
   const renderStep0 = () => (
     <div className="spacey-4">
       <h3 className="text-lg font-semibold">Select Rooms</h3>
-      {error && (
-        <div className="p-3 mb-4 text-sm text-red-500 bg-red-50 rounded-md border border-red-200">
-          <div>{error}</div>
-        </div>
-      )}
+          {error && (
+            <div className="p-3 mb-4 text-sm text-red-500 bg-red-50 rounded-md border border-red-200">
+              <div className="font-medium">Booking Error</div>
+              <div>{error}</div>
+              <button 
+                onClick={() => setError('')}
+                className="mt-2 text-sm text-red-600 underline hover:text-red-700"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
+
 
       {availableRooms.map(room => {
         const isDorm = room.type.toLowerCase() === 'dorm'
@@ -114,7 +117,6 @@ export default function BookingModal({
           room.availability.availableBeds - currentCount : 
           room.availability.availableRooms - currentCount
 
-        
         return (
           <div key={room._id} className="border p-4 rounded-lg">
             <div className="flex justify-between items-center">
@@ -125,10 +127,13 @@ export default function BookingModal({
                 <p className="text-sm text-gray-500">
                   ₹{room.price}/night {isDorm && '(per bed)'}
                 </p>
-                {isDorm && (
+                {isDorm ? (
                   <p className="text-sm text-gray-500">
-                  Shared Room - {room.availability.availableBeds} bed{room.availability.availableBeds !== 1 ? 's' : ''} available
-
+                    Shared Room - {room.availability.availableBeds} bed{room.availability.availableBeds !== 1 ? 's' : ''} available
+                  </p>
+                ) : (
+                  <p className="text-sm text-gray-500">
+                    Private Room - {room.availability.availableRooms} room{room.availability.availableRooms !== 1 ? 's' : ''} available
                   </p>
                 )}
               </div>
@@ -140,19 +145,24 @@ export default function BookingModal({
                     }
                   }}
                   className="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-100"
-                  disabled={currentCount === 0}
+                  disabled={currentCount <= 0}
                 >
                   -
                 </button>
                 <span>{currentCount}</span>
                 <button 
                   onClick={() => {
-                    if (remainingCapacity > 0) {
+                    const maxAvailable = room.type === 'Dorm' ? 
+                      room.availability.availableBeds : 
+                      room.availability.availableRooms;
+                    if (currentCount < maxAvailable) {
                       handleRoomSelection(room._id, currentCount + 1)
                     }
                   }}
                   className="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-100"
-                  disabled={remainingCapacity === 0}
+                  disabled={currentCount >= (room.type === 'Dorm' ? 
+                    room.availability.availableBeds : 
+                    room.availability.availableRooms)}
                 >
                   +
                 </button>
@@ -239,6 +249,126 @@ export default function BookingModal({
     </div>
   )
 
+  const validateStep2 = () => {
+    const errors = {}
+    
+    if (!bookingForm.numberOfGuests || bookingForm.numberOfGuests < 1) {
+      errors.numberOfGuests = "At least one guest is required"
+    }
+    if (!bookingForm.guestName) {
+      errors.guestName = "Guest name is required"
+    }
+    if (!bookingForm.email) {
+      errors.email = "Email is required"
+    }
+    if (!bookingForm.phone) {
+      errors.phone = "Phone number is required"
+    }
+    setValidationErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  const handleStep2Submit = async (e) => {
+    e.preventDefault()
+    if (validateStep2()) {
+      try {
+        setIsLoading(true)
+
+
+
+        // Calculate total amount
+        const totalAmount = availableRooms.reduce((sum, room) => {
+          const count = bookingForm.selectedRooms[room._id] || 0
+          return sum + room.price * count
+        }, 0)
+
+        // Prepare booking data
+        const bookingData = {
+          ...bookingForm,
+          totalAmount,
+          rooms: Object.entries(bookingForm.selectedRooms).map(([roomId, quantity]) => ({
+            roomId,
+            quantity,
+            checkIn: bookingForm.checkIn,
+            checkOut: bookingForm.checkOut,
+          })),
+        }
+
+        setBookingForm(bookingData)
+
+        console.log("Sending booking data:", JSON.stringify(bookingData, null, 2))
+
+
+        // const verifyResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/bookings/verify`, {
+        //   method: 'POST',
+        //   headers: {
+        //     'Content-Type': 'application/json',
+        //   },
+        //   body: JSON.stringify(bookingData),
+        // });
+  
+        // if (!verifyResponse.ok) {
+        //   const errorData = await verifyResponse.json();
+        //   setShowError(true)
+        //   setError(errorData.message)
+        //   throw new Error(errorData.message || 'Booking verification failed');
+        // }
+
+        // Initiate payment first
+
+        console.log("Initiating payment request to:", `${process.env.REACT_APP_API_URL}/api/payments/initiate`);
+        const paymentResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/payments/initiate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: 'include', // Include cookies for session
+          body: JSON.stringify({
+            bookingData: bookingData,
+            amount: totalAmount,
+            customerId: bookingForm.email,
+            email: bookingForm.email,
+            phone: bookingForm.phone,
+          }),
+        })
+        
+        console.log("Payment response status:", paymentResponse.status);
+
+
+        if (!paymentResponse.ok) {
+          console.error("Payment initiation failed with status:", paymentResponse.status);
+          let errorData;
+          try {
+            errorData = await paymentResponse.json();
+            console.error("Payment error details:", errorData);
+          } catch (jsonError) {
+            console.error("Failed to parse error response:", jsonError);
+            throw new Error("Failed to initialize payment: Invalid server response");
+          }
+          throw new Error(errorData.message || "Failed to initialize payment");
+        }
+
+
+        const paymentData = await paymentResponse.json()
+
+        if (paymentData.status === "SUCCESS" && paymentData.data) {
+          console.log("Payment data received:", paymentData.data)
+          setPaymentData(paymentData.data)
+          setIsPaymentModalOpen(true)
+
+          
+          console.log("Payment modal opened with data:", paymentData.data)
+
+        } else {
+          throw new Error("Payment initialization failed")
+        }
+      } catch (error) {
+        console.error("Booking/Payment Error:", error)
+        setError("Failed to process booking: " + error.message)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+  }
+
   const renderStep2 = () => (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -306,6 +436,19 @@ export default function BookingModal({
         />
       </div>
 
+      {error && showError && (
+          <div className="p-3 mb-4 text-sm text-red-500 bg-red-50 rounded-md border border-red-200">
+            <div className="font-medium">Booking Error</div>
+            <div>{error}</div>
+            <button 
+              onClick={() => setShowError(false)}
+              className="mt-2 text-sm text-red-600 underline hover:text-red-700"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
       <div className="flex gap-2">
         <Button
           onClick={() => setStep(1)}
@@ -315,23 +458,40 @@ export default function BookingModal({
           Back
         </Button>
         <Button
-          onClick={(e) => {
-            if (validateStep2()) {
-              handleBookingSubmit(e)
-            }
-          }}
+          onClick={handleStep2Submit}
           className="w-full bg-brand-purple hover:bg-brand-purple/90"
           disabled={isLoading}
         >
-          {isLoading ? 'Booking...' : 'Confirm Booking'}
+          {isLoading ? "Processing..." : "Proceed to Payment"}
         </Button>
       </div>
     </div>
   )
 
+  console.log("BookingModal render - isOpen:", isOpen)
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[95vw] sm:max-w-[500px] bg-white p-4 max-h-[90vh] overflow-y-auto rounded-lg shadow-xl overflow-auto">
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+      <PaymentModal
+          setBookingDetails={setBookingDetails}
+          setIsModalOpen={setIsModalOpen}
+          paymentData={paymentData}
+          bookingForm={bookingForm}
+          setChecking={setChecking}
+          onPaymentSuccess={() => {
+          onClose();
+          setPaymentData(null);
+          }}
+          onPaymentFailure={(error) => setError(error)}
+          isOpen={isPaymentModalOpen}
+          onClose={() => setIsPaymentModalOpen(false)}
+          setIsBookingConfirmed={setIsBookingConfirmed}
+          bookingDetails={bookingDetails}
+          />
+
+
+
+      <DialogContent className="w-[95vw] sm:max-w-[500px] bg-white p-4 max-h-[90vh] overflow-y-auto rounded-lg shadow-xl">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">
             Booking Details
@@ -368,8 +528,7 @@ export default function BookingModal({
                   <span>
                     {room.type === 'Dorm' ? 
                       `${count} bed${count !== 1 ? 's' : ''} in Shared Dorm` : 
-                    `${count} Private ${room.type} Room${count > 1 ? 's' : ''}`
-
+                      `${count} Private ${room.type} Room${count > 1 ? 's' : ''}`
                     }
                   </span>
                 </div>
@@ -383,14 +542,9 @@ export default function BookingModal({
             {step === 2 && renderStep2()}
           </div>
         </div>
-
-        {error && (
-          <div className="p-3 mb-4 text-sm text-red-500 bg-red-50 rounded-md border border-red-200">
-            <div className="font-medium">Booking Error</div>
-            <div>{error}</div>
-          </div>
-        )}
       </DialogContent>
-    </Dialog>
+      </Dialog>
+    </>
   )
+
 }
