@@ -5,6 +5,200 @@ import Booking from '../models/Booking.js';
 
 const router = Router();
 
+export const initiatePayment = async (req, res) => {
+    try {
+        const { bookingData, amount, customerId, email, phone } = req.body;
+        
+        console.log('payment initiated : ', bookingData);
+
+        // Validate required fields
+        if (!bookingData || !amount || !email || !phone) {
+            return res.status(400).json({
+                status: 'ERROR',
+                message: 'Missing required fields for payment initiation'
+            });
+        }
+
+        // Validate configuration
+        const config = validatePaytmConfig();
+        
+        // Validate amount format
+        const numericAmount = parseFloat(bookingData.totalAmount);
+        if (isNaN(numericAmount) || numericAmount <= 0) {
+            return res.status(400).json({
+                status: 'ERROR',
+                message: 'Invalid amount value'
+            });
+        }
+
+        // Format order ID with timestamp to ensure uniqueness
+        const timestamp = new Date().getTime();
+        const formattedOrderId = `ORDER_${timestamp}_${email.split('@')[0].substring(0, 6)}`;
+
+        // Prepare parameters with strict validation
+        const paytmParams = {
+            body: {
+                requestType: "Payment",
+                mid: config.PAYTM_MID,
+                websiteName: config.PAYTM_WEBSITE,
+                orderId: formattedOrderId,
+                callbackUrl: config.PAYTM_CALLBACK_URL,
+                txnAmount: {
+                    value: numericAmount.toFixed(2),
+                    currency: "INR",
+                },
+                userInfo: {
+                    custId: email.split('@')[0].substring(0, 20),  // Using email prefix as customer ID
+                    email: email.substring(0, 50),
+                    mobile: phone.toString().replace(/\D/g, '').substring(0, 15)
+                },
+            }
+        };
+
+        // Generate checksum
+        const checksum = await PaytmChecksum.generateSignature(
+            JSON.stringify(paytmParams.body),
+            config.PAYTM_MERCHANT_KEY
+        );
+
+        paytmParams.head = {
+            signature: checksum
+        };
+
+        const post_data = JSON.stringify(paytmParams);
+        
+        // Get API URL based on environment
+        const isProduction = process.env.NODE_ENV === 'production';
+        const hostname = isProduction ? 'securegw.paytm.in' : 'securegw-stage.paytm.in';
+        const apiPath = `/theia/api/v1/initiateTransaction?mid=${config.PAYTM_MID}&orderId=${formattedOrderId}`;
+
+        // Make API call with enhanced error handling
+        const response = await new Promise((resolve, reject) => {
+            const options = {
+                hostname: hostname,
+                port: 443,
+                path: apiPath,
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Content-Length': post_data.length
+                },
+                timeout: 10000
+            };
+
+            const req = https.request(options, (response) => {
+                let data = '';
+                
+                response.on('data', (chunk) => {
+                    data += chunk;
+                });
+                
+                response.on('end', () => {
+                    // Log the raw response for debugging
+                    console.log('Raw Paytm Response:', data);
+                    
+                    try {
+                        const parsedData = JSON.parse(data);
+                        console.log('Parsed Paytm Response:', parsedData);
+                        
+                        // Check if the response has the expected structure
+                        if (!parsedData || typeof parsedData !== 'object') {
+                            reject(new Error('Invalid response format from payment gateway'));
+                            return;
+                        }
+
+                        resolve(parsedData);
+                    } catch (e) {
+                        console.error('Response parsing error:', e);
+                        reject(new Error(`Failed to parse payment gateway response: ${e.message}`));
+                    }
+                });
+            });
+
+            req.on('error', (error) => {
+                console.error('Payment API request error:', error);
+                reject(new Error(`Payment gateway connection error: ${error.message}`));
+            });
+
+            req.on('timeout', () => {
+                req.destroy();
+                reject(new Error('Payment gateway request timed out'));
+            });
+
+            req.write(post_data);
+            req.end();
+        });
+
+        // Enhanced response validation
+        console.log('Checking response structure:', {
+            hasBody: !!response.body,
+            bodyContent: response.body,
+            resultInfo: response.body?.resultInfo
+        });
+
+        if (!response.body) {
+            throw new Error('Invalid response structure from payment gateway');
+        }
+
+        // Check for error response from Paytm
+        if (response.body.resultInfo && response.body.resultInfo.resultStatus === 'F') {
+            throw new Error(response.body.resultInfo.resultMsg || 'Payment initiation failed');
+        }
+
+        // Validate transaction token with detailed error
+        if (!response.body.txnToken) {
+            const errorMsg = response.body.resultInfo?.resultMsg || 'Transaction token not received';
+            console.error('Transaction token error:', {
+                response: response.body,
+                resultInfo: response.body.resultInfo
+            });
+            throw new Error(errorMsg);
+        }
+
+        // Store temporary booking reference
+        const tempBooking = {
+            ...bookingData,
+            paymentStatus: 'INITIATED',
+            paymentInitiatedAt: new Date(),
+            paytmOrderId: formattedOrderId,
+            status: 'PENDING',
+            paymentReference: formattedOrderId
+        };
+
+        if (req.session) {
+            req.session.tempBooking = tempBooking;
+        } else {
+            console.warn('Session not available for storing booking data');
+        }
+
+        return res.json({
+            status: 'SUCCESS',
+            data: {
+                mid: config.PAYTM_MID,
+                orderId: formattedOrderId,
+                txnToken: response.body.txnToken,
+                amount: numericAmount.toFixed(2),
+                callbackUrl: config.PAYTM_CALLBACK_URL,
+                environment: isProduction ? 'PROD' : 'STAGE'
+            }
+        });
+
+    } catch (error) {
+        console.error('Payment initiation error:', {
+            message: error.message,
+            stack: error.stack,
+            // Log additional context if available
+            responseData: error.responseData
+        });
+
+        return res.status(500).json({
+            status: 'ERROR',
+            message: error.message || 'Failed to initiate payment',
+            code: 'PAYMENT_INITIATION_ERROR'
+        });
+    }
+};
+
 const validatePaytmConfig = () => {
     const requiredConfig = {
         PAYTM_MID: process.env.PAYTM_MID,
@@ -24,170 +218,6 @@ const validatePaytmConfig = () => {
     return requiredConfig;
 };
 
-// Updates to initiatePayment function in the payment controller
-
-export const initiatePayment = async (req, res) => {
-    try {
-        const { bookingData, amount, customerId, email, phone } = req.body;
-        
-        console.log('payment initiated : ',bookingData)
-        // Validate required fields
-        if (!bookingData || !amount || !customerId || !email || !phone) {
-
-            return res.status(400).json({
-                status: 'ERROR',
-                message: 'Missing required fields for payment initiation'
-            });
-        }
-
-        // Validate configuration
-        const config = validatePaytmConfig();
-        
-        // Validate amount format
-        const numericAmount = parseFloat(amount);
-        if (isNaN(numericAmount) || numericAmount <= 0) {
-            return res.status(400).json({
-                status: 'ERROR',
-                message: 'Invalid amount value'
-            });
-        }
-
-        // Format order ID with timestamp to ensure uniqueness
-        const timestamp = new Date().getTime();
-        const formattedOrderId = `ORDER_${timestamp}_${customerId.toString().substring(0, 6)}`;
-
-
-        // Prepare parameters with strict validation
-        const paytmParams = {
-            body: {
-                requestType: "Payment",
-                mid: config.PAYTM_MID,
-                websiteName: config.PAYTM_WEBSITE,
-                orderId: formattedOrderId,
-                callbackUrl: config.PAYTM_CALLBACK_URL,
-                txnAmount: {
-                    value: numericAmount.toFixed(2),
-                    currency: "INR",
-                },
-                userInfo: {
-                    custId: customerId.toString().substring(0, 20),  // Limit customer ID length
-                    email: email.substring(0, 50),  // Prevent overly long emails
-                    mobile: phone.toString().replace(/\D/g, '').substring(0, 15)  // Sanitize phone
-                },
-            }
-        };
-
-        // Generate checksum
-        let checksum;
-        try {
-            checksum = await PaytmChecksum.generateSignature(
-                JSON.stringify(paytmParams.body),
-                config.PAYTM_MERCHANT_KEY
-            );
-        } catch (checksumError) {
-            console.error('Checksum generation error:', checksumError);
-            throw new Error('Failed to generate payment signature');
-        }
-
-        paytmParams.head = {
-            signature: checksum
-        };
-
-        const post_data = JSON.stringify(paytmParams);
-        
-        // Get API URL based on environment
-        const isProduction = process.env.NODE_ENV === 'production';
-        const hostname = isProduction ? 'securegw.paytm.in' : 'securegw-stage.paytm.in';
-        const apiPath = `/theia/api/v1/initiateTransaction?mid=${config.PAYTM_MID}&orderId=${formattedOrderId}`;
-
-        // Make API call with proper error handling
-        const response = await new Promise((resolve, reject) => {
-            const options = {
-                hostname: hostname,
-                port: 443,
-                path: apiPath,
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Content-Length': post_data.length
-                },
-                timeout: 10000, // 10 second timeout
-            };
-
-            // Create request with timeout handling
-            const req = https.request(options, (response) => {
-                let data = '';
-                
-                response.on('data', (chunk) => {
-                    data += chunk;
-                });
-                
-                response.on('end', () => {
-                    try {
-                        // Check if response is valid JSON
-                        const parsedData = JSON.parse(data);
-                        resolve(parsedData);
-                    } catch (e) {
-                        reject(new Error(`Failed to parse Paytm response: ${data.substring(0, 100)}`));
-                    }
-                });
-            });
-
-            req.on('error', (error) => {
-                console.error('Payment API request error:', error);
-                reject(new Error(`Payment gateway connection error: ${error.message}`));
-            });
-
-            req.on('timeout', () => {
-                req.destroy();
-                reject(new Error('Payment gateway request timed out'));
-            });
-
-            req.write(post_data);
-            req.end();
-        });
-
-        // Create temporary booking reference
-            const tempBooking = {
-                ...bookingData,
-                paymentStatus: 'INITIATED',
-                paymentInitiatedAt: new Date(),
-                paytmOrderId: formattedOrderId,
-                status: 'PENDING',
-                paymentReference: formattedOrderId
-            };
-
-
-        // Store temporary booking reference
-        req.session.tempBooking = tempBooking;
-
-
-        // Validate that we got a transaction token
-        if (!response.body?.txnToken) {
-            throw new Error(response.body?.resultInfo?.resultMsg || 'Failed to get transaction token');
-        }
-
-        res.json({
-            status: 'SUCCESS',
-            data: {
-                mid: config.PAYTM_MID,
-                orderId: formattedOrderId,
-                txnToken: response.body.txnToken,
-                amount: numericAmount.toFixed(2),
-                callbackUrl: config.PAYTM_CALLBACK_URL,
-                environment: isProduction ? 'PROD' : 'STAGE'
-            }
-        });
-
-    } catch (error) {
-        console.error('Payment initiation error:', error);
-        res.status(500).json({
-            status: 'ERROR',
-            message: error.message || 'Failed to initiate payment',
-            code: error.code
-        });
-    }
-};
 export const paymentCallback = async (req, res) => {
     try {
         console.log('Payment callback received:', req.body);
