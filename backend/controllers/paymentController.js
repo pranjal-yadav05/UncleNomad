@@ -79,7 +79,8 @@ export const initiatePayment = async (req, res) => {
         const apiPath = `/theia/api/v1/initiateTransaction?mid=${config.PAYTM_MID}&orderId=${formattedOrderId}`;
 
         // Log the request details before making the API call
-        console.log('Making request to Paytm API:', {
+        console.log('Making request to Paytm API with details:', {
+
             url: `https://${hostname}${apiPath}`,
             method: 'POST',
             headers: {
@@ -112,11 +113,13 @@ export const initiatePayment = async (req, res) => {
                 
                 response.on('end', () => {
                     // Log the raw response for debugging
-                    console.log('Raw Paytm response:', data);
+        console.log('Raw Paytm response received:', data);
+
 
                     try {
                         const parsedData = JSON.parse(data);
-                        console.log('Parsed Paytm response:', parsedData);
+        console.log('Parsed Paytm response details:', parsedData);
+
                         
                         // Check if the response has the expected structure
                         if (!parsedData || typeof parsedData !== 'object') {
@@ -147,7 +150,8 @@ export const initiatePayment = async (req, res) => {
         });
 
         // Enhanced response validation
-        console.log('Validating response structure:', {
+        console.log('Validating response structure and content:', {
+
             hasBody: !!response.body,
             bodyContent: response.body,
             resultInfo: response.body?.resultInfo
@@ -165,7 +169,8 @@ export const initiatePayment = async (req, res) => {
         // Validate transaction token with detailed error
         if (!response.body.txnToken) {
             const errorMsg = response.body.resultInfo?.resultMsg || 'Transaction token not received';
-            console.error('Transaction token error:', {
+        console.error('Error retrieving transaction token:', {
+
                 response: response.body,
                 resultInfo: response.body.resultInfo
             });
@@ -213,7 +218,8 @@ export const initiatePayment = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Payment initiation error:', {
+        console.error('Error during payment initiation:', {
+
             message: error.message,
             stack: error.stack,
             // Log additional context if available
