@@ -78,6 +78,17 @@ export const initiatePayment = async (req, res) => {
         const hostname = isProduction ? 'securegw.paytm.in' : 'securegw-stage.paytm.in';
         const apiPath = `/theia/api/v1/initiateTransaction?mid=${config.PAYTM_MID}&orderId=${formattedOrderId}`;
 
+        // Log the request details before making the API call
+        console.log('Making request to Paytm API:', {
+            url: `https://${hostname}${apiPath}`,
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': post_data.length
+            },
+            body: paytmParams
+        });
+
         // Make API call with enhanced error handling
         const response = await new Promise((resolve, reject) => {
             const options = {
@@ -408,6 +419,17 @@ export const verifyPayment = async (req, res) => {
         const hostname = isProduction ? 'securegw.paytm.in' : 'securegw-stage.paytm.in';
         const apiPath = `/v3/order/status`;
 
+        // Log the request details before making the API call
+        console.log('Making request to Paytm Status API:', {
+            url: `https://${hostname}${apiPath}`,
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': post_data.length
+            },
+            body: paytmParams
+        });
+
         // Make API call to check transaction status
         const response = await new Promise((resolve, reject) => {
             const options = {
@@ -420,12 +442,6 @@ export const verifyPayment = async (req, res) => {
                     'Content-Length': post_data.length
                 }
             };
-
-            console.log('Making request to Paytm Status API:', {
-                url: `https://${hostname}${apiPath}`,
-                method: 'POST',
-                orderId: orderId
-            });
 
             const req = https.request(options, (response) => {
                 let data = '';
