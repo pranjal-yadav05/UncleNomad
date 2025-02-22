@@ -6,10 +6,12 @@ import Booking from '../models/Booking.js';
 const router = Router();
 
 export const initiatePayment = async (req, res) => {
+    console.log('Incoming request body:', req.body);
+
     try {
         const { bookingData, amount, customerId, email, phone } = req.body;
         
-        console.log('payment initiated : ', bookingData);
+        console.log('Payment initiated with booking data:', bookingData);
 
         // Validate required fields
         if (!bookingData || !amount || !email || !phone) {
@@ -21,9 +23,12 @@ export const initiatePayment = async (req, res) => {
 
         // Validate configuration
         const config = validatePaytmConfig();
+        console.log('Paytm configuration validated:', config);
         
         // Validate amount format
         const numericAmount = parseFloat(bookingData.totalAmount);
+        console.log('Parsed numeric amount:', numericAmount);
+
         if (isNaN(numericAmount) || numericAmount <= 0) {
             return res.status(400).json({
                 status: 'ERROR',
@@ -34,6 +39,7 @@ export const initiatePayment = async (req, res) => {
         // Format order ID with timestamp to ensure uniqueness
         const timestamp = new Date().getTime();
         const formattedOrderId = `ORDER_${timestamp}_${email.split('@')[0].substring(0, 6)}`;
+        console.log('Generated order ID:', formattedOrderId);
 
         // Prepare parameters with strict validation
         const paytmParams = {
@@ -95,11 +101,11 @@ export const initiatePayment = async (req, res) => {
                 
                 response.on('end', () => {
                     // Log the raw response for debugging
-                    console.log('Raw Paytm Response:', data);
-                    
+                    console.log('Raw Paytm response:', data);
+
                     try {
                         const parsedData = JSON.parse(data);
-                        console.log('Parsed Paytm Response:', parsedData);
+                        console.log('Parsed Paytm response:', parsedData);
                         
                         // Check if the response has the expected structure
                         if (!parsedData || typeof parsedData !== 'object') {
@@ -130,7 +136,7 @@ export const initiatePayment = async (req, res) => {
         });
 
         // Enhanced response validation
-        console.log('Checking response structure:', {
+        console.log('Validating response structure:', {
             hasBody: !!response.body,
             bodyContent: response.body,
             resultInfo: response.body?.resultInfo
@@ -170,6 +176,18 @@ export const initiatePayment = async (req, res) => {
         } else {
             console.warn('Session not available for storing booking data');
         }
+
+        console.log('Sending response to client:', {
+            status: 'SUCCESS',
+            data: {
+                mid: config.PAYTM_MID,
+                orderId: formattedOrderId,
+                txnToken: response.body.txnToken,
+                amount: numericAmount.toFixed(2),
+                callbackUrl: config.PAYTM_CALLBACK_URL,
+                environment: isProduction ? 'PROD' : 'STAGE'
+            }
+        });
 
         return res.json({
             status: 'SUCCESS',
@@ -254,7 +272,6 @@ export const paymentCallback = async (req, res) => {
             receivedData.head.signature
         );
         console.log('Checksum verification result:', isValidChecksum);
-
 
         if (!isValidChecksum) {
             console.error('Checksum verification failed for order:', receivedData.body?.ORDERID);
@@ -351,6 +368,7 @@ export const paymentCallback = async (req, res) => {
         res.redirect(`${process.env.FRONTEND_URL}/booking-failed?error=${encodeURIComponent(error.message)}`);
     }
 };
+
 export const verifyPayment = async (req, res) => {
     try {
         const { orderId } = req.body;
@@ -529,6 +547,5 @@ export const verifyPayment = async (req, res) => {
         });
     }
 };
-
 
 export default router;
