@@ -34,7 +34,7 @@ const PaytmPaymentForm = ({
       }
 
       const script = document.createElement("script")
-      script.src = `https://securegw${paymentData.environment === 'PROD' ? '' : '-stage'}.paytm.in/merchantpgpui/checkoutjs/merchants/${paymentData.mid}.js`
+      script.src = `https://${process.env.REACT_APP_PAYTM_HOSTNAME}/merchantpgpui/checkoutjs/merchants/${paymentData.mid}.js`
       script.async = true
       script.crossOrigin = "anonymous"
 
