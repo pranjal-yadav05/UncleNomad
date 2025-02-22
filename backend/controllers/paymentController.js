@@ -74,8 +74,7 @@ export const initiatePayment = async (req, res) => {
         const post_data = JSON.stringify(paytmParams);
         
         // Get API URL based on environment
-        const isProduction = process.env.NODE_ENV === 'production';
-        const hostname = isProduction ? 'securegw.paytm.in' : 'securegw-stage.paytm.in';
+        const hostname = process.env.PAYTM_HOSTNAME;
         const apiPath = `/theia/api/v1/initiateTransaction?mid=${config.PAYTM_MID}&orderId=${formattedOrderId}`;
 
         // Log the request details before making the API call
@@ -421,8 +420,7 @@ export const verifyPayment = async (req, res) => {
         const post_data = JSON.stringify(paytmParams);
 
         // Get API URL based on environment
-        const isProduction = process.env.NODE_ENV === 'production';
-        const hostname = isProduction ? 'securegw.paytm.in' : 'securegw-stage.paytm.in';
+        const hostname = process.env.PAYTM_HOSTNAME;
         const apiPath = `/v3/order/status`;
 
         // Log the request details before making the API call
