@@ -200,7 +200,6 @@ export const initiatePayment = async (req, res) => {
                 txnToken: response.body.txnToken,
                 amount: numericAmount.toFixed(2),
                 callbackUrl: config.PAYTM_CALLBACK_URL,
-                environment: isProduction ? 'PROD' : 'STAGE'
             }
         });
 
@@ -212,7 +211,6 @@ export const initiatePayment = async (req, res) => {
                 txnToken: response.body.txnToken,
                 amount: numericAmount.toFixed(2),
                 callbackUrl: config.PAYTM_CALLBACK_URL,
-                environment: isProduction ? 'PROD' : 'STAGE'
             }
         });
 
