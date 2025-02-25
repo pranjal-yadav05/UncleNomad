@@ -82,6 +82,18 @@ const ManageQueries = () => {
     fetchQueries();
   }, []);
 
+  if (isLoading) {
+    return (
+      <div className="p-4">
+        <h2 className="text-xl font-semibold mb-4">Manage Queries</h2>
+        <div className="flex items-center gap-3">
+          <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-gray-900"></div>
+          <p className="text-gray-600">Loading queries...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       <h2 className="text-2xl font-bold">Manage Customer Queries</h2>

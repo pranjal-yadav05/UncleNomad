@@ -211,11 +211,13 @@ export default function ManageBookings() {
     return (
       <div className="p-4">
         <h2 className="text-xl font-semibold mb-4">Manage Bookings</h2>
-        <div className="text-center">Loading bookings...</div>
+        <div className="flex items-center gap-3">
+          <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-gray-900"></div>
+          <p className="text-gray-600">Loading bookings...</p>
+        </div>
       </div>
     );
   }
-
   return (
     <div className="p-4">
       <h2 className="text-2xl font-bold mb-6 text-gray-800">Manage Bookings</h2>

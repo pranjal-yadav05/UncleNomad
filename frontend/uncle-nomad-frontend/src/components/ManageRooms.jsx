@@ -27,6 +27,7 @@ export default function ManageRooms() {
   const [editMode, setEditMode] = useState(false);
   const [showRoomForm, setShowRoomForm] = useState(false);
   const [currentRoomId, setCurrentRoomId] = useState(null);
+  const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
     fetchRooms();
@@ -34,6 +35,7 @@ export default function ManageRooms() {
 
   const fetchRooms = async () => {
     try {
+      setIsLoading(true)
       const response = await fetch(`${API_URL}/api/rooms`);
       if (!response.ok) {
         throw new Error('Failed to fetch rooms');
@@ -48,12 +50,14 @@ export default function ManageRooms() {
     } catch (error) {
       console.error('Error fetching rooms:', error);
       setRooms([]);
+    } finally{
+      setIsLoading(false)
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+    setIsLoading(true)
     const url = editMode ? `${API_URL}/api/rooms/${currentRoomId}` : `${API_URL}/api/rooms`;
     const method = editMode ? 'PUT' : 'POST';
   
@@ -112,6 +116,8 @@ export default function ManageRooms() {
     } catch (error) {
       console.error('Error saving room:', error);
       alert(`Error: ${error.message}`);
+    } finally{
+      setIsLoading(false)
     }
   };
 
@@ -138,6 +144,7 @@ export default function ManageRooms() {
 
   const handleDelete = async (id) => {
     try {
+      setIsLoading(true)
       const response = await fetch(`${API_URL}/api/rooms/${id}`, {
         method: 'DELETE',
       });
@@ -147,8 +154,22 @@ export default function ManageRooms() {
       }
     } catch (error) {
       console.error('Error deleting room:', error);
+    } finally{
+      setIsLoading(false)
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="p-4">
+        <h2 className="text-xl font-semibold mb-4">Manage Rooms</h2>
+        <div className="flex items-center gap-3">
+          <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-gray-900"></div>
+          <p className="text-gray-600">Loading rooms...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4">

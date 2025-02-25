@@ -22,6 +22,11 @@ const AdminPanel = () => {
     if (!authToken) {
       navigate('/admin-auth');
     }
+
+    if (location.pathname === '/admin') {
+      navigate('/admin/bookings');
+    }
+    
   }, [navigate]);
 
 

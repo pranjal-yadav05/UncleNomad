@@ -11,7 +11,8 @@ export default function RoomFormModal({
   formData,
   setFormData,
   handleSubmit,
-  editMode
+  editMode,
+  isLoading
 }) {
   const handleInputChange = (e) => {
     const { name, value, type, files, checked } = e.target;
@@ -119,7 +120,7 @@ export default function RoomFormModal({
               Cancel
             </Button>
             <Button type="submit">
-              {editMode ? 'Update Room' : 'Add Room'}
+              {isLoading ? "processing..." : editMode ? 'Update Room' : 'Add Room'}
             </Button>
           </div>
         </form>

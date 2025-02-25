@@ -49,6 +49,7 @@ export default function ManagePackages() {
   const [error, setError] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     fetchPackages();
@@ -56,6 +57,7 @@ export default function ManagePackages() {
 
   const fetchPackages = async () => {
     try {
+      setIsLoading(true)
       const response = await fetch(`${API_URL}/api/tours`);
       if (!response.ok) throw new Error("Failed to fetch packages");
       const data = await response.json();
@@ -63,6 +65,8 @@ export default function ManagePackages() {
     } catch (error) {
       console.error("Error fetching packages:", error);
       setError("Failed to load packages. Please try again.");
+    } finally{
+      setIsLoading(false)
     }
   };
 
@@ -164,6 +168,20 @@ export default function ManagePackages() {
     setCurrentPackageId(null);
     setIsModalOpen(false);
   };
+
+  if (isLoading) {
+    return (
+      <div className="p-4">
+        <h2 className="text-xl font-semibold mb-4">Manage Packages</h2>
+        <div className="flex items-center gap-3">
+          <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-gray-900"></div>
+          <p className="text-gray-600">Loading packages...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  
 
   return (
     <div className="container mx-auto px-4 py-8">
