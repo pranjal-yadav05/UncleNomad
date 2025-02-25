@@ -1,7 +1,9 @@
-import { Button } from "./ui/button"
-import { Input } from "./ui/input"
-import { Label } from "./ui/label"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { useEffect } from "react"; // Import useEffect for handling image upload
+
 
 export default function RoomFormModal({
   isOpen,
@@ -12,10 +14,27 @@ export default function RoomFormModal({
   editMode
 }) {
   const handleInputChange = (e) => {
-    const { name, value, type } = e.target
-    const parsedValue = type === 'number' ? Number(value) : value
-    setFormData({ ...formData, [name]: parsedValue })
-  }
+    const { name, value, type, files, checked } = e.target;
+    
+    if (type === 'file') {
+      setFormData({ ...formData, [name]: files[0] });
+    } else if (type === 'checkbox') {
+      setFormData({ ...formData, [name]: checked });
+    } else if (type === 'number') {
+      setFormData({ ...formData, [name]: Number(value) });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
+  };
+  
+  useEffect(() => {
+    // Reset image field if editing a room
+    if (editMode && formData.image) {
+      setFormData({ ...formData, image: formData.image });
+    }
+  }, [editMode, formData.image]);
+
+
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -82,7 +101,20 @@ export default function RoomFormModal({
               />
             </div>
           </div>
-          <div className="flex justify-end gap-2 mt-6">
+            <div className="space-y-2">
+              <Label htmlFor="image">Room Image</Label>
+              <Input
+                id="image"
+                name="image"
+                type="file"
+                accept="image/*"
+                onChange={handleInputChange}
+                required={!editMode} // Only required for new rooms
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 mt-6">
+
             <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
             </Button>

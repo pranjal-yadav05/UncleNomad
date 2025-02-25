@@ -1,26 +1,33 @@
 import express from 'express';
-const router = express.Router();
 import {
   createRoom,
-  getRooms,
-  getRoomById,
   updateRoom,
-  deleteRoom
+  deleteRoom,
+  getRoomById,
+  getRooms,
 } from '../controllers/roomController.js';
+import multer from 'multer'; // Import multer for handling file uploads
 
-// Create a new room
-router.post('/', createRoom);
+const router = express.Router();
+const upload = multer({ dest: 'uploads/' }); // Set up multer for file uploads
 
-// Get all rooms
-router.get('/', getRooms);
-
-// Get a single room by ID
-router.get('/:id', getRoomById);
-
-// Update a room
-router.put('/:id', updateRoom);
-
-// Delete a room
+// Room routes
+router.post('/', upload.single('image'), (req, res, next) => {
+  console.log('POST request received for room creation');
+  console.log('File:', req.file);
+  console.log('Body:', req.body);
+  next();
+}, createRoom);
+ // Use multer middleware for image upload
+ router.put('/:id', upload.single('image'), (req, res, next) => {
+  console.log(`PUT request received for room ${req.params.id}`);
+  console.log('File:', req.file);
+  console.log('Body:', req.body);
+  next();
+}, updateRoom);
+ // Use multer middleware for image upload
 router.delete('/:id', deleteRoom);
+router.get('/:id', getRoomById);
+router.get('/', getRooms);
 
 export default router;

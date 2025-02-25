@@ -56,21 +56,39 @@ export default function ManageRooms() {
     
     const url = editMode ? `${API_URL}/api/rooms/${currentRoomId}` : `${API_URL}/api/rooms`;
     const method = editMode ? 'PUT' : 'POST';
-
+  
+    // Create a FormData object
+    const formDataToSend = new FormData();
+    
+    // Properly append each field to the FormData
+    for (const key in formData) {
+      // Handle arrays like amenities specially
+      if (Array.isArray(formData[key])) {
+        formData[key].forEach(item => formDataToSend.append(`${key}[]`, item));
+      } 
+      // Handle file objects (don't try to convert them to string)
+      else if (key === 'image' && formData[key] instanceof File) {
+        formDataToSend.append(key, formData[key]);
+      }
+      // Handle booleans and other primitives
+      else {
+        formDataToSend.append(key, formData[key]);
+      }
+    }
+  
     try {
       const response = await fetch(url, {
         method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
+        body: formDataToSend,
+        // Important: Do not set Content-Type header when sending FormData
+        // Let the browser set it with the correct boundary
       });
-
+  
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to save room');
       }
-
+  
       fetchRooms();
       setFormData({
         id: '',
@@ -85,7 +103,8 @@ export default function ManageRooms() {
         smokingAllowed: false,
         alcoholAllowed: false,
         childrenAllowed: true,
-        childrenPolicy: ''
+        childrenPolicy: '',
+        image: null // Reset image field properly
       });
       setEditMode(false);
       setCurrentRoomId(null);
@@ -155,6 +174,7 @@ export default function ManageRooms() {
       <Table className="border border-gray-300">
         <TableHeader>
           <TableRow className="bg-gray-100">
+            <TableHead>Image</TableHead>
             <TableHead>ID</TableHead>
             <TableHead>Type</TableHead>
             <TableHead>Price</TableHead>
@@ -166,6 +186,15 @@ export default function ManageRooms() {
         <TableBody>
           {rooms.map((room) => (
             <TableRow key={room._id}>
+              <TableCell>
+                {room.imageUrl && (
+                  <img 
+                    src={room.imageUrl} 
+                    alt={'image'} 
+                    className="w-16 h-16 object-cover rounded"
+                  />
+                )}
+              </TableCell>
               <TableCell>{room.id}</TableCell>
               <TableCell>{room.type}</TableCell>
               <TableCell>{room.price}</TableCell>

@@ -162,6 +162,7 @@ function AvailabilitySection() {
           className="bg-brand-purple text-white hover:bg-brand-purple/90"
           onClick={checkAvailability}
           disabled={loading}
+          id='checkbtn'
         >
           {loading ? "checking..." : "Check Availability"}
         </Button>

@@ -36,7 +36,7 @@ const Header = () => {
           <nav className="hidden md:flex items-center space-x-6">
           <a 
               href="#about" 
-              className="text-gray-600 hover:text-brand-purple transition-colors"
+              className="text-black hover:text-yellow"
               onClick={(e) => {
                 e.preventDefault();
                 const section = document.getElementById('about');
@@ -52,7 +52,7 @@ const Header = () => {
             </a>
             <a 
               href="#availability" 
-              className="text-gray-600 hover:text-brand-purple transition-colors"
+              className="text-black hover:text-yellow"
               onClick={(e) => {
                 e.preventDefault();
                 const section = document.getElementById('availability');
@@ -68,7 +68,7 @@ const Header = () => {
             </a>
             <a 
               href="#tours" 
-              className="text-gray-600 hover:text-brand-purple transition-colors"
+              className="text-black hover:text-yellow"
               onClick={(e) => {
                 e.preventDefault();
                 const section = document.getElementById('tours');

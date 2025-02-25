@@ -96,81 +96,91 @@ export default function BookingModal({
   const renderStep0 = () => (
     <div className="spacey-4">
       <h3 className="text-lg font-semibold">Select Rooms</h3>
-          {error && (
-            <div className="p-3 mb-4 text-sm text-red-500 bg-red-50 rounded-md border border-red-200">
-              <div className="font-medium">Booking Error</div>
-              <div>{error}</div>
-              <button 
-                onClick={() => setError('')}
-                className="mt-2 text-sm text-red-600 underline hover:text-red-700"
-              >
-                Dismiss
-              </button>
-            </div>
-          )}
-
-
+      {error && (
+        <div className="p-3 mb-4 text-sm text-red-500 bg-red-50 rounded-md border border-red-200">
+          <div className="font-medium">Booking Error</div>
+          <div>{error}</div>
+          <button 
+            onClick={() => setError('')}
+            className="mt-2 text-sm text-red-600 underline hover:text-red-700"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+  
       {availableRooms.map(room => {
-        const isDorm = room.type.toLowerCase() === 'dorm'
-        const currentCount = bookingForm.selectedRooms[room._id] || 0
+        const isDorm = room.type.toLowerCase() === 'dorm';
+        const currentCount = bookingForm.selectedRooms[room._id] || 0;
         const remainingCapacity = isDorm ? 
           room.availability.availableBeds - currentCount : 
-          room.availability.availableRooms - currentCount
-
+          room.availability.availableRooms - currentCount;
+  
         return (
-          <div key={room._id} className="border p-4 rounded-lg">
-            <div className="flex justify-between items-center">
-              <div>
-                <h4 className="font-medium">
-                  {isDorm ? 'Dorm Bed' : `${room.type} Room`}
-                </h4>
+          <div key={room._id} className="border p-4 rounded-lg flex gap-4">
+            {/* Image Section */}
+            <div className="w-24 h-24 flex-shrink-0">
+              <img 
+                src={room.imageUrl} 
+                alt="room-image" 
+                className="w-full h-full object-cover rounded-md"
+              />
+            </div>
+  
+            {/* Room Details */}
+            <div className="flex-1">
+              <h4 className="font-medium">
+                {isDorm ? 'Dorm Bed' : `${room.type} Room`}
+              </h4>
+              <p className="text-sm text-gray-500">
+                ₹{room.price}/night {isDorm && '(per bed)'}
+              </p>
+              {isDorm ? (
                 <p className="text-sm text-gray-500">
-                  ₹{room.price}/night {isDorm && '(per bed)'}
+                  Shared Room - {room.availability.availableBeds} bed{room.availability.availableBeds !== 1 ? 's' : ''} available
                 </p>
-                {isDorm ? (
-                  <p className="text-sm text-gray-500">
-                    Shared Room - {room.availability.availableBeds} bed{room.availability.availableBeds !== 1 ? 's' : ''} available
-                  </p>
-                ) : (
-                  <p className="text-sm text-gray-500">
-                    Private Room - {room.availability.availableRooms} room{room.availability.availableRooms !== 1 ? 's' : ''} available
-                  </p>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => {
-                    if (currentCount > 0) {
-                      handleRoomSelection(room._id, currentCount - 1)
-                    }
-                  }}
-                  className="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-100"
-                  disabled={currentCount <= 0}
-                >
-                  -
-                </button>
-                <span>{currentCount}</span>
-                <button 
-                  onClick={() => {
-                    const maxAvailable = room.type === 'Dorm' ? 
-                      room.availability.availableBeds : 
-                      room.availability.availableRooms;
-                    if (currentCount < maxAvailable) {
-                      handleRoomSelection(room._id, currentCount + 1)
-                    }
-                  }}
-                  className="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-100"
-                  disabled={currentCount >= (room.type === 'Dorm' ? 
+              ) : (
+                <p className="text-sm text-gray-500">
+                  Private Room - {room.availability.availableRooms} room{room.availability.availableRooms !== 1 ? 's' : ''} available
+                </p>
+              )}
+            </div>
+  
+            {/* Quantity Controls */}
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => {
+                  if (currentCount > 0) {
+                    handleRoomSelection(room._id, currentCount - 1);
+                  }
+                }}
+                className="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-100"
+                disabled={currentCount <= 0}
+              >
+                -
+              </button>
+              <span>{currentCount}</span>
+              <button 
+                onClick={() => {
+                  const maxAvailable = isDorm ? 
                     room.availability.availableBeds : 
-                    room.availability.availableRooms)}
-                >
-                  +
-                </button>
-              </div>
+                    room.availability.availableRooms;
+                  if (currentCount < maxAvailable) {
+                    handleRoomSelection(room._id, currentCount + 1);
+                  }
+                }}
+                className="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-100"
+                disabled={currentCount >= (isDorm ? 
+                  room.availability.availableBeds : 
+                  room.availability.availableRooms)}
+              >
+                +
+              </button>
             </div>
           </div>
-        )
+        );
       })}
+      
       <Button
         onClick={() => {
           if (validateStep0()) {
@@ -184,13 +194,14 @@ export default function BookingModal({
       >
         Next
       </Button>
-
+  
       <p className="text-sm text-gray-500 mt-2">
         Note: When booking dorm beds, you're reserving individual beds in a shared space. 
         Private rooms are booked as complete units.
       </p>
     </div>
-  )
+  );
+  
 
   const renderStep1 = () => (
     <div className="space-y-4">

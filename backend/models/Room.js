@@ -23,6 +23,10 @@ const roomSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  imageUrl:{
+    type:String,
+    required:false
+  },
   amenities: [String],
   mealIncluded: Boolean,
   mealPrice: Number,

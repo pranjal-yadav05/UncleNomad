@@ -4,22 +4,15 @@ import { useState, useEffect, useRef } from "react"
 import Header from "./Header"
 import HeroSection from "./HeroSection"
 import AvailabilitySection from "./AvailabilitySection"
-import TourCard from "./TourCard"
-import TourDetailsModal from "./TourDetailsModal"
 import AboutSection from "./AboutSection"
-import BookingModal from "./BookingModal"
-import TourBookingModal from "./TourBookingModal"
-import GuideBookingModal from "./GuideBookingModal"
-import BookingConfirmationDialog from "./BookingConfirmationDialog"
 import Footer from "./Footer"
-import TourGuides from "./TourGuides"
 import TourSection from "./TourSection"
+import AvailableRooms from "./AvailableRooms"
 
 export default function TravelPage() {
   const API_URL = process.env.REACT_APP_API_URL;
-  const [property, setProperty] = useState(null)
   const [tours, setTours] = useState([])
-  const [guides, setGuides] = useState([])
+  const [rooms, setRooms] = useState([])
   const [availableRooms, setAvailableRooms] = useState([])
 
   const [bookingDates, setBookingDates] = useState({
@@ -50,14 +43,6 @@ export default function TravelPage() {
   const roomsRef = useRef(null)
 
   useEffect(() => {
-    // Fetch property data
-    fetch(`${API_URL}/api/property`)
-      .then((res) => res.json())
-      .then((data) => {
-        setProperty(data)
-        setIsLoading((prev) => ({ ...prev, property: false }))
-      })
-      .catch((error) => console.error("Error fetching property:", error))
 
     // Fetch tours and guides data
     fetch(`${API_URL}/api/tours`)
@@ -67,14 +52,15 @@ export default function TravelPage() {
         setIsLoading((prev) => ({ ...prev, tours: false }))
       })
       .catch((error) => console.error("Error fetching tours:", error))
-
-    fetch(`${API_URL}/api/guides`)
-      .then((res) => res.json())
-      .then((data) => {
-        setGuides(data)
-        setIsLoading((prev) => ({ ...prev, guides: false }))
+    
+    fetch(`${API_URL}/api/rooms`)
+    .then((res) => res.json())
+    .then((data) => {
+      setRooms(data)
+      setIsLoading((prev) => ({ ...prev, property: false, rooms: false }))
       })
-      .catch((error) => console.error("Error fetching guides:", error))
+      .catch((error) => console.error("Error fetching rooms:", error))
+
   }, [])
 
   const checkAvailability = async () => {
@@ -107,9 +93,25 @@ export default function TravelPage() {
   }
 
   const handleBookNowClick = (room) => {
-    setSelectedRoom(room)
-    setIsBookingModalOpen(true)
-  }
+    const availabilitySection = document.getElementById("availability");
+    const section = document.getElementById('checkbtn')
+    if (availabilitySection) {
+      const offset = 100; // Adjust this value as needed
+      const elementPosition = availabilitySection.getBoundingClientRect().top + window.scrollY;
+      const offsetPosition = elementPosition - offset;
+  
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: "smooth",
+      });
+
+      section.classList.add('highlight2');
+      setTimeout(() => {
+        section.classList.remove('highlight2');
+      }, 2000);
+    }
+  };
+  
 
   const handleBookingSubmit = async (e) => {
     e.preventDefault()
@@ -171,7 +173,10 @@ export default function TravelPage() {
         
         <AboutSection />
 
-        <AvailabilitySection />
+      <AvailabilitySection />
+
+      <AvailableRooms availableRooms={rooms} handleBookNowClick={handleBookNowClick} isLoading={isLoading}/>
+
 
         <TourSection
           setIsBookingModalOpen={setIsBookingModalOpen} 

@@ -20,6 +20,14 @@
 
 .highlight {
   animation: highlight-animation 2s forwards;
+  color: white;
+  /* background-color: white; */
+}
+
+.highlight2{
+  animation: highlight-animation 2s forwards;
+  color: black;
+  /* background-color: white; */
 }
 
 @keyframes highlight-animation {

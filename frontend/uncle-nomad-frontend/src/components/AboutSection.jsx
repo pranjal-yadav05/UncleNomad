@@ -13,12 +13,12 @@ const cardData = [
     icon: Compass,
   },
   {
-    title: "Solo Backpacker",
+    title: "Travel at Your Own Pace",
     imageSrc: "solo.jpg",
     icon: User,
   },
   {
-    title: "Group Traveler",
+    title: "Explore Together",
     imageSrc: "group.jpeg",
     icon: Users,
   },
