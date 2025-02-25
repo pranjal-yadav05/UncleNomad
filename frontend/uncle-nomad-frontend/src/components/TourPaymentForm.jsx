@@ -7,7 +7,8 @@ const TourPaymentForm = ({
   bookingForm,
   onPaymentSuccess, 
   onPaymentFailure, 
-  onClose
+  onClose,
+  setIsCheckingOpen
 }) => {
   
   const validateEmail = (email) => {

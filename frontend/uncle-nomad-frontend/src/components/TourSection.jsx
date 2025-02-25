@@ -6,12 +6,14 @@ import TourDetailsModal from "./TourDetailsModal"
 import TourBookingModal from "./TourBookingModal"
 import { Button } from "./ui/button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
+import CheckingPaymentModal from "./CheckingPaymentModal"
 
 const TourSection = ({ tours, setIsBookingModalOpen, isBookingModalOpen }) => {
   const [selectedTour, setSelectedTour] = useState(null)
   const [isTourModalOpen, setIsTourModalOpen] = useState(false)
   const [showLeftButton, setShowLeftButton] = useState(false)
   const [showRightButton, setShowRightButton] = useState(true)
+  const [isCheckingOpen, setIsCheckingOpen] = useState(false)
   const scrollRef = useRef(null)
 
   const handleBookNowClick = () => {
@@ -109,9 +111,15 @@ const TourSection = ({ tours, setIsBookingModalOpen, isBookingModalOpen }) => {
 
       {/* Tour Booking Modal */}
       <TourBookingModal
+        isCheckingOpen={isCheckingOpen}
+        setIsCheckingOpen={setIsCheckingOpen}
         isOpen={isBookingModalOpen}
         onClose={() => setIsBookingModalOpen(false)}
         selectedTour={selectedTour}
+      />
+
+      <CheckingPaymentModal
+        open={isCheckingOpen}
       />
     </div>
   )

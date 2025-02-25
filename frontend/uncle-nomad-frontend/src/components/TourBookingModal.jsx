@@ -8,7 +8,7 @@ import { Label } from "./ui/label"
 import TourPaymentForm from "./TourPaymentForm"
 import TourBookingConfirmationDialog from "./TourBookingConfirmationDialog"
 
-export default function TourBookingModal({ isOpen, onClose, selectedTour }) {
+export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsCheckingOpen, isCheckingOpen }) {
   const [bookingDetails, setBookingDetails] = useState({
     tourId: "",
     guestName: "",
@@ -25,6 +25,8 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour }) {
   const [paymentData, setPaymentData] = useState(null)
   const [modalOpen, setModalOpen] = useState(true)
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false)  // New state for confirmation dialog
+  const [isLoading, setIsLoading] = useState(false)
+  
 
   useEffect(() => {
     if (isOpen) {
@@ -69,6 +71,7 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour }) {
   };
 
   const handleBookingSubmit = async (e) => {
+    setIsLoading(true)
     e.preventDefault();
     if (validateForm()) {
       try {
@@ -100,6 +103,7 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour }) {
 
         const result = await response.json();
         setBookingData(result.booking);
+        setIsLoading(false)
         setPaymentStep(true);
 
       } catch (error) {
@@ -111,6 +115,7 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour }) {
 
   const handlePaymentSuccess = async (paymentResponse) => {
     try {
+      setIsCheckingOpen(true)
       const response = await fetch(
         `${process.env.REACT_APP_API_URL}/api/tours/booking/${bookingData._id}`,
         {
@@ -133,7 +138,7 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour }) {
           tourName: selectedTour.title,
         },
       });
-
+      setIsCheckingOpen(false)
       setIsConfirmationOpen(true);  // Show confirmation dialog after successful payment
     } catch (error) {
       console.error("Booking confirmation error:", error);
@@ -194,6 +199,7 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour }) {
 
         {paymentStep ? (
           <TourPaymentForm
+            setIsCheckingOpen={setIsCheckingOpen}
             paymentData={{
               amount: selectedTour.price * bookingDetails.groupSize,
               tourId: selectedTour._id,
@@ -298,9 +304,10 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour }) {
               <Button
                 type="submit"
                 variant="custom"
+                disabled={isLoading}
                 className="flex-1 bg-brand-purple hover:bg-brand-purple/90 text-white"
               >
-                Proceed to Payment
+                {isLoading ? "proceeding..." : "Proceed to Payment"}
               </Button>
             </DialogFooter>
           </form>
