@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { useEffect } from 'react';
 
 const PackageFormModal = ({ 
   isOpen, 
@@ -11,11 +12,32 @@ const PackageFormModal = ({
   currentDay, 
   setCurrentDay, 
   handleAddPackage, 
-  editMode 
+  editMode,
+  isUploading
 }) => {
   const [editingDayIndex, setEditingDayIndex] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+
+  useEffect(() => {
+    // Update the image preview whenever the modal opens or newPackage.imageUrl changes
+    setImagePreview(newPackage.image || null);
+  }, [isOpen, newPackage.image]);
 
   if (!isOpen) return null;
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setNewPackage({ ...newPackage, image: file });
+      
+      // Create image preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleAddOrUpdateDay = () => {
     if (!currentDay.day || !currentDay.title || !currentDay.description || 
@@ -23,28 +45,25 @@ const PackageFormModal = ({
       alert('Please fill all day fields');
       return;
     }
-
+  
+    const newDay = { 
+      ...currentDay, 
+      _id: editingDayIndex !== null ? newPackage.itinerary[editingDayIndex]._id : { "$oid": crypto.randomUUID() }
+    };
+  
     if (editingDayIndex !== null) {
-      // Update existing day
       const updatedItinerary = [...newPackage.itinerary];
-      updatedItinerary[editingDayIndex] = currentDay;
+      updatedItinerary[editingDayIndex] = newDay;
       setNewPackage({ ...newPackage, itinerary: updatedItinerary });
       setEditingDayIndex(null);
     } else {
-      // Add new day
       setNewPackage({
         ...newPackage,
-        itinerary: [...newPackage.itinerary, currentDay]
+        itinerary: [...newPackage.itinerary, newDay]
       });
     }
-
-    setCurrentDay({
-      day: '',
-      title: '',
-      description: '',
-      activities: '',
-      accommodation: ''
-    });
+  
+    setCurrentDay({ day: '', title: '', description: '', activities: '', accommodation: '' });
   };
 
   return (
@@ -64,14 +83,34 @@ const PackageFormModal = ({
           </div>
           
           <form onSubmit={handleAddPackage} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="image">Upload Image</Label>
+              <Input
+                id="image"
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+              />
+              {(imagePreview || newPackage.image) && (
+                <div className="mt-2">
+                  <img 
+                    src={imagePreview || newPackage.image} 
+                    alt="Tour preview" 
+                    className="w-32 h-32 object-cover rounded"
+                  />
+                </div>
+              )}
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Package Fields */}
               <div className="space-y-2">
                 <Label htmlFor="title">Package ID</Label>
                 <Input
-                  id="title"
+                  id="id"
+                  type="number"
                   value={newPackage.id}
-                  onChange={(e) => setNewPackage({ ...newPackage, id: e.target.value })}
+                  onChange={(e) => setNewPackage({ ...newPackage, id: parseInt(e.target.value) || '' })}
                   required
                 />
               </div>
@@ -83,6 +122,88 @@ const PackageFormModal = ({
                   value={newPackage.title}
                   onChange={(e) => setNewPackage({ ...newPackage, title: e.target.value })}
                   required
+                />
+              </div>  
+              
+              <div className="space-y-2">
+                <Label htmlFor="priceOptions">Price Options</Label>
+                {Object.entries(newPackage.priceOptions || {}).map(([key, value], index) => (
+                  <div key={index} className="flex gap-2">
+                    <Input
+                      type="text"
+                      placeholder="Option (e.g., Solo Rider)"
+                      value={key}
+                      onChange={(e) => {
+                        const updatedOptions = { ...newPackage.priceOptions };
+                        const newKey = e.target.value;
+                        if (key !== newKey) {
+                          const currentValue = updatedOptions[key];
+                          delete updatedOptions[key]; // Remove old key
+                          updatedOptions[newKey] = currentValue;
+                          setNewPackage({ ...newPackage, priceOptions: updatedOptions });
+                        }
+                      }}
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Price (e.g., 19999)"
+                      value={value}
+                      onChange={(e) => {
+                        setNewPackage({
+                          ...newPackage,
+                          priceOptions: {
+                            ...newPackage.priceOptions,
+                            [key]: e.target.value,
+                          },
+                        });
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        const updatedOptions = { ...newPackage.priceOptions };
+                        delete updatedOptions[key];
+                        setNewPackage({ ...newPackage, priceOptions: updatedOptions });
+                      }}
+                      className="text-red-500"
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setNewPackage({
+                      ...newPackage,
+                      priceOptions: { ...newPackage.priceOptions, "New Option": "" },
+                    });
+                  }}
+                  className="mt-2"
+                >
+                  + Add Price Option
+                </Button>
+              </div>
+
+              <div className="space-y-2">  
+                <Label htmlFor="inclusions">Inclusions</Label>
+                <Input
+                  id="inclusions"
+                  value={Array.isArray(newPackage.inclusions) ? newPackage.inclusions.join(', ') : ''}
+                  onChange={(e) => setNewPackage({ ...newPackage, inclusions: e.target.value.split(', ') })}
+                  required
+                  placeholder="Item 1, Item 2, Item 3..."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="exclusions">Exclusions</Label>
+                <Input
+                  id="exclusions"
+                  value={Array.isArray(newPackage.exclusions) ? newPackage.exclusions.join(', ') : ''}
+                  onChange={(e) => setNewPackage({ ...newPackage, exclusions: e.target.value.split(', ') })}
+                  required
+                  placeholder="Item 1, Item 2, Item 3..."
                 />
               </div>
 
@@ -104,6 +225,7 @@ const PackageFormModal = ({
                   value={newPackage.duration}
                   onChange={(e) => setNewPackage({ ...newPackage, duration: e.target.value })}
                   required
+                  placeholder="e.g., 7 Days / 6 Nights"
                 />
               </div>
 
@@ -111,6 +233,7 @@ const PackageFormModal = ({
                 <Label htmlFor="groupSize">Group Size</Label>
                 <Input
                   id="groupSize"
+                  type="number"
                   value={newPackage.groupSize}
                   onChange={(e) => setNewPackage({ ...newPackage, groupSize: e.target.value })}
                   required
@@ -137,10 +260,39 @@ const PackageFormModal = ({
                 />
               </div>
 
+              {/* Fields for Start and End Date */}
+              <div className="space-y-2">
+                <Label htmlFor="startDate">Start Date</Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={newPackage.startDate ? newPackage.startDate.split('T')[0] : ''}
+                  onChange={(e) => setNewPackage({ 
+                    ...newPackage, 
+                    startDate: e.target.value
+                  })}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="endDate">End Date</Label>
+                <Input
+                  id="endDate"
+                  type="date"
+                  value={newPackage.endDate ? newPackage.endDate.split('T')[0] : ''}
+                  onChange={(e) => setNewPackage({ 
+                    ...newPackage, 
+                    endDate: e.target.value
+                  })}
+                  required
+                />
+              </div>
+
               {/* Itinerary Section */}
               <div className="space-y-2 md:col-span-2">
                 <h4 className="font-semibold">Itinerary</h4>
-                {newPackage.itinerary.length > 0 && (
+                {newPackage.itinerary && newPackage.itinerary.length > 0 && (
                   <div className="mb-4 space-y-2">
                     {newPackage.itinerary.map((day, index) => (
                       <div key={index} className="p-2 border rounded">
@@ -228,7 +380,7 @@ const PackageFormModal = ({
                   >
                     {editingDayIndex !== null ? 'Update Day' : 'Add Day'}
                   </Button>
-                  {newPackage.itinerary.length > 0 && (
+                  {newPackage.itinerary && newPackage.itinerary.length > 0 && (
                     <button
                       type="button"
                       onClick={() => {
@@ -250,31 +402,12 @@ const PackageFormModal = ({
               <Button
                 type="button"
                 variant="secondary"
-                onClick={() => {
-                  setNewPackage({
-                    id: '',
-                    title: '',
-                    description: '', 
-                    price: '',
-                    duration: '',
-                    groupSize: '',
-                    location: '',
-                    itinerary: []
-                  });
-                  setCurrentDay({
-                    day: '',
-                    title: '',
-                    description: '',
-                    activities: '',
-                    accommodation: ''
-                  });
-                  setEditingDayIndex(null);
-                }}
+                onClick={onClose}
               >
-                Clear Form
+                Cancel
               </Button>
-              <Button type="submit">
-                {editMode ? 'Update Package' : 'Add Package'}
+              <Button type="submit" disabled={isUploading}>
+                {isUploading ? 'Uploading...' : (editMode ? 'Update Package' : 'Add Package')}
               </Button>
             </div>
           </form>

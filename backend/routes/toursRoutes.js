@@ -1,18 +1,23 @@
 import express from 'express';
-const router = express.Router();
-
 import {
-  createTour,
   getTours,
+  createTour,
   getTourById,
   updateTour,
-  deleteTour
+  deleteTour,
+  verifyTourBooking,
+  createTourBooking,
+  initiatePayment,
+  verifyTourPayment,
+  confirmTourBooking,
+  getTourBookingById
 } from '../controllers/tourController.js';
 
-// Middleware for validating tour data
+const router = express.Router();
+
 const validateTourData = (req, res, next) => {
-  const { title, description, price, duration, groupSize, location } = req.body;
-  if (!title || !description || !price || !duration || !groupSize || !location) {
+  const { title, description, price, duration, groupSize, location, startDate, endDate } = req.body;
+  if (!title || !description || !price || !duration || !groupSize || !location || !startDate || !endDate) {
     return res.status(400).json({ message: 'All fields are required' });
   }
   next();
@@ -30,22 +35,21 @@ const validateItinerary = (req, res, next) => {
   next();
 };
 
-
-// Create a new tour
-router.post('/', validateTourData, validateItinerary, createTour);
-
-
-// Get all tours
+// CRUD routes
 router.get('/', getTours);
-
-// Get a single tour by ID
+router.post('/', validateItinerary, validateTourData, createTour);
 router.get('/:id', getTourById);
-
-// Update a tour
-router.put('/:id', validateTourData, validateItinerary, updateTour);
-
-
-// Delete a tour
+router.put('/:id', validateItinerary, validateTourData, updateTour);
 router.delete('/:id', deleteTour);
+
+// Booking routes
+router.post('/:id/verify-booking', verifyTourBooking);
+router.post('/:id/book', createTourBooking);
+router.get('/booking/:id', getTourBookingById);
+router.put('/:tourId/book/:bookingId/confirm', confirmTourBooking);
+
+// Payment routes
+router.post('/:id/initiate-payment', initiatePayment);
+router.post('/:id/verify-payment', verifyTourPayment);
 
 export default router;

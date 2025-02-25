@@ -138,6 +138,7 @@ export default function ManageRooms() {
       <Button 
         onClick={() => setShowRoomForm(true)} 
         className="mb-4"
+        variant='custom' 
       >
         Add New Room
       </Button>
@@ -151,9 +152,9 @@ export default function ManageRooms() {
         editMode={editMode}
       />
 
-      <Table>
+      <Table className="border border-gray-300">
         <TableHeader>
-          <TableRow>
+          <TableRow className="bg-gray-100">
             <TableHead>ID</TableHead>
             <TableHead>Type</TableHead>
             <TableHead>Price</TableHead>

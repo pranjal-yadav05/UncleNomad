@@ -90,9 +90,9 @@ const ManageQueries = () => {
             No Queries found.
         </div>
       ) : (
-            <Table>
+            <Table className="border border-gray-300">
                 <TableHeader>
-                <TableRow>
+                <TableRow className="bg-gray-100">
                     <TableHead>Email</TableHead>
                     <TableHead>Query</TableHead>
                     <TableHead>Date</TableHead>
