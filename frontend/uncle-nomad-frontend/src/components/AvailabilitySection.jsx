@@ -226,24 +226,7 @@ function AvailabilitySection() {
           <CheckingPaymentModal
             open={checking}
           />
-
-          {/* {paymentData && (
-            <PaytmPaymentForm 
-            paymentData={paymentData}
-            isLoading={loading}
-            bookingForm={bookingForm}
-            onPaymentSuccess={(response) => {
-              console.log('Payment successful:', response);
-              setIsBookingConfirmed(true);
-              setPaymentData(null); // Clear payment data
-            }}
-            onPaymentFailure={(error) => {
-              console.error('Payment failed:', error);
-              setError(error);
-              setPaymentData(null); // Clear payment data
-            }}
-          />
-          )} */}
+          
         </div>
       </div>
     </Card>
