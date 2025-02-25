@@ -9,7 +9,8 @@ import {
 import multer from 'multer'; // Import multer for handling file uploads
 
 const router = express.Router();
-const upload = multer({ dest: 'uploads/' }); // Set up multer for file uploads
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage }) // Set up multer for file uploads
 
 // Room routes
 router.post('/', upload.single('image'), (req, res, next) => {

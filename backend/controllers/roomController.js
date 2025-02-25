@@ -1,15 +1,13 @@
 import Room from '../models/Room.js';
-import cloudinary from 'cloudinary';
 import { v2 as cloudinaryV2 } from 'cloudinary';
-import fs from 'fs';
-import { promisify } from 'util';
-const unlinkAsync = promisify(fs.unlink);
+import streamifier from 'streamifier';
 
 // Configure Cloudinary
 cloudinaryV2.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure: true
 });
 
 export const getRooms = async (req, res) => {
@@ -34,6 +32,49 @@ export const getRoomById = async (req, res) => {
   }
 };
 
+// Helper function to delete image from Cloudinary
+const deleteCloudinaryImage = async (imageUrl) => {
+  if (!imageUrl) return null;
+  
+  try {
+    // Extract the public ID from the existing image URL
+    const urlPathname = new URL(imageUrl).pathname;
+    const pathParts = urlPathname.split('/');
+    
+    // Get the filename without extension
+    const filenameWithExt = pathParts[pathParts.length - 1];
+    const filename = filenameWithExt.split('.')[0];
+    
+    // Find the folder structure - look for 'uncle-nomad' in the path
+    let folderPath = '';
+    let foundUncleNomad = false;
+    
+    for (let i = 0; i < pathParts.length - 1; i++) {
+      if (foundUncleNomad || pathParts[i] === 'uncle-nomad') {
+        foundUncleNomad = true;
+        folderPath += pathParts[i] + '/';
+      }
+    }
+    
+    // Construct the proper public ID
+    const publicId = folderPath + filename;
+    
+    console.log(`Deleting image with publicId: ${publicId}`);
+    
+    // Delete from Cloudinary
+    const deleteResult = await cloudinaryV2.uploader.destroy(publicId, {
+      resource_type: 'image',
+      invalidate: true
+    });
+    
+    console.log('Cloudinary delete result:', deleteResult);
+    return deleteResult;
+  } catch (error) {
+    console.error("Error deleting image from Cloudinary:", error);
+    return null;
+  }
+};
+
 // Create Room
 export const createRoom = async (req, res) => {
   try {
@@ -52,17 +93,42 @@ export const createRoom = async (req, res) => {
 
     // Check if a file was uploaded
     if (req.file) {
-      console.log('File uploaded:', req.file);
-      // Upload to Cloudinary with folder
-      const result = await cloudinaryV2.uploader.upload(req.file.path, {
-        folder: 'uncle-nomad',  // Add folder to match your uploadMedia function
-        public_id: `room-${id}-${Date.now()}`  // Create unique ID
-      });
-      imageUrl = result.secure_url;
-      await unlinkAsync(req.file.path);
-      console.log('Cloudinary upload result:', result);
-    } else {
-      console.log('No file uploaded');
+      console.log('File uploaded:', req.file.originalname, 'size:', req.file.size);
+      
+      // Generate unique ID for the room image
+      const publicId = `room-${id}-${Date.now()}`;
+      
+      try {
+        // Create upload stream with proper configuration
+        const result = await new Promise((resolve, reject) => {
+          const uploadStream = cloudinaryV2.uploader.upload_stream(
+            {
+              resource_type: 'image',
+              public_id: publicId,
+              overwrite: true,
+              quality: 'auto',
+              folder: 'uncle-nomad'
+            },
+            (error, result) => {
+              if (error) {
+                console.error('Cloudinary upload error:', error);
+                reject(error);
+              } else {
+                resolve(result);
+              }
+            }
+          );
+          
+          // Stream the buffer directly to Cloudinary
+          streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
+        });
+        
+        imageUrl = result.secure_url;
+        console.log('Cloudinary upload result:', result);
+      } catch (uploadError) {
+        console.error('Error uploading to Cloudinary:', uploadError);
+        return res.status(500).json({ message: 'Image upload failed', error: uploadError.message });
+      }
     }
 
     const newRoom = new Room({
@@ -123,56 +189,47 @@ export const updateRoom = async (req, res) => {
 
     // Handle image upload if there's a new file
     if (req.file) {
-      console.log('Updating with new file:', req.file);
+      console.log('Updating with new file:', req.file.originalname, 'size:', req.file.size);
       
       // Delete the old image from Cloudinary if it exists
       if (existingRoom.imageUrl) {
-        try {
-          // Extract the public ID from the existing image URL
-          const urlPathname = new URL(existingRoom.imageUrl).pathname;
-          const pathParts = urlPathname.split('/');
-          
-          // Get the filename without extension
-          const filenameWithExt = pathParts[pathParts.length - 1];
-          const filename = filenameWithExt.split('.')[0];
-          
-          // Find the folder structure - look for 'uncle-nomad' in the path
-          let folderPath = '';
-          let foundUncleNomad = false;
-          
-          for (let i = 0; i < pathParts.length - 1; i++) {
-            if (foundUncleNomad || pathParts[i] === 'uncle-nomad') {
-              foundUncleNomad = true;
-              folderPath += pathParts[i] + '/';
-            }
-          }
-          
-          // Construct the proper public ID
-          const publicId = folderPath + filename;
-          
-          console.log(`Deleting old room image with publicId: ${publicId}`);
-          
-          // Delete from Cloudinary
-          const deleteResult = await cloudinaryV2.uploader.destroy(publicId, {
-            resource_type: 'image',
-            invalidate: true
-          });
-          
-          console.log('Cloudinary delete result:', deleteResult);
-        } catch (error) {
-          console.error("Error deleting old room image from Cloudinary:", error);
-          // Continue with the update even if the deletion fails
-        }
+        await deleteCloudinaryImage(existingRoom.imageUrl);
       }
       
-      // Upload new image
-      const result = await cloudinaryV2.uploader.upload(req.file.path, {
-        folder: 'uncle-nomad',
-        public_id: `room-${id}-${Date.now()}`
-      });
-      updateData.imageUrl = result.secure_url;
-      await unlinkAsync(req.file.path);
-      console.log('Cloudinary update result:', result);
+      // Generate unique ID for the room image
+      const publicId = `room-${id}-${Date.now()}`;
+      
+      try {
+        // Create upload stream with proper configuration
+        const result = await new Promise((resolve, reject) => {
+          const uploadStream = cloudinaryV2.uploader.upload_stream(
+            {
+              resource_type: 'image',
+              public_id: publicId,
+              overwrite: true,
+              quality: 'auto',
+              folder: 'uncle-nomad'
+            },
+            (error, result) => {
+              if (error) {
+                console.error('Cloudinary upload error:', error);
+                reject(error);
+              } else {
+                resolve(result);
+              }
+            }
+          );
+          
+          // Stream the buffer directly to Cloudinary
+          streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
+        });
+        
+        updateData.imageUrl = result.secure_url;
+        console.log('Cloudinary upload result:', result);
+      } catch (uploadError) {
+        console.error('Error uploading to Cloudinary:', uploadError);
+        return res.status(500).json({ message: 'Image upload failed', error: uploadError.message });
+      }
     }
 
     const updatedRoom = await Room.findByIdAndUpdate(
@@ -181,7 +238,7 @@ export const updateRoom = async (req, res) => {
       { new: true }
     );
 
-    console.log('Updated room with image:', updatedRoom);
+    console.log('Updated room:', updatedRoom);
     res.status(200).json(updatedRoom);
   } catch (error) {
     console.error('Error updating room:', error);
@@ -196,6 +253,12 @@ export const deleteRoom = async (req, res) => {
     if (!room) {
       return res.status(404).json({ message: 'Room not found' });
     }
+    
+    // Delete the room image from Cloudinary if it exists
+    if (room.imageUrl) {
+      await deleteCloudinaryImage(room.imageUrl);
+    }
+    
     res.json({ message: 'Room deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
