@@ -11,6 +11,12 @@ export default function AnimatedSection({
 }) {
   const [isVisible, setIsVisible] = useState(false)
   const domRef = useRef()
+  const [hasMounted, setHasMounted] = useState(false);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -37,30 +43,33 @@ export default function AnimatedSection({
 
   // Animation style classes
   const getAnimationClass = () => {
+    if (!hasMounted) return "opacity-100"; // Prevents flash on load
     if (!isVisible) {
       switch (animation) {
         case "slide-up":
-          return "opacity-0 translate-y-16"
+          return "opacity-0 translate-y-16";
         case "slide-left":
-          return "opacity-0 -translate-x-16"
+          return "opacity-0 -translate-x-16";
         case "slide-right":
-          return "opacity-0 translate-x-16"
+          return "opacity-0 translate-x-16";
         case "zoom-in":
-          return "opacity-0 scale-95"
+          return "opacity-0 scale-95";
         case "fade":
         default:
-          return "opacity-0"
+          return "opacity-0";
       }
     }
-    return "opacity-100 translate-y-0 translate-x-0 scale-100"
-  }
+    return "opacity-100 translate-y-0 translate-x-0 scale-100";
+  };
+  
 
   return (
     <div
       ref={domRef}
-      style={{ 
+      style={{
         transitionDuration: `${duration}ms`,
-        transitionDelay: `${delay}ms`
+        transitionDelay: `${delay}ms`,
+        willChange: "opacity, transform" // Optimizes rendering
       }}
       className={`transition-all ease-out ${getAnimationClass()}`}
     >
