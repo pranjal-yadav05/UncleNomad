@@ -13,6 +13,16 @@
   }
 }
 
+/* section {
+  opacity: 0;
+  transition: opacity 1s ease-out;
+}
+
+section.fade-in {
+  opacity: 1;
+}  */
+
+
 .App-header {
   background-color: #282c34;
   min-height: 100vh;

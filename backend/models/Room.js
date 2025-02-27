@@ -1,16 +1,10 @@
 import mongoose from 'mongoose';
 
 const roomSchema = new mongoose.Schema({
-  id: {
-    type: Number,
-    required: true,
-    unique: true
-  },
   type: {
     type: String,
     required: true
   },
-
   price: {
     type: Number,
     required: true
@@ -23,9 +17,13 @@ const roomSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
-  imageUrl:{
-    type:String,
-    required:false
+  imageUrl: {
+    type: String,
+    required: false
+  },
+  imageUrls: {
+    type: [String],
+    default: []
   },
   amenities: [String],
   mealIncluded: Boolean,
@@ -47,5 +45,4 @@ roomSchema.methods.getAvailableBunkBeds = function() {
 };
 
 const Room = mongoose.model('Room', roomSchema);
-
 export default Room;

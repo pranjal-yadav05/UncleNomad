@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react"
 import axios from "axios"
 import { Button } from "./ui/button"
-import BookingConfirmationDialog from "./BookingConfirmationDialog"
+import BookingConfirmationDialog from "../modals/BookingConfirmationDialog"
 
 const PaytmPaymentForm = ({ 
   paymentData, 

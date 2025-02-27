@@ -15,7 +15,7 @@ import adminAuthRoutes from './routes/adminAuthRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import queryRoutes from './routes/queryRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
-
+import galleryRoutes from './routes/galleryRoutes.js';
 
 
 dotenv.config();
@@ -56,6 +56,7 @@ app.use('/api/property', propertyRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/guides', guidesRoutes);
 app.use('/api/tours', toursRoutes);
+app.use('/api/gallery', galleryRoutes);
 app.use('/api/admin-auth', adminAuthRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/query',queryRoutes)

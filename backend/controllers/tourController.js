@@ -2,7 +2,76 @@ import Tour from '../models/Tour.js';
 import TourBooking from '../models/TourBooking.js';
 import PaytmChecksum from 'paytmchecksum';
 import https from 'https';
-import cloudinary from 'cloudinary'
+import streamifier from 'streamifier';
+import { v2 as cloudinaryV2 } from 'cloudinary';
+import mongoose from 'mongoose';
+
+// Configure Cloudinary
+cloudinaryV2.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure: true
+});
+
+const deleteCloudinaryImage = async (imageUrl) => {
+  if (!imageUrl) return null;
+  try {
+    const urlPathname = new URL(imageUrl).pathname;
+    const pathParts = urlPathname.split('/');
+    const filenameWithExt = pathParts[pathParts.length - 1];
+    const filename = filenameWithExt.split('.')[0];
+    let folderPath = '';
+    let foundUncleNomad = false;
+    for (let i = 0; i < pathParts.length - 1; i++) {
+      if (foundUncleNomad || pathParts[i] === 'uncle-nomad') {
+        foundUncleNomad = true;
+        folderPath += pathParts[i] + '/';
+      }
+    }
+    const publicId = folderPath + filename;
+    return await cloudinaryV2.uploader.destroy(publicId, {
+      resource_type: 'image',
+      invalidate: true
+    });
+  } catch (error) {
+    console.error("Error deleting image from Cloudinary:", error);
+    return null;
+  }
+};
+
+// Helper function to upload images to Cloudinary
+const uploadToCloudinary = async (file, tourId, index) => {
+  if (!file) return null;
+  const publicId = `tour-${tourId}-${Date.now()}-${index}`;
+  try {
+    console.log(`Starting upload to Cloudinary: ${publicId}`);
+    return await new Promise((resolve, reject) => {
+      const uploadStream = cloudinaryV2.uploader.upload_stream(
+        {
+          resource_type: "image",
+          public_id: publicId,
+          overwrite: true,
+          quality: "auto",
+          folder: "uncle-nomad",
+        },
+        (error, result) => {
+          if (error) {
+            console.error("Cloudinary upload error:", error);
+            reject(error);
+          } else {
+            console.log(`Cloudinary upload success: ${result.secure_url}`);
+            resolve(result.secure_url);
+          }
+        }
+      );
+      streamifier.createReadStream(file.buffer).pipe(uploadStream);
+    });
+  } catch (uploadError) {
+    console.error("Error uploading to Cloudinary:", uploadError);
+    return null;
+  }
+};
 
 // Get all tours
 export const getTours = async (req, res) => {
@@ -17,39 +86,55 @@ export const getTours = async (req, res) => {
 
 export const createTour = async (req, res) => {
   try {
-    const { id, title, description, price, duration, groupSize, location, itinerary, startDate, endDate } = req.body;
-
-    // Validate required fields
-    if (!id || !title || !description || !price || !duration || !groupSize || !location) {
-      return res.status(400).json({ message: 'All fields are required' });
-    }
-
-    // Validate itinerary if provided
-    if (itinerary && Array.isArray(itinerary)) {
-      for (const day of itinerary) {
-        if (!day.day || !day.title || !day.description || !day.activities || !day.accommodation) {
-          return res.status(400).json({ message: 'All itinerary fields are required for each day' });
-        }
-      }
-    }
-
-    const newTour = await Tour.create({
-      id,
-      title,
-      description,
-      price,
-      duration,
-      groupSize,
-      location,
-      itinerary: itinerary || [],
-      startDate, // New field
-      endDate // New field
+    const { title, description, price, duration, groupSize, location, itinerary, startDate, endDate } = req.body;
+    
+    // Create tour first with empty images array
+    const newTour = new Tour({
+      title, 
+      description, 
+      price, 
+      duration, 
+      groupSize, 
+      location, 
+      itinerary: itinerary || [], 
+      startDate, 
+      endDate, 
+      images: []
     });
-
+    
+    // Save tour to get a valid ID
+    await newTour.save();
+    console.log(`Tour created with ID: ${newTour._id}`);
+    
+    // Upload images if available
+    if (req.files && req.files.length > 0) {
+      console.log(`Processing ${req.files.length} image uploads for tour ${newTour._id}`);
+      
+      // Upload each image and collect URLs
+      const uploadPromises = req.files.map((file, index) => 
+        uploadToCloudinary(file, newTour._id, index)
+      );
+      
+      const uploadedUrls = await Promise.all(uploadPromises);
+      const validUrls = uploadedUrls.filter(url => url !== null);
+      console.log(`Successfully uploaded ${validUrls.length} images`);
+      
+      // Update tour with image URLs - use findByIdAndUpdate for reliability
+      const updatedTour = await Tour.findByIdAndUpdate(
+        newTour._id,
+        { $set: { images: validUrls } },
+        { new: true }
+      );
+      
+      console.log(`Tour updated with ${updatedTour.images.length} images`);
+      return res.status(201).json(updatedTour);
+    }
+    
+    // Return the created tour if no images
     res.status(201).json(newTour);
   } catch (error) {
     console.error('Error creating tour:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -67,104 +152,102 @@ export const getTourById = async (req, res) => {
   }
 };
 
+// Update a tour
 export const updateTour = async (req, res) => {
   try {
-    const { 
-      id, title, description, price, duration, groupSize, location, itinerary, 
-      startDate, endDate, image, priceOptions, inclusions, exclusions 
-    } = req.body;
+    const { id } = req.params;
 
-    if (!id || !title || !description || !price || !duration || !groupSize || !location) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
+    console.log(`\n➡️ Received update request for tour ID: ${id}`);
+    console.log("➡️ Request body:", req.body);
 
-    // Validate itinerary if provided
-    if (itinerary && Array.isArray(itinerary)) {
-      for (const day of itinerary) {
-        if (!day.day || !day.title || !day.description || !day.activities || !day.accommodation) {
-          return res.status(400).json({ message: "All itinerary fields are required for each day" });
-        }
-      }
-    }
-
-    // Fetch existing tour details
-    const existingTour = await Tour.findById(req.params.id);
+    // Check if the tour exists
+    const existingTour = await Tour.findById(id);
     if (!existingTour) {
+      console.error("❌ Tour not found");
       return res.status(404).json({ message: "Tour not found" });
     }
+    console.log("✅ Existing tour found");
 
-    let updatedImage = existingTour.image; // Default to the old image
-
-    // If a new image is uploaded, delete the old one from Cloudinary
-    if (image && image !== existingTour.image && existingTour.image) {
+    // Helper function to parse JSON safely
+    const parseJSON = (data, defaultValue) => {
       try {
-        // Extract the public ID from the existing image URL
-        // Example URL: https://res.cloudinary.com/your-cloud-name/image/upload/uncle-nomad/image/UUID.jpg
-        const urlPathname = new URL(existingTour.image).pathname;
-        const pathParts = urlPathname.split('/');
-        
-        // Get the filename without extension
-        const filenameWithExt = pathParts[pathParts.length - 1];
-        const filename = filenameWithExt.split('.')[0];
-        
-        // Find the folder structure - look for 'uncle-nomad' in the path
-        let folderPath = '';
-        let foundUncleNomad = false;
-        
-        for (let i = 0; i < pathParts.length - 1; i++) {
-          if (foundUncleNomad || pathParts[i] === 'uncle-nomad') {
-            foundUncleNomad = true;
-            folderPath += pathParts[i] + '/';
-          }
-        }
-        
-        // Construct the proper public ID
-        const publicId = folderPath + filename;
-        
-        console.log(`Deleting old image with publicId: ${publicId}`);
-        
-        // Delete from Cloudinary
-        const deleteResult = await cloudinary.v2.uploader.destroy(publicId, {
-          resource_type: 'image',
-          invalidate: true
-        });
-        
-        console.log('Cloudinary delete result:', deleteResult);
+        return typeof data === "string" ? JSON.parse(data) : data;
       } catch (error) {
-        console.error("Error deleting old image from Cloudinary:", error);
-        // Continue with the update even if the deletion fails
+        console.error("❌ JSON parse error:", error);
+        return defaultValue;
       }
+    };
 
-      // Set the new image URL
-      updatedImage = image;
+    // Prepare update data
+    const updateData = {
+      title: req.body.title || existingTour.title,
+      description: req.body.description || existingTour.description,
+      price: req.body.price || existingTour.price,
+      duration: req.body.duration || existingTour.duration,
+      groupSize: req.body.groupSize || existingTour.groupSize,
+      location: req.body.location || existingTour.location,
+      itinerary: parseJSON(req.body.itinerary, existingTour.itinerary),
+      inclusions: parseJSON(req.body.inclusions, existingTour.inclusions),
+      exclusions: parseJSON(req.body.exclusions, existingTour.exclusions),
+      priceOptions: parseJSON(req.body.priceOptions, existingTour.priceOptions),
+      startDate: req.body.startDate || existingTour.startDate,
+      endDate: req.body.endDate || existingTour.endDate,
+      bookedSlots: req.body.bookedSlots || existingTour.bookedSlots,
+      images: existingTour.images || [],
+    };
+
+    console.log("🛠️ Preparing to update tour data...");
+
+    // Check if images were uploaded
+    if (req.files && req.files.length > 0) {
+      console.log(`🖼️ Received ${req.files.length} files for upload`);
+
+      // Log received files
+      req.files.forEach((file, index) => {
+        console.log(`📂 File ${index + 1}:`, {
+          originalName: file.originalname,
+          size: file.size,
+          mimetype: file.mimetype,
+        });
+      });
+
+      // Delete old images from Cloudinary
+      console.log("🗑️ Deleting old images from Cloudinary...");
+      const deletePromises = existingTour.images.map(async (url) => {
+        try {
+          const result = await deleteCloudinaryImage(url);
+          console.log(`✅ Deleted: ${url}`);
+          return result;
+        } catch (error) {
+          console.error(`❌ Failed to delete ${url}:`, error);
+        }
+      });
+      await Promise.all(deletePromises);
+
+      // Upload new images
+      console.log("🚀 Uploading new images to Cloudinary...");
+      const uploadPromises = req.files.map((file, index) =>
+        uploadToCloudinary(file, id, index)
+      );
+
+      const uploadedUrls = await Promise.all(uploadPromises);
+      const validUrls = uploadedUrls.filter((url) => url !== null);
+
+      console.log(`✅ Successfully uploaded ${validUrls.length} images`);
+      updateData.images = validUrls;
+    } else {
+      console.log("⚠️ No new images uploaded, keeping existing ones");
     }
 
-    // Update the tour with new details
-    const updatedTour = await Tour.findByIdAndUpdate(
-      req.params.id,
-      {
-        id,
-        title,
-        description,
-        price,
-        duration,
-        groupSize,
-        location,
-        itinerary: itinerary || [],
-        startDate,
-        endDate,
-        image: updatedImage,
-        priceOptions: priceOptions || {},
-        inclusions: inclusions || [],
-        exclusions: exclusions || []
-      },
-      { new: true }
-    );
+    // Update the tour in MongoDB
+    console.log("🛠️ Updating tour in MongoDB...");
+    const updatedTour = await Tour.findByIdAndUpdate(id, updateData, { new: true });
 
-    res.json(updatedTour);
+    console.log("✅ MongoDB update result:", updatedTour);
+    res.status(200).json(updatedTour);
   } catch (error) {
-    console.error("Error updating tour:", error);
-    res.status(500).json({ message: "Server error" });
+    console.error("❌ Error updating tour:", error);
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -172,16 +255,20 @@ export const updateTour = async (req, res) => {
 // Delete a tour
 export const deleteTour = async (req, res) => {
   try {
-    const deletedTour = await Tour.findByIdAndDelete(req.params.id);
-    if (!deletedTour) {
+    const tour = await Tour.findByIdAndDelete(req.params.id);
+    if (!tour) {
       return res.status(404).json({ message: 'Tour not found' });
+    }
+    if (tour.images && tour.images.length > 0) {
+      const deletePromises = tour.images.map(url => deleteCloudinaryImage(url));
+      await Promise.all(deletePromises);
     }
     res.json({ message: 'Tour deleted successfully' });
   } catch (error) {
-    console.error('Error deleting tour:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: error.message });
   }
 };
+
 
 // Tour booking functions
 export const verifyTourBooking = async (req, res) => {
@@ -577,23 +664,54 @@ export const createTourBooking = async (req, res) => {
     res.status(500).json({ message: "Error creating tour booking" })
   }
 }
-
 export const confirmTourBooking = async (req, res) => {
   try {
     const { bookingId } = req.params;
     const { paymentReference, status } = req.body;
-    
-    const booking = await Booking.findByIdAndUpdate(
-      bookingId,
-      { paymentReference, status },
-      { new: true }
-    );
-    
-    res.json({ booking });
+
+    // Find the booking
+    const booking = await TourBooking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    // Ensure booking is still pending before confirming
+    if (booking.status !== "PENDING") {
+      return res.status(400).json({ message: "Booking is not in a pending state" });
+    }
+
+    // Find the corresponding tour
+    const tour = await Tour.findById(booking.tour);
+    if (!tour) {
+      return res.status(404).json({ message: "Tour not found" });
+    }
+
+    // Ensure `bookedSlots` exists and initialize if missing
+    if (tour.bookedSlots === undefined) {
+      tour.bookedSlots = 0;
+    }
+
+    // Check if there are enough available slots
+    if (tour.bookedSlots + booking.groupSize > tour.groupSize) {
+      return res.status(400).json({ message: "Not enough available slots for this booking" });
+    }
+
+    // Update bookedSlots in the tour
+    tour.bookedSlots += booking.groupSize;
+    await tour.save();
+
+    // Confirm the booking
+    booking.paymentReference = paymentReference;
+    booking.status = status || "CONFIRMED";
+    await booking.save();
+
+    res.json({ message: "Booking confirmed successfully", booking, updatedTour: tour });
   } catch (error) {
-    res.status(500).json({ message: 'Failed to confirm booking' });
+    console.error("Error confirming booking:", error);
+    res.status(500).json({ message: "Failed to confirm booking" });
   }
 };
+
 
 export const getTourBookingById = async (req,res) => {
   try {
@@ -611,3 +729,61 @@ export const getTourBookingById = async (req,res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 }
+
+
+export const deleteTourImage = async (req, res) => {
+  try {
+    let { tourId, imageIndex } = req.params;
+
+    console.log(`🗑️ Request to delete image at index ${imageIndex} for tour ${tourId}`);
+
+    // Ensure `tourId` is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(tourId)) {
+      console.error("❌ Invalid tour ID format");
+      return res.status(400).json({ message: "Invalid tour ID format" });
+    }
+
+    // Convert tourId to ObjectId
+    tourId = new mongoose.Types.ObjectId(tourId);
+
+    // Find the tour
+    const tour = await Tour.findById(tourId);
+    if (!tour) {
+      console.error("❌ Tour not found");
+      return res.status(404).json({ message: "Tour not found" });
+    }
+
+    // Validate index
+    imageIndex = parseInt(imageIndex);
+    if (isNaN(imageIndex) || imageIndex < 0 || imageIndex >= tour.images.length) {
+      console.error("❌ Invalid image index");
+      return res.status(400).json({ message: "Invalid image index" });
+    }
+
+    // Get image URL
+    const imageUrl = tour.images[imageIndex];
+
+    // Delete from Cloudinary (only if it's a valid Cloudinary URL)
+    if (imageUrl.includes("cloudinary.com")) {
+      console.log(`🗑️ Deleting from Cloudinary: ${imageUrl}`);
+      try {
+        await deleteCloudinaryImage(imageUrl);
+      } catch (error) {
+        console.error("❌ Error deleting image from Cloudinary:", error);
+      }
+    }
+
+    // Remove image from the array
+    tour.images.splice(imageIndex, 1);
+
+    // Save updated tour
+    await tour.save();
+
+    console.log("✅ Image deleted successfully");
+    res.status(200).json({ message: "Image deleted successfully", images: tour.images });
+
+  } catch (error) {
+    console.error("❌ Error deleting tour image:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};

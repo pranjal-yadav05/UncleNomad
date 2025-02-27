@@ -1,56 +1,55 @@
-"use client"
-
-import { useState, useRef, useEffect, useCallback } from "react"
-import TourCard from "./TourCard"
-import TourDetailsModal from "./TourDetailsModal"
-import TourBookingModal from "./TourBookingModal"
-import { Button } from "./ui/button"
-import { ChevronLeft, ChevronRight } from "lucide-react"
-import CheckingPaymentModal from "./CheckingPaymentModal"
-
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Button } from "./ui/button";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useNavigate } from 'react-router-dom'; // Import useNavigate for navigation
+import TourCard from './TourCard'; // Make sure to import TourCard
+import AnimatedSection from "./AnimatedSection";
 const TourSection = ({ tours, setIsBookingModalOpen, isBookingModalOpen }) => {
-  const [selectedTour, setSelectedTour] = useState(null)
-  const [isTourModalOpen, setIsTourModalOpen] = useState(false)
-  const [showLeftButton, setShowLeftButton] = useState(false)
-  const [showRightButton, setShowRightButton] = useState(true)
-  const [isCheckingOpen, setIsCheckingOpen] = useState(false)
-  const scrollRef = useRef(null)
-
-  const handleBookNowClick = () => {
-    setIsTourModalOpen(false)
-    setIsBookingModalOpen(true)
-  }
+  
+  const [showLeftButton, setShowLeftButton] = useState(false);
+  const [showRightButton, setShowRightButton] = useState(true);
+  const scrollRef = useRef(null);
+  const navigate = useNavigate(); // Initialize useNavigate hook
 
   const updateScrollButtons = useCallback(() => {
     if (scrollRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current
-      setShowLeftButton(scrollLeft > 0)
-      setShowRightButton(scrollLeft < scrollWidth - clientWidth - 10) // 10px threshold
+      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+      setShowLeftButton(scrollLeft > 0);
+      setShowRightButton(scrollLeft < scrollWidth - clientWidth - 10); // 10px threshold
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
-    updateScrollButtons()
-    window.addEventListener("resize", updateScrollButtons)
-    return () => window.removeEventListener("resize", updateScrollButtons)
-  }, [updateScrollButtons])
+    updateScrollButtons();
+    window.addEventListener("resize", updateScrollButtons);
+    return () => window.removeEventListener("resize", updateScrollButtons);
+  }, [updateScrollButtons]);
 
   const scroll = (direction) => {
     if (scrollRef.current) {
-      const scrollAmount = 320 // Adjust the scroll speed
+      const scrollAmount = 320; // Adjust the scroll speed
       scrollRef.current.scrollBy({
         left: direction === "left" ? -scrollAmount : scrollAmount,
         behavior: "smooth",
-      })
-      setTimeout(updateScrollButtons, 300) // Update after scroll animation
+      });
+      setTimeout(updateScrollButtons, 300); // Update after scroll animation
     }
-  }
+  };
+
+  const handleTourClick = (tour) => {
+    // Use navigate to go to the TourDetailsPage, passing the tour's data via state
+    navigate(`/tour/${tour._id}`, {
+      state: { selectedTour: tour } // Pass the selected tour via state
+    });
+  };
 
   return (
     <div id="tours" className="container mx-auto px-4 py-16 relative">
-      <h2 className="text-4xl font-bold mb-8 text-center">Curated Experiences</h2>
+      <h2 className="text-5xl font-extrabold mb-8 text-center text-white relative z-10">
+        Curated Experiences
+      </h2>
 
-      <div className="relative">
+      <div className="relative z-10">
         {/* Left Scroll Button */}
         {showLeftButton && (
           <Button
@@ -61,7 +60,8 @@ const TourSection = ({ tours, setIsBookingModalOpen, isBookingModalOpen }) => {
             <ChevronLeft className="w-6 h-6" />
           </Button>
         )}
-
+        
+        <AnimatedSection animation="slide-left " duration={1200}>
         {/* Scrollable Tour Cards Container */}
         <div
           ref={scrollRef}
@@ -74,21 +74,20 @@ const TourSection = ({ tours, setIsBookingModalOpen, isBookingModalOpen }) => {
           onScroll={updateScrollButtons}
         >
           {tours.map((tour) => (
-            <div key={tour._id} className="w-[300px] flex-shrink-0" style={{ scrollSnapAlign: "start" }}>
+            <div
+              key={tour._id}
+              className="w-[300px] flex-shrink-0 rounded-lg overflow-hidden"
+              style={{ scrollSnapAlign: "start" }}
+            >
               <TourCard
-                tour={tour}
-                setSelectedTour={setSelectedTour}
-                handleBookNowClick={handleBookNowClick}
-                setIsBookingModalOpen={setIsBookingModalOpen}
-                onClick={() => {
-                  setSelectedTour(tour)
-                  setIsTourModalOpen(true)
-                }}
+                tour={tour} // Pass the tour to the TourCard
+                handleTourClick={handleTourClick}
+                onClick={() => handleTourClick(tour)} // Handle click to navigate to details page
               />
             </div>
           ))}
         </div>
-
+        </AnimatedSection>
         {/* Right Scroll Button */}
         {showRightButton && (
           <Button
@@ -100,30 +99,8 @@ const TourSection = ({ tours, setIsBookingModalOpen, isBookingModalOpen }) => {
           </Button>
         )}
       </div>
-
-      {/* Tour Details Modal */}
-      <TourDetailsModal
-        tour={selectedTour}
-        isOpen={isTourModalOpen}
-        onClose={() => setIsTourModalOpen(false)}
-        onBook={handleBookNowClick}
-      />
-
-      {/* Tour Booking Modal */}
-      <TourBookingModal
-        isCheckingOpen={isCheckingOpen}
-        setIsCheckingOpen={setIsCheckingOpen}
-        isOpen={isBookingModalOpen}
-        onClose={() => setIsBookingModalOpen(false)}
-        selectedTour={selectedTour}
-      />
-
-      <CheckingPaymentModal
-        open={isCheckingOpen}
-      />
     </div>
-  )
-}
+  );
+};
 
-export default TourSection
-
+export default TourSection;

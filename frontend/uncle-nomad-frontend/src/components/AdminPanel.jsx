@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import ManageBookings from './ManageBookings';
-import ManageRooms from './ManageRooms';
-import ManagePackages from './ManagePackages';
+import ManageBookings from '../pages/ManageBookings';
+import ManageRooms from '../pages/ManageRooms';
+import ManagePackages from '../pages/ManagePackages';
 import AdminCredentialsUpdate from './AdminCredentialsUpdate';
 import { Button } from './ui/button';
 
@@ -36,6 +36,7 @@ const navItems = [
     { path: 'packages', label: 'Manage Packages' },
     { path: 'queries', label: 'Manage Queries' },
     { path: 'media', label: 'Manage Hero Media' },
+    { path:'gallery', label: 'Manage Gallery'},
     { path: 'credentials', label: 'Update Credentials' }
   ];
 

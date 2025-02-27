@@ -1,52 +1,105 @@
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
-import { Bed, Users } from 'lucide-react';
+import { Bed, Users, CigaretteOff, WineOff, Utensils, PlusCircle } from 'lucide-react';
 
 export default function AvailableRooms({ availableRooms, handleBookNowClick }) {
   return (
-    <section className="container mx-auto px-4 py-16 relative">
-      <h2 className="text-4xl font-bold mb-8 text-center">Rooms We Offer</h2>
-      
-      <div className="relative flex space-x-6 overflow-x-auto scroll-smooth scrollbar-hide pb-8 pt-4 px-4 md:px-12">
+    <section className="container mx-auto px-6 py-16 relative">
+      <h2 className="text-5xl font-extrabold mb-10 text-center text-gray-900 dark:text-white">
+        Rooms We Offer
+      </h2>
+
+      {/* Horizontal Scrollable Room Cards */}
+      <div className="relative w-full overflow-x-auto scroll-smooth scrollbar-hide pb-8 pt-4 px-4 md:px-12 snap-x">
+        <div className="flex space-x-6 justify-center min-w-max mx-auto">
+
         {availableRooms.map((room) => (
-          <div key={room.id} className="w-[300px] h-[420px] flex-shrink-0" style={{ scrollSnapAlign: "start" }}>
-            <Card className="w-full h-full flex flex-col bg-white shadow-lg hover:shadow-xl transition-all duration-300 rounded-2xl overflow-hidden group cursor-pointer">
-              <div className="w-full h-48 overflow-hidden relative">
+          <div key={room.id} className="w-[340px] h-[500px] flex-shrink-0 snap-start">
+            <Card className="w-full h-full flex flex-col bg-white/20 backdrop-blur-md border border-white/30 shadow-lg hover:shadow-2xl transition-all duration-500 rounded-2xl overflow-hidden group cursor-pointer">
+              
+              {/* Room Image with Overlay */}
+              <div className="w-full h-56 overflow-hidden relative rounded-t-2xl">
                 <img
                   src={room.imageUrl || "/placeholder.svg"}
                   alt={room.type}
-                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                <span className="absolute bottom-3 left-3 bg-white/90 text-primary px-2 py-1 rounded-full text-sm font-semibold">
+                <div className="absolute inset-0 bg-black/50 group-hover:bg-black/60 transition-all" />
+                <span className="absolute bottom-4 left-4 bg-gray-900 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-md">
                   ₹{room.price}/night
                 </span>
               </div>
 
-              <div className="p-4 flex flex-col flex-grow">
-                <h3 className="text-xl font-bold mb-2 line-clamp-1 flex items-center">
-                  <Bed className="w-5 h-5 mr-2" /> {room.type}
-                </h3>
-                <p className="text-gray-600 text-sm line-clamp-2 flex items-center mb-4">
-                  <Users className="w-4 h-4 mr-1" /> Capacity: {room.capacity} persons
-                </p>
+              {/* Room Details */}
+              <div className="p-6 flex flex-col flex-grow bg-white bg-opacity-90 dark:bg-gray-900 dark:bg-opacity-80 rounded-b-2xl">
                 
-                <ul className="text-gray-500 text-xs line-clamp-3 mb-4 flex-grow">
-                  {room.amenities.map((amenity, index) => (
-                    <li key={index} className="list-disc list-inside">{amenity}</li>
-                  ))}
-                </ul>
+                {/* Room Type */}
+                <h3 className="text-xl font-semibold mb-2 flex items-center text-gray-900 dark:text-white">
+                  <Bed className="w-6 h-6 mr-2 text-blue-500 dark:text-blue-400" /> {room.type}
+                </h3>
 
+                {/* Capacity */}
+                <p className="text-gray-700 dark:text-gray-300 text-sm flex items-center mb-3">
+                  <Users className="w-4 h-4 mr-1 text-blue-400" /> Capacity: {room.capacity} persons
+                </p>
+
+                {/* Smoking & Alcohol Policy */}
+                <div className="flex items-center gap-4 text-gray-600 dark:text-gray-400 text-xs mb-3">
+                  {!room.smokingAllowed && (
+                    <div className="flex items-center gap-1">
+                      <CigaretteOff className="w-4 h-4 text-red-500" />
+                      <span>No Smoking</span>
+                    </div>
+                  )}
+                  {!room.alcoholAllowed && (
+                    <div className="flex items-center gap-1">
+                      <WineOff className="w-4 h-4 text-red-500" />
+                      <span>No Alcohol</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Meals & Extra Bed Info */}
+                <div className="text-gray-700 dark:text-gray-300 text-sm flex flex-wrap gap-3 mb-4">
+                  {room.mealIncluded ? (
+                    <div className="flex items-center gap-1">
+                      <Utensils className="w-4 h-4 text-green-500" />
+                      <span>Meals Included</span>
+                    </div>
+                  ) : room.mealPrice > 0 ? (
+                    <div className="flex items-center gap-1">
+                      <Utensils className="w-4 h-4 text-orange-500" />
+                      <span>Meals: ₹{room.mealPrice}</span>
+                    </div>
+                  ) : null}
+
+                  {room.extraBedPrice > 0 && (
+                    <div className="flex items-center gap-1">
+                      <PlusCircle className="w-4 h-4 text-blue-500" />
+                      <span>Extra Bed: ₹{room.extraBedPrice}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Children Policy */}
+                {room.childrenAllowed && room.childrenPolicy && (
+                  <p className="text-gray-500 dark:text-gray-400 text-xs italic">
+                    {room.childrenPolicy}
+                  </p>
+                )}
+
+                {/* Call to Action Button */}
                 <Button 
                   onClick={() => handleBookNowClick(room)} 
-                  variant="custom" 
-                  className="w-full group-hover:text-white transition-colors duration-300">
+                  className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg transition-all duration-500 hover:scale-105 hover:opacity-90 mt-4"
+                >
                   Check Availability
                 </Button>
               </div>
             </Card>
           </div>
         ))}
+      </div>
       </div>
     </section>
   );

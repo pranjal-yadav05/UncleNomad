@@ -1,30 +1,41 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import TravelPage from './components/TravelPage';
+import TravelPage from './pages/TravelPage';
 import AdminAuth from './components/AdminAuth';
 import AdminPanel from './components/AdminPanel';
-import ManageBookings from './components/ManageBookings';
-import ManageRooms from './components/ManageRooms';
-import ManagePackages from './components/ManagePackages';
-import ManageQueries from './components/ManageQueries';
+import ManageBookings from './pages/ManageBookings';
+import ManageRooms from './pages/ManageRooms';
+import ManagePackages from './pages/ManagePackages';
+import ManageQueries from './pages/ManageQueries';
 import AdminCredentialsUpdate from './components/AdminCredentialsUpdate';
-import ManageMedia from './components/ManageMedia';
+import ManageMedia from './pages/ManageMedia';
+import TourDetailsPage from './pages/TourDetailsPage';
+import './App.css'
+import ManageGallery from './pages/ManageGallery';
+import GalleryPage from './pages/GalleryPage';
+import RoomDetailsPage from './pages/RoomDetailsPage';
+import RoomSelectionPage from './pages/RoomSelectionPage';
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<TravelPage />} />
+        <Route path='/tour/:id' element={<TourDetailsPage/>}/>
+        <Route path='/rooms/:id' element={<RoomDetailsPage/>}/>
         <Route path="/admin-auth" element={<AdminAuth />} />
-        
+        <Route path='/gallery' element={<GalleryPage/>} />
+        <Route path='/room-selection' element={<RoomSelectionPage/>} />
+
+        {/*Admin Route */}
         <Route path="/admin" element={<AdminPanel />}>
           <Route path="bookings" element={<ManageBookings />} />
+          <Route path="gallery" element={<ManageGallery/>} />
           <Route path="rooms" element={<ManageRooms />} />
           <Route path="packages" element={<ManagePackages />} />
           <Route path="queries" element={<ManageQueries />} />
             <Route path="credentials" element={<AdminCredentialsUpdate />} />
             <Route path="media" element={<ManageMedia />} />
           </Route>
-
       </Routes>
     </BrowserRouter>
   );

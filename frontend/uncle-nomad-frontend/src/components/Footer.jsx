@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Button } from "./ui/button"
 import { Link } from "react-router-dom"
-import QueryModal from './QueryModal'
+import QueryModal from '../modals/QueryModal'
 
 
 const Footer = () => {
@@ -13,7 +13,7 @@ const Footer = () => {
         {/* Logo and Description Section */}
         <div className="flex flex-col items-center text-center mb-12">
           <img
-            src="logo2.PNG"
+            src="/logo2.PNG"
             alt="Uncle Nomad"
             width={250}
             height={250}

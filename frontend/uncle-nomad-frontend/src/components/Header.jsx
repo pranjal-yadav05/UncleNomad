@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "./ui/button"
 import { Menu } from "lucide-react"
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -31,37 +31,25 @@ const Header = () => {
                   window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
                 }
               }}
-             src="logo3-rm.png" alt="Uncle Nomad Logo" width={200} height={60} />
+             src="/logo3-rm.png" alt="Uncle Nomad Logo" width={200} height={60} style={{display:'block'}}/>
           </div>
           <nav className="hidden md:flex items-center space-x-6">
-          <a 
+            <a
               href="#about" 
               className="text-black hover:text-yellow"
               onClick={(e) => {
                 e.preventDefault();
-                const section = document.getElementById('about');
-                if (section) {
-                  const offset = 80;
-                  const elementPosition = section.getBoundingClientRect().top;
-                  const offsetPosition = elementPosition + window.pageYOffset - offset;
-                  window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
-                }
+                navigate("/", { state: { section: "about" } });
               }}
             >
-              About Us
+              Home
             </a>
             <a 
               href="#availability" 
               className="text-black hover:text-yellow"
               onClick={(e) => {
                 e.preventDefault();
-                const section = document.getElementById('availability');
-                if (section) {
-                  const offset = 80;
-                  const elementPosition = section.getBoundingClientRect().top;
-                  const offsetPosition = elementPosition + window.pageYOffset - offset;
-                  window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
-                }
+                navigate("/", { state: { section: "availability" } });
               }}
             >
               Stays
@@ -71,37 +59,26 @@ const Header = () => {
               className="text-black hover:text-yellow"
               onClick={(e) => {
                 e.preventDefault();
-                const section = document.getElementById('tours');
-                if (section) {
-                  const offset = 80;
-                  const elementPosition = section.getBoundingClientRect().top;
-                  const offsetPosition = elementPosition + window.pageYOffset - offset;
-                  window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
-                }
+                navigate("/", { state: { section: "tours" } });
               }}
             >
               Tours
+            </a>
+            <a 
+              href="#gallery" 
+              className="text-black hover:text-yellow"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate('/gallery')
+              }}
+            >
+              Gallery
             </a>
 
             <Button
               onClick={(e) => {
                 e.preventDefault();
-                const section = document.getElementById('get-in-touch');
-                if (section) {
-                  const offset = 80;
-                  const elementPosition = section.getBoundingClientRect().top;
-                  const offsetPosition = elementPosition + window.pageYOffset - offset;
-                  window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
-
-                  // Force reflow to ensure animation works
-                  void section.offsetWidth;
-                  
-                  // Add highlight class and remove after animation
-                  section.classList.add('highlight');
-                  setTimeout(() => {
-                    section.classList.remove('highlight');
-                  }, 2000);
-                }
+                navigate("/", { state: { section: "get-in-touch" } });
               }}
             >
               Contact Us
@@ -172,6 +149,16 @@ const Header = () => {
               }}
             >
               Tours
+            </a>
+            <a 
+              href="#gallery" 
+              className="text-black hover:text-brand-purple transition-colors py-2 transform transition-transform duration-200 hover:translate-x-2"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate('/gallery')
+              }}
+            >
+              Gallery
             </a>
             <Button
               onClick={(e) => {

@@ -3,11 +3,12 @@ import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Calendar, MapPin } from 'lucide-react';
 
-const TourCard = ({ tour, onClick, handleBookNowClick, setSelectedTour }) => {
+const TourCard = ({ tour, onClick, handleBookNowClick, setSelectedTour, handleTourClick }) => {
   const handleButtonClick = (event) => {
     event.stopPropagation();
-    setSelectedTour(tour);
-    handleBookNowClick();
+    // setSelectedTour(tour);
+    // handleBookNowClick();
+    handleTourClick(tour)
   };
 
   return (
@@ -17,7 +18,7 @@ const TourCard = ({ tour, onClick, handleBookNowClick, setSelectedTour }) => {
     >
       <div className="w-full h-48 overflow-hidden relative">
         <img
-          src={tour.image || "/placeholder.svg"}
+          src={tour.images[0] || "/placeholder.svg"}
           alt={tour.title}
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
         />
@@ -42,7 +43,7 @@ const TourCard = ({ tour, onClick, handleBookNowClick, setSelectedTour }) => {
           </div>
         </div>
 
-        <Button onClick={handleButtonClick} variant="custom" className="w-full group-hover:bg-primary group-hover:text-black transition-colors duration-300">
+        <Button onClick={handleButtonClick} className="w-full group-hover:bg-primary group-hover:text-black transition-colors duration-300">
           Book Now
         </Button>
       </div>
