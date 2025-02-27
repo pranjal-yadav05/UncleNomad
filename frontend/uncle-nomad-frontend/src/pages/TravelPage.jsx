@@ -213,7 +213,7 @@ export default function TravelPage() {
         <div
           className="relative"
           style={{
-            backgroundImage: "url('tourback.jpeg')", // Add the background image path here
+            backgroundImage: "url('tourback.jpg')", // Add the background image path here
             backgroundSize: "cover",
             backgroundPosition: "center",
           }}
