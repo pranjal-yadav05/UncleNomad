@@ -227,9 +227,9 @@ export default function TravelPage() {
                 tours={tours}
               />
 
-            <AnimatedSection animation="zoom-in" duration={800}>
+            {/* <AnimatedSection animation="zoom-in" duration={800}> */}
               <CounterSection/>
-            </AnimatedSection>
+            {/* </AnimatedSection> */}
             
         </div>
         <AnimatedSection animation="zoom-in" duration={800}>
