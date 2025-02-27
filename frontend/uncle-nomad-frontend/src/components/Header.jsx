@@ -107,29 +107,17 @@ const Header = () => {
               className="text-black hover:text-brand-purple transition-colors py-2 transform transition-transform duration-200 hover:translate-x-2"
               onClick={(e) => {
                 e.preventDefault();
-                const section = document.getElementById('about');
-                if (section) {
-                  const offset = 80;
-                  const elementPosition = section.getBoundingClientRect().top;
-                  const offsetPosition = elementPosition + window.pageYOffset - offset;
-                  window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
-                }
+                navigate("/", { state: { section: "about" } });
               }}
             >
-              About Us
+              Home
             </a>
             <a 
               href="#availability" 
               className="text-black hover:text-brand-purple transition-colors py-2 transform transition-transform duration-200 hover:translate-x-2"
               onClick={(e) => {
                 e.preventDefault();
-                const section = document.getElementById('availability');
-                if (section) {
-                  const offset = 80;
-                  const elementPosition = section.getBoundingClientRect().top;
-                  const offsetPosition = elementPosition + window.pageYOffset - offset;
-                  window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
-                }
+                navigate("/", { state: { section: "availability" } });
               }}
             >
               Stays
@@ -139,13 +127,7 @@ const Header = () => {
               className="text-black hover:text-brand-purple transition-colors py-2 transform transition-transform duration-200 hover:translate-x-2"
               onClick={(e) => {
                 e.preventDefault();
-                const section = document.getElementById('tours');
-                if (section) {
-                  const offset = 80;
-                  const elementPosition = section.getBoundingClientRect().top;
-                  const offsetPosition = elementPosition + window.pageYOffset - offset;
-                  window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
-                }
+                navigate("/", { state: { section: "tours" } });
               }}
             >
               Tours
@@ -163,22 +145,7 @@ const Header = () => {
             <Button
               onClick={(e) => {
                 e.preventDefault();
-                const section = document.getElementById('get-in-touch');
-                if (section) {
-                  const offset = 80;
-                  const elementPosition = section.getBoundingClientRect().top;
-                  const offsetPosition = elementPosition + window.pageYOffset - offset - 200;
-                  window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
-
-                  // Force reflow to ensure animation works
-                  void section.offsetWidth;
-                  
-                  // Add highlight class and remove after animation
-                  section.classList.add('highlight');
-                  setTimeout(() => {
-                    section.classList.remove('highlight');
-                  }, 2000);
-                }
+                navigate("/", { state: { section: "get-in-touch" } });
               }}
             >
               Contact Us
