@@ -1,8 +1,18 @@
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Bed, Users, CigaretteOff, WineOff, Utensils, PlusCircle } from 'lucide-react';
+import { useNavigate } from "react-router-dom";
 
 export default function AvailableRooms({ availableRooms, handleBookNowClick }) {
+  const navigate = useNavigate();
+
+  const handleRoomClick = (room) => {
+    // Use navigate to go to the TourDetailsPage, passing the tour's data via state
+    navigate(`/rooms/${room._id}`, {
+      state: { selectedRoom: room } // Pass the selected tour via state
+    });
+  };
+
   return (
     <section className="container mx-auto px-6 py-16 relative">
       <h2 className="text-5xl font-extrabold mb-10 text-center text-gray-900 dark:text-white">
@@ -14,8 +24,8 @@ export default function AvailableRooms({ availableRooms, handleBookNowClick }) {
         <div className="flex space-x-6 justify-center min-w-max mx-auto">
 
         {availableRooms.map((room) => (
-          <div key={room.id} className="w-[340px] h-[500px] flex-shrink-0 snap-start">
-            <Card className="w-full h-full flex flex-col bg-white/20 backdrop-blur-md border border-white/30 shadow-lg hover:shadow-2xl transition-all duration-500 rounded-2xl overflow-hidden group cursor-pointer">
+          <div className="w-[340px] h-[500px] flex-shrink-0 snap-start">
+            <Card onClick={()=>handleRoomClick(room)} className="w-full h-full flex flex-col bg-white/20 backdrop-blur-md border border-white/30 shadow-lg hover:shadow-2xl transition-all duration-500 rounded-2xl overflow-hidden group cursor-pointer">
               
               {/* Room Image with Overlay */}
               <div className="w-full h-56 overflow-hidden relative rounded-t-2xl">
@@ -90,7 +100,10 @@ export default function AvailableRooms({ availableRooms, handleBookNowClick }) {
 
                 {/* Call to Action Button */}
                 <Button 
-                  onClick={() => handleBookNowClick(room)} 
+                  onClick={(event) => {
+                    event.stopPropagation(); // Prevent the Card's onClick from firing
+                    handleBookNowClick(room);
+                  }} 
                   className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg transition-all duration-500 hover:scale-105 hover:opacity-90 mt-4"
                 >
                   Check Availability

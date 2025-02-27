@@ -91,7 +91,7 @@ const RoomDetailsPage = () => {
       })
     } else {
       // Navigate to availability section to start booking
-      navigate("/#availability")
+      navigate("/", { state: { section: "availability" } });
     }
   }
 
