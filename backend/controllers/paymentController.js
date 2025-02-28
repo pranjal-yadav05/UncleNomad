@@ -510,7 +510,7 @@ export const verifyPayment = async (req, res) => {
                 });
             }
 
-            await Booking.findByIdAndUpdate(booking._id, {
+            const bookingUpdate = await Booking.findByIdAndUpdate(booking._id, {
                 paymentStatus: 'PAID',
                 paymentDate: new Date(),
                 paymentAmount: body.txnAmount,
@@ -522,6 +522,7 @@ export const verifyPayment = async (req, res) => {
                 status: 'SUCCESS',
                 message: 'Payment verified successfully',
                 data: {
+                    bookingUpdate: bookingUpdate,
                     orderId: orderId,
                     txnId: body.txnId,
                     txnAmount: body.txnAmount,

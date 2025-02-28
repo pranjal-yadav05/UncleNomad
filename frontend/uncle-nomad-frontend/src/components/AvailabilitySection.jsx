@@ -29,13 +29,33 @@ function AvailabilitySection() {
   const [dateError, setDateError] = useState("")
 
   const handleDateChange = (e) => {
-    const { name, value } = e.target
-
-    setBookingForm((prev) => ({
-      ...prev,
-      [name]: new Date(value),
-    }))
-  }
+    const { name, value } = e.target;
+    const selectedDate = new Date(value);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time to avoid issues
+    
+    setBookingForm((prev) => {
+      let updatedForm = { ...prev, [name]: selectedDate };
+      let { checkIn, checkOut } = updatedForm;
+  
+      if (checkIn && checkOut) {
+        if (checkIn >= checkOut) {
+          setDateError("Check-out date must be after the check-in date.");
+          return prev; // Prevent updating state
+        } else {
+          setDateError(""); // Clear error if valid
+        }
+      }
+  
+      if (selectedDate < today) {
+        setDateError("Dates must be in the future.");
+        return prev; // Prevent updating state
+      }
+  
+      return updatedForm;
+    });
+  };
+  
 
   const checkAvailability = async () => {
     const { checkIn, checkOut } = bookingForm

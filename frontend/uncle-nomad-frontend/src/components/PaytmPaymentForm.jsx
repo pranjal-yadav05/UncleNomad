@@ -1,7 +1,8 @@
-import { useEffect, useState, useCallback } from "react"
-import axios from "axios"
-import { Button } from "./ui/button"
-import BookingConfirmationDialog from "../modals/BookingConfirmationDialog"
+import { useEffect, useState, useCallback } from "react";
+import axios from "axios";
+import { Button } from "./ui/button";
+import BookingConfirmationDialog from "../modals/BookingConfirmationDialog";
+import BookingFailedDialog from "../modals/BookingFailedDialog"; // Import failed dialog
 
 const PaytmPaymentForm = ({ 
   paymentData, 
@@ -14,48 +15,55 @@ const PaytmPaymentForm = ({
   onPaymentFailure, 
   setIsBookingConfirmed,
   onClose,
-  setChecking
+  setChecking,
+  setIsBookingFailed
 }) => {
-  const [error, setError] = useState(null)
-  const [isPaytmLoaded, setIsPaytmLoaded] = useState(false)
-  const [showConfirmation, setShowConfirmation] = useState(false)
+  const [error, setError] = useState(null);
+  const [isPaytmLoaded, setIsPaytmLoaded] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [isFailed, setIsFailed] = useState(false); // Track failure state
 
   const handleCloseConfirmation = useCallback(() => {
-    setShowConfirmation(false)
-    setIsBookingConfirmed(false)
-    onClose?.()
-  }, [onClose, setIsBookingConfirmed])
+    setShowConfirmation(false);
+    setIsBookingConfirmed(false);
+    onClose?.();
+  }, [onClose, setIsBookingConfirmed]);
+
+  const handleCloseFailed = () => {
+    setIsBookingFailed(false);
+    setIsFailed(false);
+    onClose?.();
+  };
 
   const loadPaytmScript = useCallback(() => {
     return new Promise((resolve, reject) => {
-      const existingScript = document.querySelector(`script[src*="paytm.in"]`)
+      const existingScript = document.querySelector(`script[src*="paytm.in"]`);
       if (existingScript) {
-        existingScript.remove()
+        existingScript.remove();
       }
 
-      const script = document.createElement("script")
-      script.src = `https://${process.env.REACT_APP_PAYTM_HOSTNAME}/merchantpgpui/checkoutjs/merchants/${paymentData.mid}.js`
-      script.async = true
-      script.crossOrigin = "anonymous"
+      const script = document.createElement("script");
+      script.src = `https://${process.env.REACT_APP_PAYTM_HOSTNAME}/merchantpgpui/checkoutjs/merchants/${paymentData.mid}.js`;
+      script.async = true;
+      script.crossOrigin = "anonymous";
 
       script.onload = () => {
-        setIsPaytmLoaded(true)
-        resolve()
-      }
+        setIsPaytmLoaded(true);
+        resolve();
+      };
 
       script.onerror = () => {
-        reject(new Error("Failed to load Paytm script"))
-      }
+        reject(new Error("Failed to load Paytm script"));
+      };
 
-      document.body.appendChild(script)
-    })
-  }, [paymentData])
+      document.body.appendChild(script);
+    });
+  }, [paymentData]);
 
   const handleTransactionStatus = useCallback(async (response) => {
     try {
       if (response.STATUS === 'TXN_SUCCESS') {
-
-        setChecking(true)
+        setChecking(true);
         const selectedRooms = Object.entries(bookingForm.selectedRooms)
           .filter(([roomId, quantity]) => quantity > 0)
           .map(([roomId, quantity]) => ({
@@ -81,7 +89,7 @@ const PaytmPaymentForm = ({
           paymentReference: response.ORDERID
         };
 
-        setBookingDetails(bookingData)
+        setBookingDetails(bookingData);
 
         const bookingResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/bookings/book`, {
           method: 'POST',
@@ -95,20 +103,36 @@ const PaytmPaymentForm = ({
 
         const bookingResult = await bookingResponse.json();
         
-        await axios.post(`${process.env.REACT_APP_API_URL}/api/payments/verify`, {
+        const bookingUpdate = await axios.post(`${process.env.REACT_APP_API_URL}/api/payments/verify`, {
           orderId: response.ORDERID
         });
-
-        setBookingDetails(bookingResult)
-        setShowConfirmation(true)
-        setIsBookingConfirmed(true)
+        
+        console.log('booking result', bookingUpdate.data.data.bookingUpdate);
+        setBookingDetails(bookingUpdate.data.data.bookingUpdate);
+        setShowConfirmation(true);
+        setIsBookingConfirmed(true);
         onPaymentSuccess?.(bookingResult);
-        setChecking(false)
+        setChecking(false);
 
       } else {
-        throw new Error('Payment failed or was cancelled');
+        console.error("Payment failed or was cancelled");
+        setIsBookingFailed(true);
+        setIsFailed(true);
+        onPaymentFailure?.("Payment failed or was cancelled");
+
+        // Close the Paytm payment gateway
+        if (window.Paytm && window.Paytm.CheckoutJS) {
+          try {
+            window.Paytm.CheckoutJS.close();
+          } catch (error) {
+            console.error("Error closing Paytm gateway:", error);
+          }
+        }
       }
     } catch (error) {
+      console.error("Payment verification failed:", error);
+      setIsBookingFailed(true);
+      setIsFailed(true);
       onPaymentFailure?.(error.message || "Payment verification failed");
     }
   }, [bookingForm, onPaymentSuccess, onPaymentFailure]);
@@ -127,8 +151,10 @@ const PaytmPaymentForm = ({
         console.error("Failed to load payment gateway:", error.message);
         setTimeout(() => {
           setError("Failed to load payment gateway");
+          setIsBookingFailed(true);
+          setIsFailed(true);
           onPaymentFailure?.(error.message);
-        }, 3000); // Delay error display
+        }, 3000);
       });
   
     return () => {
@@ -138,7 +164,6 @@ const PaytmPaymentForm = ({
       }
     };
   }, [loadPaytmScript, paymentData, onPaymentFailure]);
-  
 
   useEffect(() => {
     if (!isPaytmLoaded || !paymentData?.txnToken) return;
@@ -157,7 +182,10 @@ const PaytmPaymentForm = ({
           handler: {
             notifyMerchant: (eventName, data) => {
               if (eventName === "APP_CLOSED") {
+                console.error("Payment window closed by user");
                 setError("Payment window was closed");
+                setIsBookingFailed(true);
+                setIsFailed(true);
                 onPaymentFailure?.("Payment cancelled by user");
               }
             },
@@ -185,21 +213,27 @@ const PaytmPaymentForm = ({
           },
         };
 
-        window.Paytm.CheckoutJS.onLoad(function executeAfterCompleteLoad() {
+        window.Paytm.CheckoutJS.onLoad(() => {
           window.Paytm.CheckoutJS.init(config)
-            .then(function onSuccess() {
-              setIsModalOpen(false)
+            .then(() => {
+              setIsModalOpen(false);
               onClose?.();
               window.Paytm.CheckoutJS.invoke();
             })
-            .catch(function onError(error) {
+            .catch((error) => {
+              console.error("Failed to initialize payment:", error);
               setError("Failed to initialize payment");
+              setIsBookingFailed(true);
+              setIsFailed(true);
               onPaymentFailure?.(error.message);
             });
         });
 
       } catch (error) {
+        console.error("Failed to initialize payment:", error);
         setError("Failed to initialize payment");
+        setIsBookingFailed(true);
+        setIsFailed(true);
         onPaymentFailure?.(error.message);
       }
     };
@@ -207,30 +241,9 @@ const PaytmPaymentForm = ({
     initializePayment();
   }, [isPaytmLoaded, paymentData, handleTransactionStatus, onPaymentFailure]);
 
-  if (error) {
-    return (
-      <div className="text-center text-red-600">
-        <p className="font-medium">{error}</p>
-        <Button 
-          onClick={() => window.location.reload()} 
-          className="mt-4 bg-brand-purple hover:bg-brand-purple/90 text-white"
-        >
-          Try Again
-        </Button>
-      </div>
-    );
-  }
-
-  // if (showConfirmation && bookingDetails) {
-  //   return (
-  //     <BookingConfirmationDialog
-  //       booking={bookingDetails}
-  //       onClose={handleCloseConfirmation}
-  //     />
-  //   );
-  // }
-
-  return (
+  return isFailed ? (
+    <BookingFailedDialog errorMessage="Payment failed or was cancelled." onClose={handleCloseFailed} />
+  ) : (
     <div className="text-center w-full">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-purple mx-auto"></div>
       <p className="mt-4 font-medium">{isPaytmLoaded ? "Initializing payment..." : "Loading payment gateway..."}</p>
@@ -239,4 +252,4 @@ const PaytmPaymentForm = ({
   );
 };
 
-export default PaytmPaymentForm
+export default PaytmPaymentForm;

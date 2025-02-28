@@ -8,6 +8,8 @@ import { Label } from "../components/ui/label"
 import TourPaymentForm from "../components/TourPaymentForm"
 import TourBookingConfirmationDialog from "../modals/TourBookingConfirmationDialog"
 import { useNavigate } from "react-router-dom"
+import FailedTransactionModal from "./FailedTransactionModal"
+import { Alert, AlertDescription, AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogCancel } from "../components/ui/alert"
 
 export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsCheckingOpen, isCheckingOpen }) {
   const [bookingDetails, setBookingDetails] = useState({
@@ -27,9 +29,11 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsC
   const [bookingData, setBookingData] = useState(null)
   const [paymentData, setPaymentData] = useState(null)
   const [modalOpen, setModalOpen] = useState(true)
-  const [isConfirmationOpen, setIsConfirmationOpen] = useState(false)  // New state for confirmation dialog
+  const [isConfirmationOpen, setIsConfirmationOpen] = useState(false)
+  const [isDisclaimerOpen, setIsDisclaimerOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  
+  const [isPaymentFailedOpen, setIsPaymentFailedOpen] = useState(false);
+  const [paymentErrorMessage, setPaymentErrorMessage] = useState("");
 
   useEffect(() => {
     if (isOpen) {
@@ -58,28 +62,27 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsC
     if (!validatePhone(bookingDetails.phone)) {
       errors.phone = "Please enter a valid 10-digit phone number";
     }
+    
+    // Check if group size is within limits
+    const availableSlots = selectedTour.groupSize - selectedTour.bookedSlots;
     if (bookingDetails.groupSize < 1) {
       errors.groupSize = "Group size must be at least 1";
+    } else if (bookingDetails.groupSize > availableSlots) {
+      errors.groupSize = `Only ${availableSlots} slots available for this tour`;
     }
+    
     setIsLoading(false)
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
-  }, [bookingDetails, validateEmail, validatePhone]);
+  }, [bookingDetails, validateEmail, validatePhone, selectedTour]);
 
   const handleInputChange = (e) => {
     const { id, value } = e.target;
   
-    // If changing groupSize, ensure it's a valid number and within limits
+    // Allow any input for groupSize without immediate restrictions
     if (id === "groupSize") {
-      let numValue = parseInt(value, 10) || 1; // Convert to number or default to 1
-      const availableSlots = selectedTour.groupSize - selectedTour.bookedSlots; // Calculate available slots
-  
-      if (numValue > availableSlots) {
-        numValue = availableSlots; // Restrict to max available slots
-      } else if (numValue < 1) {
-        numValue = 1; // Ensure at least 1 participant
-      }
-  
+      // Convert to number but don't restrict yet
+      const numValue = parseInt(value, 10) || ""; // Allow empty string if parsing fails
       setBookingDetails((prev) => ({ ...prev, [id]: numValue }));
     } else {
       // For all other input fields (name, email, phone, specialRequests)
@@ -91,49 +94,55 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsC
     }
   };
   
-  
-
   const handleBookingSubmit = async (e) => {
-    setIsLoading(true)
     e.preventDefault();
+    setIsLoading(true);
+    
     if (validateForm()) {
-      try {
-        const totalAmount = selectedTour.price * Number.parseInt(bookingDetails.groupSize);
+      // Show disclaimer dialog instead of proceeding directly
+      setIsDisclaimerOpen(true);
+    } else {
+      setIsLoading(false);
+    }
+  };
 
-        const bookingData = {
-          ...bookingDetails,
-          totalAmount: totalAmount,
-          bookingDate: new Date(),
-          tourId: selectedTour._id,
-        };
+  const proceedToPayment = async () => {
+    try {
+      const totalAmount = selectedTour.price * Number.parseInt(bookingDetails.groupSize);
 
-        if (!bookingData.tourId || !bookingData.groupSize || !bookingData.bookingDate || !bookingData.guestName || !bookingData.email || !bookingData.phone) {
-          console.error("Missing required fields:", bookingData);
-          alert("Please make sure all required fields are filled in.");
-          return;
-        }
+      const bookingData = {
+        ...bookingDetails,
+        totalAmount: totalAmount,
+        bookingDate: new Date(),
+        tourId: selectedTour._id,
+      };
 
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/tours/${selectedTour._id}/book`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(bookingData),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || "Failed to create booking");
-        }
-
-        const result = await response.json();
-        setBookingData(result.booking);
-        setPaymentStep(true);
-
-      } catch (error) {
-        console.error("Booking Error:", error);
-        alert("Failed to create booking: " + error.message);
-      } finally{
-        setIsLoading(false)
+      if (!bookingData.tourId || !bookingData.groupSize || !bookingData.bookingDate || !bookingData.guestName || !bookingData.email || !bookingData.phone) {
+        console.error("Missing required fields:", bookingData);
+        alert("Please make sure all required fields are filled in.");
+        return;
       }
+
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/tours/${selectedTour._id}/book`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(bookingData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to create booking");
+      }
+
+      const result = await response.json();
+      setBookingData(result.booking);
+      setPaymentStep(true);
+
+    } catch (error) {
+      console.error("Booking Error:", error);
+      alert("Failed to create booking: " + error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -213,6 +222,16 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsC
     };
   };
 
+  const handleAgreeToDisclaimer = () => {
+    setIsDisclaimerOpen(false);
+    proceedToPayment();
+  };
+
+  const handleCancelDisclaimer = () => {
+    setIsDisclaimerOpen(false);
+    setIsLoading(false);
+  };
+
   return (
     <>
     <Dialog open={isOpen && modalOpen} onOpenChange={handleClose}>
@@ -247,7 +266,8 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsC
             bookingForm={bookingDetails}
             onPaymentSuccess={handlePaymentSuccess}
             onPaymentFailure={(error) => {
-              alert(`Payment failed: ${error}`);
+              setPaymentErrorMessage(error);
+              setIsPaymentFailedOpen(true);
               setPaymentStep(false);
               setModalOpen(true);
             }}
@@ -310,13 +330,14 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsC
                 id="groupSize"
                 type="number"
                 min="1"
-                max={selectedTour.groupSize - selectedTour.bookedSlots} // Limit max value
                 required
                 value={bookingDetails.groupSize}
                 onChange={handleInputChange}
                 className="w-full border-gray-200 focus:ring-2 focus:ring-brand-purple"
               />
-
+              <div className="text-sm text-gray-500">
+                Available slots: {selectedTour.groupSize - selectedTour.bookedSlots}
+              </div>
               {validationErrors.groupSize && <p className="text-red-500 text-sm mt-1">{validationErrors.groupSize}</p>}
             </div>
 
@@ -355,14 +376,42 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsC
       </DialogContent>
     </Dialog>
 
+    {/* Disclaimer Dialog */}
+    <AlertDialog open={isDisclaimerOpen} onOpenChange={setIsDisclaimerOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Tour Booking Disclaimer</AlertDialogTitle>
+          <AlertDescription>
+            <p>Please review the following information before proceeding:</p>
+            <ul className="list-disc pl-5 mt-2 space-y-1">
+              <li>You are booking {bookingDetails.groupSize} {bookingDetails.groupSize === 1 ? 'participant' : 'participants'} for {selectedTour?.title}</li>
+              <li>Total amount: ₹{selectedTour?.price * bookingDetails.groupSize}</li>
+              <li>Cancellation policies apply as per our terms and conditions</li>
+              <li>Payment is required to confirm your booking</li>
+            </ul>
+          </AlertDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={handleCancelDisclaimer}>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={handleAgreeToDisclaimer}>Agree & Continue</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
     {/* Confirmation Dialog */}
     {isConfirmationOpen && (
-          <TourBookingConfirmationDialog
-            isOpen={true}
-            tourBooking={paymentData.confirmedBooking}
-            onClose={handleConfirmationClose}
-          />
-        )}
+      <TourBookingConfirmationDialog
+        isOpen={true}
+        tourBooking={paymentData.confirmedBooking}
+        onClose={handleConfirmationClose}
+      />
+    )}
+
+    <FailedTransactionModal
+      open={isPaymentFailedOpen}
+      onClose={() => setIsPaymentFailedOpen(false)}
+      errorMessage={paymentErrorMessage}
+    />
     </>
   );
 }

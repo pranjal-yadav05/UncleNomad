@@ -9,6 +9,7 @@ import Footer from "../components/Footer"
 import BookingModal from "../modals/BookingModal"
 import { format } from "date-fns"
 import BookingConfirmationDialog from "../modals/BookingConfirmationDialog"
+import BookingFailedDialog from "../modals/BookingFailedDialog"
 
 const RoomSelectionPage = () => {
   const location = useLocation()
@@ -41,6 +42,7 @@ const RoomSelectionPage = () => {
   const [checking, setChecking] = useState(false)
   const [isBookingConfirmed, setIsBookingConfirmed] = useState(false)
   const [bookingDetails, setBookingDetails] = useState(null)
+  const [isBookingFailed, setIsBookingFailed] = useState(false)
   const [error, setError] = useState(null)
 
   useEffect(() => {
@@ -359,6 +361,7 @@ const RoomSelectionPage = () => {
           setIsBookingConfirmed={setIsBookingConfirmed}
           setBookingDetails={setBookingDetails}
           bookingDetails={bookingDetails}
+          setIsBookingFailed={setIsBookingFailed}
         />
       )}
       {isBookingConfirmed && 
@@ -370,6 +373,13 @@ const RoomSelectionPage = () => {
             window.history.pushState(null, null, "/"); // Ensure back button doesn't work
           }}
           booking={bookingDetails}
+        />
+      }
+      {
+        isBookingFailed &&
+        <BookingFailedDialog // Pass booking details if available
+          errorMessage="Payment processing failed. Please try again."
+          onClose={() => setIsBookingFailed(false)}
         />
       }
 

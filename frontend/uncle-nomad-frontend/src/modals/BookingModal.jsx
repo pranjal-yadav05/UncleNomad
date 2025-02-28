@@ -27,6 +27,7 @@ export default function BookingModal({
   setIsBookingConfirmed,
   setBookingDetails,
   bookingDetails,
+  setIsBookingFailed
 }) {
   const navigate = useNavigate()
   const [paymentData, setPaymentData] = useState(null)
@@ -65,37 +66,18 @@ export default function BookingModal({
   }
 
   const handleNumberChange = (e) => {
-    const { name, value } = e.target
-    const numValue = Number(value)
-
-    // Validate number fields
-    if (name === "numberOfGuests") {
-      if (numValue < 1 || isNaN(numValue)) {
-        setValidationErrors((prev) => ({
-          ...prev,
-          [name]: "At least 1 guest is required",
-        }))
-      } else if (numValue > totalCapacity) {
-        setValidationErrors((prev) => ({
-          ...prev,
-          [name]: `Maximum capacity is ${totalCapacity} guests for selected rooms`,
-        }))
-      } else {
-        setValidationErrors((prev) => ({
-          ...prev,
-          [name]: "",
-        }))
-      }
-    }
-
-    // Only update the state if it's valid for numberOfGuests
-    if (name !== "numberOfGuests" || (numValue <= totalCapacity && numValue >= 1)) {
-      setBookingForm((prev) => ({
+    const { name, value } = e.target;
+    
+    setBookingForm((prev) => ({
         ...prev,
-        [name]: numValue,
-      }))
-    }
-  }
+        [name]: value, // Let them type freely
+    }));
+
+    // No auto-correction, no auto-fill, no validation here
+  };
+
+
+  
 
   // Effect to validate numberOfGuests when rooms change
   useEffect(() => {
@@ -105,14 +87,23 @@ export default function BookingModal({
         ...prev,
         numberOfGuests: `Maximum capacity is ${totalCapacity} guests for selected rooms`
       }));
-      
-      // Automatically adjust guest count to match capacity
+  
       setBookingForm(prev => ({
         ...prev,
         numberOfGuests: totalCapacity
       }));
+  
+      // ✅ Remove error when auto-adjusted
+      setTimeout(() => {
+        setValidationErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.numberOfGuests;
+          return newErrors;
+        });
+      }, 500);
     }
   }, [bookingForm.selectedRooms, totalCapacity]);
+  
 
   const handleCheckboxChange = (e) => {
     const { name, checked } = e.target
@@ -156,32 +147,21 @@ export default function BookingModal({
   )
 
   const validateStep2 = () => {
-    const errors = {}
+    let errors = {};
 
-    if (!bookingForm.numberOfGuests || bookingForm.numberOfGuests < 1) {
-      errors.numberOfGuests = "At least one guest is required"
+    if (!bookingForm.numberOfGuests || isNaN(bookingForm.numberOfGuests) || bookingForm.numberOfGuests < 1) {
+        errors.numberOfGuests = "At least 1 guest is required.";
+    } else if (bookingForm.numberOfGuests > totalCapacity) {
+        errors.numberOfGuests = `Maximum capacity is ${totalCapacity} guests for selected rooms.`;
     }
-    
-    if (bookingForm.numberOfGuests > totalCapacity) {
-      errors.numberOfGuests = `Maximum capacity is ${totalCapacity} guests for selected rooms`
-    }
-    
-    if (!bookingForm.guestName) {
-      errors.guestName = "Guest name is required"
-    }
-    if (!bookingForm.email) {
-      errors.email = "Email is required"
-    }
-    if (!bookingForm.phone) {
-      errors.phone = "Phone number is required"
-    }
-    setValidationErrors(errors)
-    return Object.keys(errors).length === 0
-  }
 
-  const handleStep2Submit = async (e) => {
-    if (e && e.preventDefault) e.preventDefault();
-    if (!validateStep2()) return;
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0; // Return true if no errors
+  };
+
+  const handleStep2Submit = async (e = null) => {
+      if(e) e.preventDefault(); // Prevent default form submission
+
       try {
         setIsLoading(true)
 
@@ -255,10 +235,15 @@ export default function BookingModal({
       }
   };
 
-  const handleDisclaimer = (e)=>{
-    setIsPaymentModalOpen(true)
-    handleStep2Submit(e);
-  }
+  const handleDisclaimer = () => {
+    if (!validateStep2()) {
+      return; // Stop here if validation fails
+    }
+  
+    setIsDisclaimerOpen(true); // ✅ Open disclaimer modal
+  };
+  
+  
 
   const renderStep2 = () => (
     <div className="space-y-4">
@@ -349,15 +334,13 @@ export default function BookingModal({
           Back
         </Button>
         <Button
-          onClick={(e) => {
-            e.preventDefault();
-            setIsDisclaimerOpen(true);
-          }}
+          onClick={handleDisclaimer} // ✅ Runs validation first
           className="w-full bg-brand-purple hover:bg-brand-purple/90"
-          disabled={isLoading || Object.keys(validationErrors).length > 0}
+          disabled={isLoading}
         >
           {isLoading ? "Processing..." : "Proceed to Payment"}
-        </Button>
+        </Button>   
+
       </div>
     </div>
   )
@@ -371,6 +354,7 @@ export default function BookingModal({
           setIsModalOpen={setIsModalOpen}
           paymentData={paymentData}
           bookingForm={bookingForm}
+          setIsBookingFailed={setIsBookingFailed}
           setChecking={setChecking}
           onPaymentSuccess={() => {
             onClose()
@@ -435,7 +419,10 @@ export default function BookingModal({
       <DisclaimerDialog
         isOpen={isDisclaimerOpen}
         onClose={() => setIsDisclaimerOpen(false)}
-        onAgree={handleDisclaimer}
+        onAgree={() => {
+          setIsDisclaimerOpen(false);
+          handleStep2Submit(); // ✅ Proceed to payment after user agrees
+        }}
       />
     </>
   )

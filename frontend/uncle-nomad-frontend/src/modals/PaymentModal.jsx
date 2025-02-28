@@ -14,7 +14,8 @@ export default function PaymentModal({
   setIsModalOpen,
   setBookingDetails,
   bookingDetails,
-  setChecking
+  setChecking,
+  setIsBookingFailed
 }) {
   const [error, setError] = useState(null)
   const [isFailedModalOpen, setIsFailedModalOpen] = useState(false);
@@ -50,6 +51,7 @@ export default function PaymentModal({
             onClose={onClose}
             setBookingDetails={setBookingDetails}
             bookingDetails={bookingDetails}
+            setIsBookingFailed={setIsBookingFailed}
           />
         </div>
         <FailedTransactionModal 

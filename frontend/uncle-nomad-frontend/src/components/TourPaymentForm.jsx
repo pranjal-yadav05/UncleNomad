@@ -117,8 +117,6 @@ const TourPaymentForm = ({
                   );
                   
                   console.log('Payment verification response:', verificationResponse.data);
-
-                  
                   
                   // Close the payment gateway after successful verification
                   if (window.Paytm && window.Paytm.CheckoutJS) {
@@ -134,7 +132,20 @@ const TourPaymentForm = ({
                   onPaymentSuccess?.(response);
                   onClose?.();
                 } else {
-                  throw new Error('Payment failed: ' + (response.RESPMSG || 'Unknown error'));
+                  // Close the payment gateway first
+                  if (window.Paytm && window.Paytm.CheckoutJS) {
+                    try {
+                      window.Paytm.CheckoutJS.close();
+                      console.log('Payment gateway closed after failure');
+                    } catch (closeError) {
+                      console.error('Error closing payment gateway:', closeError);
+                    }
+                  }
+                  
+                  // Then trigger the failure callback
+                  const errorMessage = 'Payment failed: ' + (response.RESPMSG || 'Unknown error');
+                  onPaymentFailure?.(errorMessage);
+                  onClose?.();
                 }
               } catch (error) {
                 console.error('Error in transaction status handler:', error);

@@ -1,4 +1,5 @@
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "../components/ui/dialog"
+import { CheckCircle } from "lucide-react"
 
 const BookingConfirmationDialog = ({ booking, onClose }) => {
   if (!booking) {
@@ -25,9 +26,13 @@ const BookingConfirmationDialog = ({ booking, onClose }) => {
       }
     }}>
       <DialogContent className="sm:max-w-[425px]">
-        <DialogTitle className="text-lg font-semibold mb-4">
-          Booking Confirmation
-        </DialogTitle>
+      <div className="flex flex-col items-center mb-4">
+          <CheckCircle className="h-12 w-12 sm:h-16 sm:w-16 text-green-500 mb-2" />
+          <DialogTitle className="text-xl sm:text-2xl font-bold text-gray-900 text-center">
+            Booking Confirmation
+          </DialogTitle>
+        </div>
+        
         <DialogDescription className="mb-4">
           Your booking has been successfully confirmed. Here are the details:
         </DialogDescription>
