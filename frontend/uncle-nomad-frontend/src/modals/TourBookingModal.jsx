@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
+import { Loader2 } from "lucide-react" // Import loading spinner
 import TourPaymentForm from "../components/TourPaymentForm"
 import TourBookingConfirmationDialog from "../modals/TourBookingConfirmationDialog"
 import { useNavigate } from "react-router-dom"
@@ -35,11 +36,31 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsC
   const [isPaymentFailedOpen, setIsPaymentFailedOpen] = useState(false);
   const [paymentErrorMessage, setPaymentErrorMessage] = useState("");
 
+  // OTP related states
+  const [otp, setOtp] = useState("");
+  const [isOtpSent, setIsOtpSent] = useState(false);
+  const [isOtpVerified, setIsOtpVerified] = useState(false);
+  const [otpError, setOtpError] = useState(null);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [otpResendTimer, setOtpResendTimer] = useState(0);
+
   useEffect(() => {
     if (isOpen) {
       setModalOpen(true);
     }
   }, [isOpen]);
+
+  // Timer for OTP resend countdown
+  useEffect(() => {
+    let timer;
+    if (otpResendTimer > 0) {
+      timer = setTimeout(() => setOtpResendTimer(otpResendTimer - 1), 1000);
+    }
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [otpResendTimer]);
 
   const validateEmail = useCallback((email) => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -71,10 +92,15 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsC
       errors.groupSize = `Only ${availableSlots} slots available for this tour`;
     }
     
+    // Check if OTP is verified
+    if (!isOtpVerified) {
+      errors.otp = "Email verification is required before proceeding";
+    }
+    
     setIsLoading(false)
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
-  }, [bookingDetails, validateEmail, validatePhone, selectedTour]);
+  }, [bookingDetails, validateEmail, validatePhone, selectedTour, isOtpVerified]);
 
   const handleInputChange = (e) => {
     const { id, value } = e.target;
@@ -93,10 +119,97 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsC
       setValidationErrors((prev) => ({ ...prev, [id]: "" }));
     }
   };
-  
+
+  const handleEmailChange = (e) => {
+    // Reset OTP verification when email changes
+    if (isOtpSent || isOtpVerified) {
+      setIsOtpSent(false);
+      setIsOtpVerified(false);
+      setOtp("");
+      setOtpError(null);
+    }
+    setBookingDetails(prev => ({ ...prev, email: e.target.value }));
+    if (validationErrors.email) {
+      setValidationErrors(prev => ({ ...prev, email: "" }));
+    }
+  };
+
+  const sendOtp = async (e) => {
+    e.preventDefault();
+    
+    // Validate email before sending OTP
+    if (!validateEmail(bookingDetails.email)) {
+      setOtpError("Please enter a valid email address");
+      return;
+    }
+    
+    setIsSendingOtp(true);
+    setOtpError(null);
+    
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/send-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: bookingDetails.email })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to send OTP");
+      }
+      
+      setIsOtpSent(true);
+      setOtpResendTimer(60); // 60 seconds countdown for resend
+    } catch (error) {
+      setOtpError(error.message || "Failed to send OTP. Please try again.");
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  const verifyOtp = async (e) => {
+    e.preventDefault();
+    
+    if (!otp.trim()) {
+      setOtpError("Please enter the OTP");
+      return;
+    }
+    
+    setIsVerifyingOtp(true);
+    setOtpError(null);
+    
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/verify-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: bookingDetails.email, otp })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Invalid OTP");
+      }
+      
+      setIsOtpVerified(true);
+      if (validationErrors.otp) {
+        setValidationErrors(prev => ({ ...prev, otp: "" }));
+      }
+    } catch (error) {
+      setOtpError(error.message || "Invalid OTP. Please try again.");
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
+
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+    
+    if (!isOtpVerified) {
+      setValidationErrors(prev => ({ ...prev, otp: "Email verification is required before proceeding" }));
+      setIsLoading(false);
+      return;
+    }
     
     if (validateForm()) {
       // Show disclaimer dialog instead of proceeding directly
@@ -164,7 +277,6 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsC
 
       const updatedBooking = await response.json();
 
-      console.log("detaislsss",bookingDetails)
       setPaymentData({
         ...paymentData,
         confirmedBooking: {
@@ -194,6 +306,10 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsC
       totalAmount: 0,
     });
     setValidationErrors({});
+    setIsOtpSent(false);
+    setIsOtpVerified(false);
+    setOtp("");
+    setOtpError(null);
     onClose();
   };
 
@@ -232,6 +348,13 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsC
     setIsLoading(false);
   };
 
+  // Generate summary text for verification status
+  const getVerificationStatus = () => {
+    if (isOtpVerified) return <span className="text-green-500 flex items-center text-sm">✓ Email verified</span>;
+    if (isOtpSent) return <span className="text-amber-500 flex items-center text-sm">OTP sent to your email</span>;
+    return null;
+  };
+
   return (
     <>
     <Dialog open={isOpen && modalOpen} onOpenChange={handleClose}>
@@ -252,8 +375,6 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsC
             )}
           </div>
         </DialogHeader>
-
-        
 
         {paymentStep ? (
           <TourPaymentForm
@@ -290,36 +411,102 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsC
               {validationErrors.guestName && <p className="text-red-500 text-sm mt-1">{validationErrors.guestName}</p>}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-3">
+              {/* Email field with verification button */}
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm font-medium text-gray-900">
                   Email
                 </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  required
-                  value={bookingDetails.email}
-                  onChange={handleInputChange}
-                  className="w-full border-gray-200 focus:ring-2 focus:ring-brand-purple"
-                />
-                {validationErrors.email && <p className="text-red-500 text-sm mt-1">{validationErrors.email}</p>}
+                <div className="flex gap-2">
+                  <Input
+                    id="email"
+                    type="email"
+                    required
+                    value={bookingDetails.email}
+                    onChange={handleEmailChange}
+                    className="w-full border-gray-200 focus:ring-2 focus:ring-brand-purple"
+                    disabled={isOtpVerified || isSendingOtp}
+                    placeholder="Enter your email"
+                  />
+                  <Button 
+                    type="button"
+                    onClick={sendOtp} 
+                    disabled={!validateEmail(bookingDetails.email) || isSendingOtp || isOtpVerified || otpResendTimer > 0}
+                    className="whitespace-nowrap"
+                  >
+                    {isSendingOtp ? (
+                      <div className="flex items-center">
+                        <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                        <span className="text-xs">Sending...</span>
+                      </div>
+                    ) : isOtpVerified ? (
+                      "Verified"
+                    ) : isOtpSent && otpResendTimer > 0 ? (
+                      `Resend (${otpResendTimer}s)`
+                    ) : isOtpSent ? (
+                      "Resend OTP"
+                    ) : (
+                      "Send OTP"
+                    )}
+                  </Button>
+                </div>
+                {validationErrors.email && <p className="text-red-500 text-sm">{validationErrors.email}</p>}
+                {getVerificationStatus()}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="phone" className="text-sm font-medium text-gray-900">
-                  Phone Number
-                </Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  required
-                  value={bookingDetails.phone}
-                  onChange={handleInputChange}
-                  className="w-full border-gray-200 focus:ring-2 focus:ring-brand-purple"
-                />
-                {validationErrors.phone && <p className="text-red-500 text-sm mt-1">{validationErrors.phone}</p>}
-              </div>
+              {/* OTP field */}
+              {isOtpSent && !isOtpVerified && (
+                <div className="bg-gray-50 p-3 rounded-lg space-y-3">
+                  <div className="text-sm text-gray-700">
+                    Enter the verification code sent to <span className="font-medium">{bookingDetails.email}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      id="otp"
+                      type="text"
+                      required
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value)}
+                      className="w-full border-gray-200 focus:ring-2 focus:ring-brand-purple"
+                      placeholder="Enter OTP"
+                      maxLength={6}
+                      disabled={isVerifyingOtp}
+                    />
+                    <Button 
+                      type="button" 
+                      onClick={verifyOtp}
+                      disabled={!otp.trim() || isVerifyingOtp}
+                    >
+                      {isVerifyingOtp ? (
+                        <div className="flex items-center">
+                          <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                          <span>Verifying...</span>
+                        </div>
+                      ) : (
+                        "Verify"
+                      )}
+                    </Button>
+                  </div>
+                  {otpError && <p className="text-red-500 text-sm">{otpError}</p>}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phone" className="text-sm font-medium text-gray-900">
+                Phone Number
+              </Label>
+              <Input
+                id="phone"
+                type="tel"
+                required
+                value={bookingDetails.phone}
+                onChange={handleInputChange}
+                className="w-full border-gray-200 focus:ring-2 focus:ring-brand-purple"
+                placeholder="10-digit phone number"
+                maxLength={10}
+              />
+              {validationErrors.phone && <p className="text-red-500 text-sm mt-1">{validationErrors.phone}</p>}
             </div>
 
             <div className="space-y-2">
@@ -354,6 +541,12 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsC
               />
             </div>
 
+            {validationErrors.otp && (
+              <Alert variant="destructive" className="bg-red-50 border-red-200 text-red-800">
+                <AlertDescription>{validationErrors.otp}</AlertDescription>
+              </Alert>
+            )}
+
             <DialogFooter className="flex gap-3 mt-6">
               <Button
                 type="button"
@@ -365,10 +558,19 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsC
               </Button>
               <Button
                 type="submit"
-                disabled={isLoading}
-                className="flex-1 bg-brand-purple hover:bg-brand-purple/90 hover:bg-purple"
+                disabled={isLoading || !isOtpVerified}
+                className={`flex-1 ${isOtpVerified 
+                  ? "bg-brand-purple hover:bg-brand-purple/90" 
+                  : "bg-gray-400 cursor-not-allowed"}`}
               >
-                {isLoading ? "proceeding..." : "Proceed to Payment"}
+                {isLoading ? (
+                  <div className="flex items-center justify-center">
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <span>Processing...</span>
+                  </div>
+                ) : (
+                  "Proceed to Payment"
+                )}
               </Button>
             </DialogFooter>
           </form>

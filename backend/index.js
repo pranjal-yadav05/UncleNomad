@@ -16,7 +16,7 @@ import paymentRoutes from './routes/paymentRoutes.js';
 import queryRoutes from './routes/queryRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
 import galleryRoutes from './routes/galleryRoutes.js';
-
+import emailVerifyRoutes from './routes/emailVerifyRoutes.js'
 
 dotenv.config();
 
@@ -52,7 +52,7 @@ app.use(session({
 // Routes
 app.use('/api/rooms', roomRoutes);
 app.use('/api/property', propertyRoutes);
-
+app.use('/api/auth', emailVerifyRoutes)
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/guides', guidesRoutes);
 app.use('/api/tours', toursRoutes);
