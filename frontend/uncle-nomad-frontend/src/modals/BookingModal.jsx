@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import PaymentModal from "./PaymentModal"
 import { format } from "date-fns"
 import { CalendarDaysIcon, UserIcon, HomeIcon } from "@heroicons/react/24/outline"
 import { Button } from "../components/ui/button"
@@ -10,7 +9,9 @@ import { Label } from "../components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog"
 import { useNavigate } from "react-router-dom"
 import DisclaimerDialog from "./DisclaimerDialog"
-import { Loader2 } from "lucide-react" // Import loading spinner for OTP process
+import { Loader2 } from "lucide-react"
+import PaytmPaymentForm from "../components/PaytmPaymentForm"
+import FailedTransactionModal from "../modals/FailedTransactionModal"
 
 export default function BookingModal({
   isOpen,
@@ -28,17 +29,18 @@ export default function BookingModal({
   setIsBookingConfirmed,
   setBookingDetails,
   bookingDetails,
-  setIsBookingFailed
+  setIsBookingFailed,
 }) {
   const navigate = useNavigate()
   const [paymentData, setPaymentData] = useState(null)
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
+  const [isPaymentActive, setIsPaymentActive] = useState(false)
   const [isDisclaimerOpen, setIsDisclaimerOpen] = useState(false)
+  const [isFailedModalOpen, setIsFailedModalOpen] = useState(false)
   // Start from step 1 since room selection is now on RoomSelectionPage
   const [step, setStep] = useState(1)
   const [validationErrors, setValidationErrors] = useState({})
   const [showError, setShowError] = useState(true)
-  
+
   // OTP related states
   const [otp, setOtp] = useState("")
   const [isOtpSent, setIsOtpSent] = useState(false)
@@ -47,20 +49,18 @@ export default function BookingModal({
   const [isSendingOtp, setIsSendingOtp] = useState(false)
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false)
   const [otpResendTimer, setOtpResendTimer] = useState(0)
-  
+
   // Timer for OTP resend countdown
   useEffect(() => {
-    let timer;
+    let timer
     if (otpResendTimer > 0) {
-      timer = setTimeout(() => setOtpResendTimer(otpResendTimer - 1), 1000);
+      timer = setTimeout(() => setOtpResendTimer(otpResendTimer - 1), 1000)
     }
     return () => {
-      if (timer) clearTimeout(timer);
-    };
-  }, [otpResendTimer]);
-  
-  console.log('selected Rooms',bookingForm.selectedRooms)
-  
+      if (timer) clearTimeout(timer)
+    }
+  }, [otpResendTimer])
+
   // Calculate total room capacity
   const calculateTotalCapacity = () => {
     return availableRooms.reduce((sum, room) => {
@@ -69,8 +69,20 @@ export default function BookingModal({
       return sum + (isDorm ? currentCount : room.capacity * currentCount)
     }, 0)
   }
-  
+
   const totalCapacity = calculateTotalCapacity()
+
+  const handlePaymentSuccess = (response) => {
+    setIsPaymentActive(false)
+    onClose()
+  }
+
+  const handlePaymentFailure = (errorMsg) => {
+    setError(errorMsg)
+    setIsBookingFailed(true)
+    setIsFailedModalOpen(true)
+    setIsPaymentActive(false)
+  }
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -95,11 +107,11 @@ export default function BookingModal({
       setOtp("")
       setOtpError(null)
     }
-    
-    setBookingForm(prev => ({ ...prev, email: e.target.value }))
-    
+
+    setBookingForm((prev) => ({ ...prev, email: e.target.value }))
+
     if (validationErrors.email) {
-      setValidationErrors(prev => ({ ...prev, email: "" }))
+      setValidationErrors((prev) => ({ ...prev, email: "" }))
     }
   }
 
@@ -110,28 +122,28 @@ export default function BookingModal({
 
   const sendOtp = async (e) => {
     e.preventDefault()
-    
+
     // Validate email before sending OTP
     if (!validateEmail(bookingForm.email)) {
       setOtpError("Please enter a valid email address")
       return
     }
-    
+
     setIsSendingOtp(true)
     setOtpError(null)
-    
+
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/send-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: bookingForm.email })
+        body: JSON.stringify({ email: bookingForm.email }),
       })
-      
+
       if (!response.ok) {
         const errorData = await response.json()
         throw new Error(errorData.message || "Failed to send OTP")
       }
-      
+
       setIsOtpSent(true)
       setOtpResendTimer(60) // 60 seconds countdown for resend
     } catch (error) {
@@ -143,30 +155,30 @@ export default function BookingModal({
 
   const verifyOtp = async (e) => {
     e.preventDefault()
-    
+
     if (!otp.trim()) {
       setOtpError("Please enter the OTP")
       return
     }
-    
+
     setIsVerifyingOtp(true)
     setOtpError(null)
-    
+
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: bookingForm.email, otp })
+        body: JSON.stringify({ email: bookingForm.email, otp }),
       })
-      
+
       if (!response.ok) {
         const errorData = await response.json()
         throw new Error(errorData.message || "Invalid OTP")
       }
-      
+
       setIsOtpVerified(true)
       if (validationErrors.otp) {
-        setValidationErrors(prev => ({ ...prev, otp: "" }))
+        setValidationErrors((prev) => ({ ...prev, otp: "" }))
       }
     } catch (error) {
       setOtpError(error.message || "Invalid OTP. Please try again.")
@@ -183,41 +195,40 @@ export default function BookingModal({
   }
 
   const handleNumberChange = (e) => {
-    const { name, value } = e.target;
-    
+    const { name, value } = e.target
+
     setBookingForm((prev) => ({
-        ...prev,
-        [name]: value, // Let them type freely
-    }));
+      ...prev,
+      [name]: value, // Let them type freely
+    }))
 
     // No auto-correction, no auto-fill, no validation here
-  };
+  }
 
   // Effect to validate numberOfGuests when rooms change
   useEffect(() => {
-    const currentGuests = bookingForm.numberOfGuests;
+    const currentGuests = bookingForm.numberOfGuests
     if (currentGuests > totalCapacity) {
-      setValidationErrors(prev => ({
+      setValidationErrors((prev) => ({
         ...prev,
-        numberOfGuests: `Maximum capacity is ${totalCapacity} guests for selected rooms`
-      }));
-  
-      setBookingForm(prev => ({
+        numberOfGuests: `Maximum capacity is ${totalCapacity} guests for selected rooms`,
+      }))
+
+      setBookingForm((prev) => ({
         ...prev,
-        numberOfGuests: totalCapacity
-      }));
-  
-      // ✅ Remove error when auto-adjusted
+        numberOfGuests: totalCapacity,
+      }))
+
+      // Remove error when auto-adjusted
       setTimeout(() => {
-        setValidationErrors(prev => {
-          const newErrors = { ...prev };
-          delete newErrors.numberOfGuests;
-          return newErrors;
-        });
-      }, 500);
+        setValidationErrors((prev) => {
+          const newErrors = { ...prev }
+          delete newErrors.numberOfGuests
+          return newErrors
+        })
+      }, 500)
     }
-  }, [bookingForm.selectedRooms, totalCapacity]);
-  
+  }, [bookingForm.numberOfGuests, totalCapacity, setBookingForm])
 
   const handleCheckboxChange = (e) => {
     const { name, checked } = e.target
@@ -239,19 +250,19 @@ export default function BookingModal({
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
           <div className="flex gap-2">
-            <Input 
-              id="email" 
-              name="email" 
-              type="email" 
-              value={bookingForm.email} 
-              onChange={handleEmailChange} 
-              required 
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              value={bookingForm.email}
+              onChange={handleEmailChange}
+              required
               disabled={isOtpVerified || isSendingOtp}
               className={validationErrors.email ? "border-red-500" : ""}
             />
-            <Button 
+            <Button
               type="button"
-              onClick={sendOtp} 
+              onClick={sendOtp}
               disabled={!validateEmail(bookingForm.email) || isSendingOtp || isOtpVerified || otpResendTimer > 0}
               className="whitespace-nowrap"
             >
@@ -293,11 +304,7 @@ export default function BookingModal({
                 maxLength={6}
                 disabled={isVerifyingOtp}
               />
-              <Button 
-                type="button" 
-                onClick={verifyOtp}
-                disabled={!otp.trim() || isVerifyingOtp}
-              >
+              <Button type="button" onClick={verifyOtp} disabled={!otp.trim() || isVerifyingOtp}>
                 {isVerifyingOtp ? (
                   <div className="flex items-center">
                     <Loader2 className="mr-1 h-4 w-4 animate-spin" />
@@ -326,24 +333,24 @@ export default function BookingModal({
         <Button
           onClick={() => {
             // Validate step 1 fields
-            const errors = {};
+            const errors = {}
             if (!bookingForm.guestName.trim()) {
-              errors.guestName = "Full name is required";
+              errors.guestName = "Full name is required"
             }
             if (!validateEmail(bookingForm.email)) {
-              errors.email = "Please enter a valid email address";
+              errors.email = "Please enter a valid email address"
             }
             if (!bookingForm.phone.trim()) {
-              errors.phone = "Phone number is required";
+              errors.phone = "Phone number is required"
             }
             if (!isOtpVerified) {
-              errors.email = "Email verification is required before proceeding";
+              errors.email = "Email verification is required before proceeding"
             }
-            
-            setValidationErrors(errors);
-            
+
+            setValidationErrors(errors)
+
             if (Object.keys(errors).length === 0) {
-              setStep(2);
+              setStep(2)
             }
           }}
           variant="custom"
@@ -357,107 +364,107 @@ export default function BookingModal({
   )
 
   const validateStep2 = () => {
-    let errors = {};
+    const errors = {}
 
     if (!bookingForm.numberOfGuests || isNaN(bookingForm.numberOfGuests) || bookingForm.numberOfGuests < 1) {
-        errors.numberOfGuests = "At least 1 guest is required.";
+      errors.numberOfGuests = "At least 1 guest is required."
     } else if (bookingForm.numberOfGuests > totalCapacity) {
-        errors.numberOfGuests = `Maximum capacity is ${totalCapacity} guests for selected rooms.`;
+      errors.numberOfGuests = `Maximum capacity is ${totalCapacity} guests for selected rooms.`
     }
 
     // Ensure email is verified before proceeding
     if (!isOtpVerified) {
-      errors.otp = "Email verification is required before proceeding";
+      errors.otp = "Email verification is required before proceeding"
     }
 
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0; // Return true if no errors
-  };
+    setValidationErrors(errors)
+    return Object.keys(errors).length === 0 // Return true if no errors
+  }
 
   const handleStep2Submit = async (e = null) => {
-      if(e) e.preventDefault(); // Prevent default form submission
+    if (e) e.preventDefault() // Prevent default form submission
 
-      try {
-        setIsLoading(true)
+    try {
+      setIsLoading(true)
 
-        // Calculate total amount
-        const totalAmount = availableRooms.reduce((sum, room) => {
-          const count = bookingForm.selectedRooms[room._id] || 0
-          return sum + room.price * count
-        }, 0)
+      // Calculate total amount
+      const totalAmount = availableRooms.reduce((sum, room) => {
+        const count = bookingForm.selectedRooms[room._id] || 0
+        return sum + room.price * count
+      }, 0)
 
-        // Prepare booking data
-        const bookingData = {
-          ...bookingForm,
-          totalAmount,
-          rooms: Object.entries(bookingForm.selectedRooms).map(([roomId, quantity]) => ({
-            roomId,
-            quantity,
-            checkIn: bookingForm.checkIn,
-            checkOut: bookingForm.checkOut,
-          })),
-        }
-
-        setBookingForm(bookingData)
-
-        console.log("Sending booking data:", JSON.stringify(bookingData, null, 2))
-
-        console.log("Initiating payment request to:", `${process.env.REACT_APP_API_URL}/api/payments/initiate`)
-        const paymentResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/payments/initiate`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include", // Include cookies for session
-          body: JSON.stringify({
-            bookingData: bookingData,
-            amount: totalAmount,
-            customerId: bookingForm.email,
-            email: bookingForm.email,
-            phone: bookingForm.phone,
-          }),
-        })
-
-        console.log("Payment response status:", paymentResponse.status)
-
-        if (!paymentResponse.ok) {
-          console.error("Payment initiation failed with status:", paymentResponse.status)
-          let errorData
-          try {
-            errorData = await paymentResponse.json()
-            console.error("Payment error details:", errorData)
-          } catch (jsonError) {
-            console.error("Failed to parse error response:", jsonError)
-            throw new Error("Failed to initialize payment: Invalid server response")
-          }
-          throw new Error(errorData.message || "Failed to initialize payment")
-        }
-
-        const paymentData = await paymentResponse.json()
-
-        if (paymentData.status === "SUCCESS" && paymentData.data) {
-          console.log("Payment data received:", paymentData.data)
-          setPaymentData(paymentData.data)
-          setIsPaymentModalOpen(true)
-
-          console.log("Payment modal opened with data:", paymentData.data)
-        } else {
-          throw new Error("Payment initialization failed")
-        }
-      } catch (error) {
-        console.error("Booking/Payment Error:", error)
-        setError("Failed to process booking: " + error.message)
-      } finally {
-        setIsLoading(false)
+      // Prepare booking data
+      const bookingData = {
+        ...bookingForm,
+        totalAmount,
+        rooms: Object.entries(bookingForm.selectedRooms).map(([roomId, quantity]) => ({
+          roomId,
+          quantity,
+          checkIn: bookingForm.checkIn,
+          checkOut: bookingForm.checkOut,
+        })),
       }
-  };
+
+      setBookingForm(bookingData)
+
+      console.log("Sending booking data:", JSON.stringify(bookingData, null, 2))
+
+      console.log("Initiating payment request to:", `${process.env.REACT_APP_API_URL}/api/payments/initiate`)
+      const paymentResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/payments/initiate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include", // Include cookies for session
+        body: JSON.stringify({
+          bookingData: bookingData,
+          amount: totalAmount,
+          customerId: bookingForm.email,
+          email: bookingForm.email,
+          phone: bookingForm.phone,
+        }),
+      })
+
+      console.log("Payment response status:", paymentResponse.status)
+
+      if (!paymentResponse.ok) {
+        console.error("Payment initiation failed with status:", paymentResponse.status)
+        let errorData
+        try {
+          errorData = await paymentResponse.json()
+          console.error("Payment error details:", errorData)
+        } catch (jsonError) {
+          console.error("Failed to parse error response:", jsonError)
+          throw new Error("Failed to initialize payment: Invalid server response")
+        }
+        throw new Error(errorData.message || "Failed to initialize payment")
+      }
+
+      const paymentData = await paymentResponse.json()
+
+      if (paymentData.status === "SUCCESS" && paymentData.data) {
+        console.log("Payment data received:", paymentData.data)
+        setPaymentData(paymentData.data)
+        setIsPaymentActive(true)
+
+        console.log("Payment initiated with data:", paymentData.data)
+      } else {
+        throw new Error("Payment initialization failed")
+      }
+    } catch (error) {
+      console.error("Booking/Payment Error:", error)
+      setError("Failed to process booking: " + error.message)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const handleDisclaimer = () => {
     if (!validateStep2()) {
-      return; // Stop here if validation fails
+      return // Stop here if validation fails
     }
-  
-    setIsDisclaimerOpen(true); // ✅ Open disclaimer modal
-  };
-  
+
+    setIsDisclaimerOpen(true) // Open disclaimer modal
+  }
+
   const renderStep2 = () => (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -553,39 +560,41 @@ export default function BookingModal({
           Back
         </Button>
         <Button
-          onClick={handleDisclaimer} // ✅ Runs validation first
+          onClick={handleDisclaimer} // Runs validation first
           className="w-full bg-brand-purple hover:bg-brand-purple/90"
           disabled={isLoading || !isOtpVerified}
         >
           {isLoading ? "Processing..." : "Proceed to Payment"}
-        </Button>   
-
+        </Button>
       </div>
     </div>
   )
 
-  console.log("BookingModal render - isOpen:", isOpen)
+  // Render payment form when needed
+  const renderPaymentForm = () => {
+    if (!isPaymentActive || !paymentData) return null
+
+    return (
+      <PaytmPaymentForm
+        setChecking={setChecking}
+        closeModal={onClose}
+        setIsBookingConfirmed={setIsBookingConfirmed}
+        paymentData={paymentData}
+        bookingForm={bookingForm}
+        onPaymentSuccess={handlePaymentSuccess}
+        onPaymentFailure={handlePaymentFailure}
+        onClose={() => setIsPaymentActive(false)}
+        setBookingDetails={setBookingDetails}
+        bookingDetails={bookingDetails}
+        isLoading={isLoading}
+        setIsLoading={setIsLoading}
+      />
+    )
+  }
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <PaymentModal
-          setBookingDetails={setBookingDetails}
-          setIsModalOpen={setIsModalOpen}
-          paymentData={paymentData}
-          bookingForm={bookingForm}
-          setIsBookingFailed={setIsBookingFailed}
-          setChecking={setChecking}
-          onPaymentSuccess={() => {
-            onClose()
-            setPaymentData(null)
-          }}
-          onPaymentFailure={(error) => setError(error)}
-          isOpen={isPaymentModalOpen}
-          onClose={() => setIsPaymentModalOpen(false)}
-          setIsBookingConfirmed={setIsBookingConfirmed}
-          bookingDetails={bookingDetails}
-        />
-
         <DialogContent className="w-[95vw] sm:max-w-[500px] bg-white p-4 max-h-[90vh] overflow-y-auto rounded-lg shadow-xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">Booking Details</DialogTitle>
@@ -629,20 +638,29 @@ export default function BookingModal({
             })}
 
             <div className="overflow-y-auto max-h-[calc(90vh-200px)] sm:max-h-none">
-              {step === 1 && renderStep1()}
-              {step === 2 && renderStep2()}
+              {!isPaymentActive && step === 1 && renderStep1()}
+              {!isPaymentActive && step === 2 && renderStep2()}
+              {isPaymentActive && renderPaymentForm()}
             </div>
           </div>
         </DialogContent>
       </Dialog>
+
       <DisclaimerDialog
         isOpen={isDisclaimerOpen}
         onClose={() => setIsDisclaimerOpen(false)}
         onAgree={() => {
-          setIsDisclaimerOpen(false);
-          handleStep2Submit(); // ✅ Proceed to payment after user agrees
+          setIsDisclaimerOpen(false)
+          handleStep2Submit() // Proceed to payment after user agrees
         }}
+      />
+
+      <FailedTransactionModal
+        open={isFailedModalOpen}
+        onClose={() => setIsFailedModalOpen(false)}
+        errorMessage={error}
       />
     </>
   )
 }
+
