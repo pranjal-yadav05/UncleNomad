@@ -111,11 +111,14 @@ const TourPaymentForm = ({
                     {
                       orderId: response.ORDERID,
                       bookingId: paymentData.bookingId,
-                      paymentStatus: 'SUCCESS'
+                      tourId: paymentData.tourId,
+                      paymentStatus: 'SUCCESS',
                     }
                   );
                   
                   console.log('Payment verification response:', verificationResponse.data);
+
+                  
                   
                   // Close the payment gateway after successful verification
                   if (window.Paytm && window.Paytm.CheckoutJS) {

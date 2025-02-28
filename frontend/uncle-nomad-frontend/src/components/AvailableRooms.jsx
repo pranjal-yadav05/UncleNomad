@@ -24,7 +24,7 @@ export default function AvailableRooms({ availableRooms, handleBookNowClick }) {
         <div className="flex space-x-6 justify-center min-w-max mx-auto">
 
         {availableRooms.map((room) => (
-          <div className="w-[340px] h-[500px] flex-shrink-0 snap-start">
+          <div key={room._id} className="w-[340px] h-[500px] flex-shrink-0 snap-start">
             <Card onClick={()=>handleRoomClick(room)} className="w-full h-full flex flex-col bg-white/20 backdrop-blur-md border border-white/30 shadow-lg hover:shadow-2xl transition-all duration-500 rounded-2xl overflow-hidden group cursor-pointer">
               
               {/* Room Image with Overlay */}

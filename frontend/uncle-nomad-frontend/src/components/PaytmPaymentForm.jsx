@@ -115,22 +115,30 @@ const PaytmPaymentForm = ({
 
   useEffect(() => {
     if (!paymentData || !paymentData.txnToken) {
-      setError("Payment initialization failed: Missing payment details");
+      console.error("Payment initialization failed: Missing payment details");
       return;
     }
-
-    loadPaytmScript().catch((error) => {
-      setError("Failed to load payment gateway");
-      onPaymentFailure?.(error.message);
-    });
-
+  
+    loadPaytmScript()
+      .then(() => {
+        console.log("Paytm script loaded successfully");
+      })
+      .catch((error) => {
+        console.error("Failed to load payment gateway:", error.message);
+        setTimeout(() => {
+          setError("Failed to load payment gateway");
+          onPaymentFailure?.(error.message);
+        }, 3000); // Delay error display
+      });
+  
     return () => {
       const script = document.querySelector('script[src*="paytm.in"]');
       if (script) {
         script.remove();
       }
-    }
+    };
   }, [loadPaytmScript, paymentData, onPaymentFailure]);
+  
 
   useEffect(() => {
     if (!isPaytmLoaded || !paymentData?.txnToken) return;

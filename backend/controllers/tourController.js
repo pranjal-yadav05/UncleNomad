@@ -443,7 +443,7 @@ export const initiatePayment = async (req, res) => {
 // Verify tour payment
 export const verifyTourPayment = async (req, res) => {
   try {
-    const { orderId } = req.body;
+    const { orderId, tourId } = req.body;
     
     // Find booking in database by payment reference instead of using session
     const booking = await TourBooking.findOne({ 
@@ -517,6 +517,9 @@ export const verifyTourPayment = async (req, res) => {
     // Process the response
     if (response.body.resultInfo.resultStatus === "TXN_SUCCESS") {
       // Update booking status directly (no need to find it again since we already have it)
+      const session = await mongoose.startSession();
+      session.startTransaction();
+
       const updatedBooking = await TourBooking.findByIdAndUpdate(
         booking._id,
         {
@@ -528,6 +531,7 @@ export const verifyTourPayment = async (req, res) => {
         },
         { new: true }
       );
+
       
       if (!updatedBooking) {
         return res.status(404).json({
@@ -535,6 +539,20 @@ export const verifyTourPayment = async (req, res) => {
           message: "Booking not found during update",
         });
       }
+
+      const updatedTour = await Tour.findByIdAndUpdate(
+        tourId,
+        { $inc: { bookedSlots: updatedBooking.groupSize } }, // Increase booked slots
+        { new: true, session }
+      );
+
+      if (!updatedTour) {
+        throw new Error("Tour not found while updating bookedSlots");
+      }
+
+      await session.commitTransaction();
+      session.endSession();
+
       
       return res.json({
         status: "SUCCESS",
@@ -668,7 +686,7 @@ export const confirmTourBooking = async (req, res) => {
   try {
     const { bookingId } = req.params;
     const { paymentReference, status } = req.body;
-
+    console.log('inside confirm')
     // Find the booking
     const booking = await TourBooking.findById(bookingId);
     if (!booking) {
@@ -682,6 +700,7 @@ export const confirmTourBooking = async (req, res) => {
 
     // Find the corresponding tour
     const tour = await Tour.findById(booking.tour);
+    console.log('tour',tour)
     if (!tour) {
       return res.status(404).json({ message: "Tour not found" });
     }

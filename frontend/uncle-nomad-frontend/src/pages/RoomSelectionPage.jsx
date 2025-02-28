@@ -8,6 +8,7 @@ import Header from "../components/Header"
 import Footer from "../components/Footer"
 import BookingModal from "../modals/BookingModal"
 import { format } from "date-fns"
+import BookingConfirmationDialog from "../modals/BookingConfirmationDialog"
 
 const RoomSelectionPage = () => {
   const location = useLocation()
@@ -41,6 +42,17 @@ const RoomSelectionPage = () => {
   const [isBookingConfirmed, setIsBookingConfirmed] = useState(false)
   const [bookingDetails, setBookingDetails] = useState(null)
   const [error, setError] = useState(null)
+
+  useEffect(() => {
+    if (isBookingConfirmed) {
+      // Push a new state and prevent back navigation
+      window.history.pushState(null, null, window.location.href);
+      window.onpopstate = () => {
+        navigate("/", { replace: true }); // Redirect to home page if they try to go back
+      };
+    }
+  }, [isBookingConfirmed, navigate]);
+  
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -239,7 +251,7 @@ const RoomSelectionPage = () => {
                     <h3 className="text-lg font-semibold">{room.name || `${room.type} Room`}</h3>
                     <div className="flex items-center">
                       <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                      <span className="ml-1 text-sm">{room.rating || 4.5}</span>
+                      <span className="ml-1 text-sm">{room.rating}</span>
                     </div>
                   </div>
 
@@ -349,6 +361,17 @@ const RoomSelectionPage = () => {
           bookingDetails={bookingDetails}
         />
       )}
+      {isBookingConfirmed && 
+        <BookingConfirmationDialog
+          isOpen={isBookingConfirmed}
+          onClose={() => {
+            setIsBookingConfirmed(false);
+            navigate("/", { replace: true }); // Replace current history entry with home page
+            window.history.pushState(null, null, "/"); // Ensure back button doesn't work
+          }}
+          booking={bookingDetails}
+        />
+      }
 
       <Footer />
     </>

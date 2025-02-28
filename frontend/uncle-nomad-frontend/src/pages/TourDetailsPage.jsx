@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from "../components/ui/button";
-import { ChevronLeft, Clock, Users, Calendar, MapPin, DollarSign, Star } from "lucide-react";
+import { ChevronLeft, Clock, Users, Calendar, MapPin, IndianRupee, Star } from "lucide-react";
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import TourBookingModal from '../modals/TourBookingModal'
@@ -13,6 +13,7 @@ import ItineraryDay from '../components/ItineraryDay';
 import ReviewCard from '../components/ReviewCard';
 import ImageGallery from '../components/ImageGallery';
 import CheckingPaymentModal from '../modals/CheckingPaymentModal';
+
 
 const TourDetailsPage = () => {
     const { state } = useLocation();
@@ -25,7 +26,7 @@ const TourDetailsPage = () => {
     const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
     const [isCheckingOpen, setIsCheckingOpen] = useState(false)
     const navigate = useNavigate()
-
+    
     useEffect(() => {
         window.scrollTo(0, 0);
         if (!tour) {
@@ -99,6 +100,7 @@ const TourDetailsPage = () => {
         );
     }
 
+    console.log('tour',tour)
     // Format dates
     const formatDate = (dateString) => {
         if (!dateString) return 'TBD';
@@ -192,10 +194,10 @@ const TourDetailsPage = () => {
                     <TourInfoCard 
                         icon={<Users className="w-10 h-10 text-blue-600 mr-4" />}
                         title="Available Spots"
-                        content={`${tour.availableSlots || 'Limited'} remaining`}
+                        content={`${tour.groupSize - tour.bookedSlots || 'Limited'} remaining`}
                     />
                     <TourInfoCard 
-                        icon={<DollarSign className="w-10 h-10 text-blue-600 mr-4" />}
+                        icon={<IndianRupee className="w-10 h-10 text-blue-600 mr-4" />}
                         title="Starting Price"
                         content={`₹${getPricingInfo()}`}
                     />
@@ -280,7 +282,7 @@ const TourDetailsPage = () => {
                                         <Button
                                             onClick={() => setIsBookingModalOpen(true)}
                                             variant='custom'
-                                            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-lg text-lg font-medium transition-colors duration-300"
+                                            className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white hover:opacity-90 mt-6 py-3 rounded-lg shadow-lg"
                                         >
                                             Book Now
                                         </Button>
@@ -477,26 +479,47 @@ const TourDetailsPage = () => {
                 </div>
 
                 {/* CTA Section */}
-                <div className="bg-blue-600 rounded-xl p-8 md:p-12 text-white text-center">
-                    <h2 className="text-3xl font-bold mb-4">Ready for an Unforgettable Adventure?</h2>
-                    <p className="text-lg mb-8 max-w-2xl mx-auto">
-                        Join us on this incredible journey through {tour.location}. Limited spaces available for this exclusive experience.
-                    </p>
-                    <div className="flex flex-col sm:flex-row justify-center gap-4">
-                        <Button
-                            onClick={() => setIsBookingModalOpen(true)}
-                            className="bg-transparent border-2 border-white hover:bg-white/10 text-white text-lg py-3 px-8 rounded-lg font-medium"
-                        >
-                            Book Now
-                        </Button>
-                        <Button
-                            onClick={() => alert("Opening contact form...")}
-                            className="bg-transparent border-2 border-white hover:bg-white/10 text-white text-lg py-3 px-8 rounded-lg font-medium"
-                        >
-                            Ask a Question
-                        </Button>
+                <div 
+                    className="relative rounded-xl bg-gray-50 p-8 md:p-12 text-white text-center"
+                    style={{
+                        backgroundImage: 'url("/solo.jpeg")',
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                    }}
+                >
+                    {/* Overlay */}
+                    <div className="absolute inset-0 bg-black/50 rounded-xl"></div>
+
+                    {/* Content (positioned above the overlay) */}
+                    <div className="relative z-10">
+                        <h2 className="text-3xl font-bold mb-4">Ready for an Unforgettable Adventure?</h2>
+                        <p className="text-lg mb-8 max-w-2xl mx-auto">
+                            Join us on this incredible journey through {tour.location}. Limited spaces available for this exclusive experience.
+                        </p>
+                        <div className="flex flex-col sm:flex-row justify-center gap-4">
+                            <Button
+                                onClick={() => setIsBookingModalOpen(true)}
+                                className="bg-transparent border-2 border-white hover:bg-white/10 text-white text-lg py-3 px-8 rounded-lg font-medium"
+                            >
+                                Book Now
+                            </Button>
+                            <Button
+                                onClick={() => {
+                                    const element = document.getElementById("get-in-touch");
+                                    if (element) {
+                                      element.scrollIntoView({ behavior: "smooth" });
+                                    } else {
+                                      navigate("/#get-in-touch"); // Fallback if section isn't on the current page
+                                    }
+                                  }}
+                                className="bg-transparent border-2 border-white hover:bg-white/10 text-white text-lg py-3 px-8 rounded-lg font-medium"
+                            >
+                                Ask a Question
+                            </Button>
+                        </div>
                     </div>
                 </div>
+
             </div>
             
             {/* Image Modal */}

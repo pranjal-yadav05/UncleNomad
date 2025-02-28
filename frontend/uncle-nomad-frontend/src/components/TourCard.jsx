@@ -43,7 +43,7 @@ const TourCard = ({ tour, onClick, handleBookNowClick, setSelectedTour, handleTo
           </div>
         </div>
 
-        <Button onClick={handleButtonClick} className="w-full group-hover:bg-primary group-hover:text-black transition-colors duration-300">
+        <Button onClick={handleButtonClick} className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white hover:opacity-90 mt-6 py-3 rounded-lg shadow-lg">
           Book Now
         </Button>
       </div>

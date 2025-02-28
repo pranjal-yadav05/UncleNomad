@@ -47,13 +47,15 @@ function AvailabilitySection() {
           `${process.env.REACT_APP_API_URL}/api/bookings/check-availability?checkIn=${checkIn.toISOString()}&checkOut=${checkOut.toISOString()}`,
         )
 
+       
+
         if (!response.ok) {
           const errorData = await response.text()
           throw new Error(errorData || "Failed to check availability")
         }
 
         const data = await response.json()
-
+        console.log('repsosns',data)
         // Process availability data from backend
         const availableRooms = data
           .map((room) => ({

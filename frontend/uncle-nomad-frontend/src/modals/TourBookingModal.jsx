@@ -7,6 +7,7 @@ import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
 import TourPaymentForm from "../components/TourPaymentForm"
 import TourBookingConfirmationDialog from "../modals/TourBookingConfirmationDialog"
+import { useNavigate } from "react-router-dom"
 
 export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsCheckingOpen, isCheckingOpen }) {
   const [bookingDetails, setBookingDetails] = useState({
@@ -18,6 +19,8 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsC
     specialRequests: "",
     totalAmount: 0,
   })
+
+  const navigate = useNavigate();
 
   const [validationErrors, setValidationErrors] = useState({})
   const [paymentStep, setPaymentStep] = useState(false)
@@ -65,11 +68,30 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsC
 
   const handleInputChange = (e) => {
     const { id, value } = e.target;
-    setBookingDetails((prev) => ({ ...prev, [id]: value }));
+  
+    // If changing groupSize, ensure it's a valid number and within limits
+    if (id === "groupSize") {
+      let numValue = parseInt(value, 10) || 1; // Convert to number or default to 1
+      const availableSlots = selectedTour.groupSize - selectedTour.bookedSlots; // Calculate available slots
+  
+      if (numValue > availableSlots) {
+        numValue = availableSlots; // Restrict to max available slots
+      } else if (numValue < 1) {
+        numValue = 1; // Ensure at least 1 participant
+      }
+  
+      setBookingDetails((prev) => ({ ...prev, [id]: numValue }));
+    } else {
+      // For all other input fields (name, email, phone, specialRequests)
+      setBookingDetails((prev) => ({ ...prev, [id]: value }));
+    }
+  
     if (validationErrors[id]) {
       setValidationErrors((prev) => ({ ...prev, [id]: "" }));
     }
   };
+  
+  
 
   const handleBookingSubmit = async (e) => {
     setIsLoading(true)
@@ -178,6 +200,19 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsC
     }
   };
 
+  const handleConfirmationClose = () => {
+    setIsConfirmationOpen(false);
+
+    // Redirect to home
+    navigate("/", { replace: true });
+
+    // Prevent back navigation
+    window.history.pushState(null, null, "/");
+    window.onpopstate = () => {
+      navigate("/", { replace: true });
+    };
+  };
+
   return (
     <>
     <Dialog open={isOpen && modalOpen} onOpenChange={handleClose}>
@@ -275,11 +310,13 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsC
                 id="groupSize"
                 type="number"
                 min="1"
+                max={selectedTour.groupSize - selectedTour.bookedSlots} // Limit max value
                 required
                 value={bookingDetails.groupSize}
                 onChange={handleInputChange}
                 className="w-full border-gray-200 focus:ring-2 focus:ring-brand-purple"
               />
+
               {validationErrors.groupSize && <p className="text-red-500 text-sm mt-1">{validationErrors.groupSize}</p>}
             </div>
 
@@ -323,10 +360,7 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsC
           <TourBookingConfirmationDialog
             isOpen={true}
             tourBooking={paymentData.confirmedBooking}
-            onClose={() => {
-              handleClose();
-              setIsConfirmationOpen(false);  // Reset confirmation dialog state
-            }}
+            onClose={handleConfirmationClose}
           />
         )}
     </>

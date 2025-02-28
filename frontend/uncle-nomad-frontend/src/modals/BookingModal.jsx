@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import PaymentModal from "./PaymentModal"
 import { format } from "date-fns"
 import { CalendarDaysIcon, UserIcon, HomeIcon } from "@heroicons/react/24/outline"
@@ -9,6 +9,7 @@ import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog"
 import { useNavigate } from "react-router-dom"
+import DisclaimerDialog from "./DisclaimerDialog"
 
 export default function BookingModal({
   isOpen,
@@ -30,11 +31,23 @@ export default function BookingModal({
   const navigate = useNavigate()
   const [paymentData, setPaymentData] = useState(null)
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
-
+  const [isDisclaimerOpen, setIsDisclaimerOpen] = useState(false)
   // Start from step 1 since room selection is now on RoomSelectionPage
   const [step, setStep] = useState(1)
   const [validationErrors, setValidationErrors] = useState({})
   const [showError, setShowError] = useState(true)
+  console.log('selected Rooms',bookingForm.selectedRooms)
+  
+  // Calculate total room capacity
+  const calculateTotalCapacity = () => {
+    return availableRooms.reduce((sum, room) => {
+      const isDorm = room.type.toLowerCase() === "dorm"
+      const currentCount = bookingForm.selectedRooms[room._id] || 0
+      return sum + (isDorm ? currentCount : room.capacity * currentCount)
+    }, 0)
+  }
+  
+  const totalCapacity = calculateTotalCapacity()
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -56,23 +69,50 @@ export default function BookingModal({
     const numValue = Number(value)
 
     // Validate number fields
-    if (name === "numberOfGuests" && (numValue < 1 || isNaN(numValue))) {
-      setValidationErrors((prev) => ({
-        ...prev,
-        [name]: "At least 1 guest is required",
-      }))
-    } else {
-      setValidationErrors((prev) => ({
-        ...prev,
-        [name]: "",
-      }))
+    if (name === "numberOfGuests") {
+      if (numValue < 1 || isNaN(numValue)) {
+        setValidationErrors((prev) => ({
+          ...prev,
+          [name]: "At least 1 guest is required",
+        }))
+      } else if (numValue > totalCapacity) {
+        setValidationErrors((prev) => ({
+          ...prev,
+          [name]: `Maximum capacity is ${totalCapacity} guests for selected rooms`,
+        }))
+      } else {
+        setValidationErrors((prev) => ({
+          ...prev,
+          [name]: "",
+        }))
+      }
     }
 
-    setBookingForm((prev) => ({
-      ...prev,
-      [name]: numValue,
-    }))
+    // Only update the state if it's valid for numberOfGuests
+    if (name !== "numberOfGuests" || (numValue <= totalCapacity && numValue >= 1)) {
+      setBookingForm((prev) => ({
+        ...prev,
+        [name]: numValue,
+      }))
+    }
   }
+
+  // Effect to validate numberOfGuests when rooms change
+  useEffect(() => {
+    const currentGuests = bookingForm.numberOfGuests;
+    if (currentGuests > totalCapacity) {
+      setValidationErrors(prev => ({
+        ...prev,
+        numberOfGuests: `Maximum capacity is ${totalCapacity} guests for selected rooms`
+      }));
+      
+      // Automatically adjust guest count to match capacity
+      setBookingForm(prev => ({
+        ...prev,
+        numberOfGuests: totalCapacity
+      }));
+    }
+  }, [bookingForm.selectedRooms, totalCapacity]);
 
   const handleCheckboxChange = (e) => {
     const { name, checked } = e.target
@@ -121,6 +161,11 @@ export default function BookingModal({
     if (!bookingForm.numberOfGuests || bookingForm.numberOfGuests < 1) {
       errors.numberOfGuests = "At least one guest is required"
     }
+    
+    if (bookingForm.numberOfGuests > totalCapacity) {
+      errors.numberOfGuests = `Maximum capacity is ${totalCapacity} guests for selected rooms`
+    }
+    
     if (!bookingForm.guestName) {
       errors.guestName = "Guest name is required"
     }
@@ -135,8 +180,8 @@ export default function BookingModal({
   }
 
   const handleStep2Submit = async (e) => {
-    e.preventDefault()
-    if (validateStep2()) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!validateStep2()) return;
       try {
         setIsLoading(true)
 
@@ -208,23 +253,31 @@ export default function BookingModal({
       } finally {
         setIsLoading(false)
       }
-    }
+  };
+
+  const handleDisclaimer = (e)=>{
+    setIsPaymentModalOpen(true)
+    handleStep2Submit(e);
   }
 
   const renderStep2 = () => (
     <div className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="numberOfGuests">Number of Guests *</Label>
-        <Input
-          id="numberOfGuests"
-          name="numberOfGuests"
-          type="number"
-          min="1"
-          value={bookingForm.numberOfGuests}
-          onChange={handleNumberChange}
-          required
-          className={validationErrors.numberOfGuests ? "border-red-500" : ""}
-        />
+        <div className="flex items-center">
+          <Input
+            id="numberOfGuests"
+            name="numberOfGuests"
+            type="number"
+            min="1"
+            max={totalCapacity}
+            value={bookingForm.numberOfGuests}
+            onChange={handleNumberChange}
+            required
+            className={validationErrors.numberOfGuests ? "border-red-500" : ""}
+          />
+          <span className="ml-2 text-xs text-gray-500">Max: {totalCapacity}</span>
+        </div>
         {validationErrors.numberOfGuests && (
           <p className="text-sm text-red-500 mt-1">{validationErrors.numberOfGuests}</p>
         )}
@@ -296,9 +349,12 @@ export default function BookingModal({
           Back
         </Button>
         <Button
-          onClick={handleStep2Submit}
+          onClick={(e) => {
+            e.preventDefault();
+            setIsDisclaimerOpen(true);
+          }}
           className="w-full bg-brand-purple hover:bg-brand-purple/90"
-          disabled={isLoading}
+          disabled={isLoading || Object.keys(validationErrors).length > 0}
         >
           {isLoading ? "Processing..." : "Proceed to Payment"}
         </Button>
@@ -376,7 +432,11 @@ export default function BookingModal({
           </div>
         </DialogContent>
       </Dialog>
+      <DisclaimerDialog
+        isOpen={isDisclaimerOpen}
+        onClose={() => setIsDisclaimerOpen(false)}
+        onAgree={handleDisclaimer}
+      />
     </>
   )
 }
-

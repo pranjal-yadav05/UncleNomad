@@ -162,14 +162,6 @@ const RoomDetailsPage = () => {
   const amenities = room.amenities && Array.isArray(room.amenities) ? room.amenities : [];
   console.log('amenitiees',amenities)
 
-  // Room ratings (sample implementation)
-  const ratings = {
-    overall: 4.7,
-    cleanliness: 4.8,
-    comfort: 4.6,
-    location: 4.9,
-    facilities: 4.5,
-  }
 
   return (
     <>
@@ -212,7 +204,7 @@ const RoomDetailsPage = () => {
                 </div>
                 <div className="flex items-center text-yellow-400">
                   <Star className="w-4 h-4 mr-1 fill-current" />
-                  <span>{ratings.overall}</span>
+                  <span>{room.rating}</span>
                 </div>
               </div>
             </div>
@@ -453,11 +445,11 @@ const RoomDetailsPage = () => {
                     {[1, 2, 3, 4, 5].map((star) => (
                       <Star
                         key={star}
-                        className={`w-5 h-5 ${star <= Math.round(ratings.overall) ? "text-yellow-400 fill-current" : "text-gray-300"}`}
+                        className={`w-5 h-5 ${star <= Math.round(room.rating) ? "text-yellow-400 fill-current" : "text-gray-300"}`}
                       />
                     ))}
                   </div>
-                  <span className="ml-2 text-gray-700 font-medium">{ratings.overall} out of 5</span>
+                  <span className="ml-2 text-gray-700 font-medium">{room.rating} out of 5</span>
                 </div>
               </div>
 
