@@ -172,7 +172,7 @@ const PaytmPaymentForm = ({
               redirect: false
             },
             env: {
-              stage: process.env.NODE_ENV === 'production' ? 'PROD' : 'STAGE'
+              stage: 'STAGE'
             }
           };
 
