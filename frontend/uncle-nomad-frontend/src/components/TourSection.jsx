@@ -45,7 +45,7 @@ const TourSection = ({ tours, setIsBookingModalOpen, isBookingModalOpen }) => {
 
   return (
     <div id="tours" className="container mx-auto px-4 py-16 relative">
-      <h2 className="text-5xl font-extrabold mb-8 text-center text-white relative z-10">
+      <h2 className="text-4xl font-extrabold mb-8 text-center text-white relative z-10">
         Curated Experiences
       </h2>
 

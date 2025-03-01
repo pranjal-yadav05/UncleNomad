@@ -17,6 +17,7 @@ const RoomDetailsPage = () => {
   const [showImageModal, setShowImageModal] = useState(false)
   const [loading, setLoading] = useState(!room)
   const [error, setError] = useState(null)
+  const [selectedImage, setSelectedImage] = useState(null)
 
   // Get data from location state
   const returnToSelection = state?.returnToSelection || false
@@ -91,7 +92,7 @@ const RoomDetailsPage = () => {
       })
     } else {
       // Navigate to availability section to start booking
-      navigate("/", { state: { section: "availability" } });
+      navigate("/availability");
     }
   }
 
@@ -306,7 +307,10 @@ const RoomDetailsPage = () => {
                       alt: `${room.type} - view ${index + 1}`,
                     })) || [{ src: room.imageUrl || "/placeholder-room.jpg", alt: `${room.type} - view 1` }]
                   }
-                  onImageClick={() => setShowImageModal(true)}
+                  onImageClick={(image) => {
+                    setSelectedImage(image.src);
+                    setShowImageModal(true);
+                  }}
                 />
               </div>
 
@@ -474,44 +478,37 @@ const RoomDetailsPage = () => {
       </div>
 
       {/* Full Image Gallery Modal */}
-      {showImageModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-90">
-          <div className="relative w-full max-w-5xl">
-            <button
-              onClick={() => setShowImageModal(false)}
-              className="absolute top-4 right-4 z-10 text-white bg-black bg-opacity-50 rounded-full p-2 transition-all hover:bg-opacity-70"
+      {showImageModal && selectedImage && (
+        <div 
+          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" 
+          onClick={() => {
+            setShowImageModal(false);
+            setSelectedImage(null);
+          }}
+        >
+          <div className="relative max-w-4xl max-h-[90vh]">
+            <img 
+              src={selectedImage} 
+              alt="Selected Room Image" 
+              className="max-w-full max-h-[90vh] object-contain"
+              loading="lazy"
+            />
+            <button 
+              className="absolute top-4 right-4 bg-black/50 text-white p-2 rounded-full"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowImageModal(false);
+                setSelectedImage(null);
+              }}
             >
-              <span className="sr-only">Close</span>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-
-            {/* Full image gallery component would go here */}
-            <div className="bg-white p-4 rounded-lg">
-              <h3 className="text-xl font-bold mb-4">{room.type} - Gallery</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {console.log("room images",room)}
-                {(room.imageUrls || [room.imageUrl]).map((src, index) => (
-                  <div key={index} className="aspect-w-16 aspect-h-9">
-                    <img
-                      src={src || "/placeholder.svg"}
-                      alt={`Room view ${index + 1}`}
-                      className="object-cover w-full h-full rounded-lg"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
         </div>
       )}
+
 
       <Footer />
     </>

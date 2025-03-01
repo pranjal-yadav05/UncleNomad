@@ -32,6 +32,7 @@ const AdminPanel = () => {
 
 const navItems = [
     { path: 'bookings', label: 'Manage Bookings' },
+    { path: 'tourbookings', label: 'Manage Tour Bookings'},
     { path: 'rooms', label: 'Manage Rooms' },
     { path: 'packages', label: 'Manage Packages' },
     { path: 'queries', label: 'Manage Queries' },

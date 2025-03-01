@@ -131,6 +131,7 @@ const ManageQueries = () => {
                         </span>
                     </TableCell>
                     <TableCell>
+                      <div className="flex gap-2">
                         {
                           query.status === 'pending' && (
                             <Button
@@ -143,14 +144,14 @@ const ManageQueries = () => {
                           )
                         }
                         <Button 
-                          variant="outline"
+                          variant="destructive"
                           
                           size="sm"
                           onClick={() => handleDelete(query)}
                         >
                           Delete
                         </Button>
-                        
+                      </div>
                     </TableCell>
                     </TableRow>
                 ))}

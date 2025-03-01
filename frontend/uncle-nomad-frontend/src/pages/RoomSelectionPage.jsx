@@ -10,6 +10,7 @@ import BookingModal from "../modals/BookingModal"
 import { format } from "date-fns"
 import BookingConfirmationDialog from "../modals/BookingConfirmationDialog"
 import BookingFailedDialog from "../modals/BookingFailedDialog"
+import AnimatedSection from "../components/AnimatedSection"
 
 const RoomSelectionPage = () => {
   const location = useLocation()
@@ -149,7 +150,7 @@ const RoomSelectionPage = () => {
   }
 
   return (
-    <>
+      <AnimatedSection animation="slide-up" duration={1000}>
       <Header />
 
       {/* Hero Section */}
@@ -384,7 +385,7 @@ const RoomSelectionPage = () => {
       }
 
       <Footer />
-    </>
+      </AnimatedSection>
   )
 }
 

@@ -44,10 +44,8 @@ const reviews = [
 export default function GoogleReviews() {
   return (
     <section 
-      className="relative text-center py-16 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"
+      className="relative text-center py-16"
     >
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-black/30"></div>
 
       <div className="container mx-auto px-6 relative z-10">
         <h2 className="text-4xl font-extrabold mb-8 text-white drop-shadow-lg">What Our Guests Say</h2>
@@ -97,7 +95,7 @@ export default function GoogleReviews() {
                   <p className="text-white/80 italic max-w-lg mx-auto text-sm">"{review.text}"</p>
 
                   {/* Source */}
-                  <p className="text-xs text-gray-300 mt-2">Source: {review.source}</p>
+                  <p className="text-xs text-gray-300 mt-2 mb-5">Source: {review.source}</p>
                 </div>
               );
             })}

@@ -39,7 +39,7 @@ const tourBookingSchema = new mongoose.Schema({
   },
   paymentStatus: {
     type: String,
-    enum: ['PENDING', 'SUCCESS', 'FAILED'],
+    enum: ['PENDING', 'SUCCESS', 'FAILED','INITIATED'],
     default: 'PENDING'
   },
   paymentReference: String,

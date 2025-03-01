@@ -14,6 +14,8 @@ import ManageGallery from './pages/ManageGallery';
 import GalleryPage from './pages/GalleryPage';
 import RoomDetailsPage from './pages/RoomDetailsPage';
 import RoomSelectionPage from './pages/RoomSelectionPage';
+import ManageTourBookings from './pages/ManageTourBookings';
+import AvailabilityPage from './pages/AvailabilityPage';
 
 function App() {
   return (
@@ -25,10 +27,12 @@ function App() {
         <Route path="/admin-auth" element={<AdminAuth />} />
         <Route path='/gallery' element={<GalleryPage/>} />
         <Route path='/room-selection' element={<RoomSelectionPage/>} />
+        <Route path='/availability' element={<AvailabilityPage/>} />
 
         {/*Admin Route */}
         <Route path="/admin" element={<AdminPanel />}>
           <Route path="bookings" element={<ManageBookings />} />
+          <Route path="tourbookings" element={<ManageTourBookings/>} />
           <Route path="gallery" element={<ManageGallery/>} />
           <Route path="rooms" element={<ManageRooms />} />
           <Route path="packages" element={<ManagePackages />} />

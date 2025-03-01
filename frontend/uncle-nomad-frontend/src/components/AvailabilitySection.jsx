@@ -147,6 +147,7 @@ function AvailabilitySection() {
             id="checkIn"
             name="checkIn"
             value={bookingForm.checkIn?.toISOString().split("T")[0] || ""}
+            onFocus={(e) => e.target.showPicker()}
             onChange={handleDateChange}
             min={new Date().toISOString().split("T")[0]}
             className="w-full p-3 border border-white/20 rounded-md bg-white/20 text-white placeholder-gray-300 focus:ring-2 focus:ring-white/50"
@@ -162,6 +163,7 @@ function AvailabilitySection() {
             id="checkOut"
             name="checkOut"
             value={bookingForm.checkOut?.toISOString().split("T")[0] || ""}
+            onFocus={(e) => e.target.showPicker()}
             onChange={handleDateChange}
             min={bookingForm.checkIn?.toISOString().split("T")[0] || new Date().toISOString().split("T")[0]}
             className="w-full p-3 border border-white/20 rounded-md bg-white/20 text-white placeholder-gray-300 focus:ring-2 focus:ring-white/50"

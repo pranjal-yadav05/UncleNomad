@@ -270,6 +270,49 @@ export const deleteTour = async (req, res) => {
 };
 
 
+
+export const getAllTourBookings = async (req, res) => {
+  try {
+    const bookings = await TourBooking.find();
+    res.json(bookings);
+  } catch (error) {
+    console.error('Error fetching tour bookings:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+
+export const deleteTourBooking = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const booking = await TourBooking.findById(id);
+
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    const tour = await Tour.findById(booking.tour);
+    if (!tour) {
+      return res.status(404).json({ message: 'Associated tour not found' });
+    }
+
+    // Deduct bookedSlots only if the booking was confirmed
+    if (booking.status === "CONFIRMED") {
+      tour.bookedSlots = Math.max(0, tour.bookedSlots - booking.groupSize);
+      await tour.save();
+    }
+
+    await TourBooking.findByIdAndDelete(id);
+
+    res.json({ message: 'Booking deleted successfully', updatedTour: tour });
+  } catch (error) {
+    console.error('Error deleting tour booking:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+
+
 // Tour booking functions
 export const verifyTourBooking = async (req, res) => {
   try {
