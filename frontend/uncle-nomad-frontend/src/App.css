@@ -46,3 +46,9 @@ section.fade-in {
     transform: rotate(360deg);
   }
 }
+
+.highlight {
+  border: 2px solid #fbbf24; /* Yellow border */
+  background-color: rgba(251, 191, 36, 0.1); /* Light yellow background */
+  transition: border 0.3s ease, background-color 0.3s ease;
+}

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "./ui/button"
 import { Menu } from "lucide-react"
 import { useNavigate, Link } from 'react-router-dom'
+import { Home, Image, Mail, Compass, Bed } from "lucide-react"
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -45,16 +46,6 @@ const Header = () => {
               Home
             </a>
             <a 
-              href="#availability" 
-              className="text-black hover:text-yellow"
-              onClick={(e) => {
-                e.preventDefault();
-                navigate("/", { state: { section: "availability" } });
-              }}
-            >
-              Stays
-            </a>
-            <a 
               href="#tours" 
               className="text-black hover:text-yellow"
               onClick={(e) => {
@@ -63,6 +54,16 @@ const Header = () => {
               }}
             >
               Tours
+            </a>
+            <a 
+              href="#availability" 
+              className="text-black hover:text-yellow"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate("/", { state: { section: "availability" } });
+              }}
+            >
+              Stays
             </a>
             <a 
               href="#gallery" 
@@ -79,6 +80,13 @@ const Header = () => {
               onClick={(e) => {
                 e.preventDefault();
                 navigate("/", { state: { section: "get-in-touch" } });
+                const getInTouchButton = document.getElementById("get-in-touch");
+                if (getInTouchButton) {
+                  getInTouchButton.classList.add("highlight");
+                  setTimeout(() => {
+                    getInTouchButton.classList.remove("highlight");
+                  }, 2000); // Remove highlight after 2 seconds
+                }
               }}
             >
               Contact Us
@@ -95,63 +103,79 @@ const Header = () => {
           </button>
         </div>
       </div>
-      <div 
+      <div
         className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${
           isMenuOpen ? "max-h-64 opacity-100" : "max-h-0 opacity-0"
         }`}
       >
-        <div className="container mx-auto px-4">
-          <nav className="flex flex-col space-y-2 py-2 bg-transparent shadow-lg rounded-lg p-4">
-            <a 
-              href="#about" 
-              className="text-black hover:text-brand-purple transition-colors py-2 transform transition-transform duration-200 hover:translate-x-2"
+        <div className="container mx-auto w-full ">
+        <nav className="flex flex-col space-y-2 py-2 items-center bg-transparent shadow-lg rounded-lg p-4">
+          {/* Wrap everything in a div to match the Contact Us width */}
+          <div className="flex flex-col">
+            <a
+              href="#about"
+              className="w-full max-w-max inline-flex items-center gap-3 text-black hover:text-brand-purple transition-colors py-2 px-4 justify-start"
               onClick={(e) => {
                 e.preventDefault();
                 navigate("/", { state: { section: "about" } });
+                setIsMenuOpen(false);
               }}
             >
-              Home
+              <Home className="h-6 w-6" />
+              <span>Home</span>
             </a>
-            <a 
-              href="#availability" 
-              className="text-black hover:text-brand-purple transition-colors py-2 transform transition-transform duration-200 hover:translate-x-2"
-              onClick={(e) => {
-                e.preventDefault();
-                navigate("/", { state: { section: "availability" } });
-              }}
-            >
-              Stays
-            </a>
-            <a 
-              href="#tours" 
-              className="text-black hover:text-brand-purple transition-colors py-2 transform transition-transform duration-200 hover:translate-x-2"
+            <a
+              href="#tours"
+              className="w-full max-w-max inline-flex items-center gap-3 text-black hover:text-brand-purple transition-colors py-2 px-4 justify-start"
               onClick={(e) => {
                 e.preventDefault();
                 navigate("/", { state: { section: "tours" } });
+                setIsMenuOpen(false);
               }}
             >
-              Tours
+              <Compass className="h-6 w-6" />
+              <span>Tours</span>
             </a>
-            <a 
-              href="#gallery" 
-              className="text-black hover:text-brand-purple transition-colors py-2 transform transition-transform duration-200 hover:translate-x-2"
+            <a
+              href="#availability"
+              className="w-full max-w-max inline-flex items-center gap-3 text-black hover:text-brand-purple transition-colors py-2 px-4 justify-start"
               onClick={(e) => {
                 e.preventDefault();
-                navigate('/gallery')
+                navigate("/", { state: { section: "availability" } });
+                setIsMenuOpen(false);
               }}
             >
-              Gallery
+              <Bed className="h-6 w-6" />
+              <span>Stays</span>
             </a>
-            <Button
+            <a
+              href="#gallery"
+              className="w-full max-w-max inline-flex items-center gap-3 text-black hover:text-brand-purple transition-colors py-2 px-4 justify-start"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate("/gallery");
+                setIsMenuOpen(false);
+              }}
+            >
+              <Image className="h-6 w-6" />
+              <span>Gallery</span>
+            </a>
+            <a
+              href="#contact"
+              className="w-full max-w-max inline-flex items-center gap-3 text-black hover:text-brand-purple transition-colors py-2 px-4 justify-start"
               onClick={(e) => {
                 e.preventDefault();
                 navigate("/", { state: { section: "get-in-touch" } });
+                setIsMenuOpen(false);
               }}
             >
-              Contact Us
-            </Button>
-          </nav>
-        </div>
+              <Mail className="h-6 w-6" />
+              <span>Contact Us</span>
+            </a>
+          </div>
+        </nav>
+
+       </div>
       </div>
     </header>
   )

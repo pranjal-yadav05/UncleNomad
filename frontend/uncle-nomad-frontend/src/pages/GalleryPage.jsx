@@ -16,6 +16,18 @@ export default function GalleryPage() {
     fetchFolders();
   }, []);
 
+  useEffect(() => {
+    if (selectedMedia) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto';
+    }
+    
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, [selectedMedia]);
+
   async function fetchFolders() {
     try {
       const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/gallery/folders`);
@@ -46,7 +58,7 @@ export default function GalleryPage() {
   }
 
   return (
-    <AnimatedSection animation="slide-up" duration={1000}>
+    <>
       <Header />
       <section className="container mx-auto px-6 py-16">
         <h2 className="text-4xl font-extrabold mb-8 text-center text-gray-900 dark:text-white">Photo Gallery</h2>
@@ -73,74 +85,71 @@ export default function GalleryPage() {
           <div className="mb-12">
             <h3 className="text-2xl font-bold mb-4 text-gray-800 dark:text-white">{selectedFolder}</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-  {imagesByFolder[selectedFolder]?.map((media, idx) => (
-    <div
-      key={idx}
-      className="cursor-pointer w-full h-40 overflow-hidden rounded-lg shadow-lg hover:scale-105 transition"
-      onClick={() => setSelectedMedia({ url: media.url, type: media.type })}
-    >
-      {media.type === "video" ? (
-        <video className="w-full h-full object-cover">
-          <source src={media.url} type="video/mp4" />
-        </video>
-      ) : (
-        <img className="w-full h-full object-cover" src={media.url} alt="Gallery Media" />
-      )}
-    </div>
-  ))}
-</div>
-
+              {imagesByFolder[selectedFolder]?.map((media, idx) => (
+                <div
+                  key={idx}
+                  className="cursor-pointer w-full h-40 overflow-hidden rounded-lg shadow-lg hover:scale-105 transition"
+                  onClick={() => setSelectedMedia({ url: media.url, type: media.type })}
+                >
+                  {media.type === "video" ? (
+                    <video className="w-full h-full object-cover">
+                      <source src={media.url} type="video/mp4" />
+                    </video>
+                  ) : (
+                    <img className="w-full h-full object-cover" src={media.url} alt="Gallery Media" />
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
-        {/* Media Modal */}
-        {selectedMedia && (
-  <div 
-    className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
-    onClick={() => {
-      setSelectedMedia(null);
-    }} // Close on background click
-  >
-    <div className="relative max-w-4xl max-h-[90vh] flex items-center justify-center">
-      {/* Close Button */}
-      <button 
-        className="absolute top-4 right-4 bg-black/50 text-white p-2 rounded-full"
-        onClick={(e) => {
-          e.stopPropagation();
-          setSelectedMedia(null);
-        }} // Close when clicked
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
-
-      {/* Image or Video */}
-      <div className="flex items-center justify-center w-full max-h-[90vh]">
-        {selectedMedia.type === "video" ? (
-          <video 
-            controls 
-            className="max-w-full max-h-[90vh] object-contain rounded-lg"
-          >
-            <source src={selectedMedia.url} type="video/mp4" />
-          </video>
-        ) : (
-          <img 
-            src={selectedMedia.url} 
-            alt="Gallery Media" 
-            className="max-w-full max-h-[90vh] object-contain rounded-lg"
-            loading="lazy"
-          />
-        )}
-      </div>
-    </div>
-  </div>
-)}
-
-
-
-      </section>
+     </section>
       <Footer />
-    </AnimatedSection>
+
+      {/* Media Modal - Updated based on RoomDetailsPage's implementation */}
+      {selectedMedia && (
+          <div 
+            className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+            onClick={() => {
+              setSelectedMedia(null);
+            }}
+          >
+            <div className="relative max-w-4xl max-h-[90vh]">
+              {/* Close Button */}
+              <button 
+                className="absolute top-4 right-4 bg-black/50 text-white p-2 rounded-full z-10"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedMedia(null);
+                }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+
+              {/* Image or Video */}
+              {selectedMedia.type === "video" ? (
+                <video 
+                  controls 
+                  className="max-w-full max-h-[90vh] object-contain rounded-lg"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <source src={selectedMedia.url} type="video/mp4" />
+                </video>
+              ) : (
+                <img 
+                  src={selectedMedia.url} 
+                  alt="Gallery Media" 
+                  className="max-w-full max-h-[90vh] object-contain rounded-lg"
+                  loading="lazy"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              )}
+            </div>
+          </div>
+        )}
+    </>
   );
 }

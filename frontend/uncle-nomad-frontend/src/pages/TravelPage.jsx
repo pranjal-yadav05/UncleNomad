@@ -37,7 +37,7 @@ export default function TravelPage() {
       setTimeout(() => {
         const section = document.getElementById(location.state.section);
         if (section) {
-          const offset = 80;
+          const offset = 120;
           const elementPosition = section.getBoundingClientRect().top;
           const offsetPosition = elementPosition + window.pageYOffset - offset;
           window.scrollTo({ top: offsetPosition, behavior: "smooth" });
