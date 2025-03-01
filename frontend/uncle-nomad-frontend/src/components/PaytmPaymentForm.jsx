@@ -80,7 +80,7 @@ const PaytmPaymentForm = ({
 
           const bookingResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/bookings/book`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", "x-api-key": process.env.REACT_APP_API_KEY },
             body: JSON.stringify(bookingData),
           })
 
@@ -92,7 +92,7 @@ const PaytmPaymentForm = ({
 
           const bookingUpdate = await axios.post(`${process.env.REACT_APP_API_URL}/api/payments/verify`, {
             orderId: response.ORDERID,
-          })
+          },{headers:{"x-api-key": process.env.REACT_APP_API_KEY}})
 
           setBookingDetails(bookingUpdate.data.data.bookingUpdate)
 

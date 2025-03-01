@@ -78,6 +78,9 @@ export default function RoomFormModal({
     try {
       const response = await fetch(`${API_URL}/api/rooms/${roomId}/image/${index}`, {
         method: "DELETE",
+        headers:{
+          "x-api-key": process.env.REACT_APP_API_KEY
+        }
       });
   
       if (!response.ok) {

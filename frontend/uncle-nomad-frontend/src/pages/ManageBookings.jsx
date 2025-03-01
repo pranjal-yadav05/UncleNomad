@@ -45,7 +45,7 @@ export default function ManageBookings() {
 
   const fetchRooms = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/rooms`);
+      const response = await fetch(`${API_URL}/api/rooms`,{ headers: { "x-api-key": process.env.REACT_APP_API_KEY }});
       if (!response.ok) throw new Error('Failed to fetch rooms');
       const data = await response.json();
       setRooms(data);
@@ -58,7 +58,7 @@ export default function ManageBookings() {
     setIsLoading(true);
     setError('');
     try {
-      const response = await fetch(`${API_URL}/api/bookings`);
+      const response = await fetch(`${API_URL}/api/bookings`,{headers:{"x-api-key": process.env.REACT_APP_API_KEY}});
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -83,7 +83,7 @@ export default function ManageBookings() {
       const response = await fetch(`${API_URL}/api/bookings/${id}`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json', "x-api-key": process.env.REACT_APP_API_KEY
         },
         body: JSON.stringify({ status }),
       });
@@ -104,6 +104,7 @@ export default function ManageBookings() {
     try {
       const response = await fetch(`${API_URL}/api/bookings/${id}`, {
         method: 'DELETE',
+        headers: {"x-api-key": process.env.REACT_APP_API_KEY}
       });
       
       if (!response.ok) {
@@ -172,6 +173,7 @@ export default function ManageBookings() {
         method,
         headers: {
           'Content-Type': 'application/json',
+          "x-api-key": process.env.REACT_APP_API_KEY
         },
         body: JSON.stringify(newBooking),
       });

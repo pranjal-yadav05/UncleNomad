@@ -149,7 +149,7 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsC
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/send-otp`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-api-key": process.env.REACT_APP_API_KEY },
         body: JSON.stringify({ email: bookingDetails.email })
       });
       
@@ -181,7 +181,7 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsC
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/verify-otp`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-api-key": process.env.REACT_APP_API_KEY },
         body: JSON.stringify({ email: bookingDetails.email, otp })
       });
       
@@ -238,7 +238,7 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsC
 
       const response = await fetch(`${process.env.REACT_APP_API_URL}/api/tours/${selectedTour._id}/book`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-api-key": process.env.REACT_APP_API_KEY },
         body: JSON.stringify(bookingData),
       });
 
@@ -266,7 +266,7 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsC
         `${process.env.REACT_APP_API_URL}/api/tours/booking/${bookingData._id}`,
         {
           method: "GET",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "x-api-key": process.env.REACT_APP_API_KEY },
         }
       );
 

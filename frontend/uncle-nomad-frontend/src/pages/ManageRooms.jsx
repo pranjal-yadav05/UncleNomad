@@ -33,7 +33,7 @@ export default function ManageRooms() {
   const fetchRooms = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`${API_URL}/api/rooms`);
+      const response = await fetch(`${API_URL}/api/rooms`,{headers:{"x-api-key": process.env.REACT_APP_API_KEY}});
       if (!response.ok) {
         throw new Error('Failed to fetch rooms');
       }
@@ -104,6 +104,7 @@ export default function ManageRooms() {
       const response = await fetch(url, {
         method,
         body: formDataToSend,
+        headers:{"x-api-key": process.env.REACT_APP_API_KEY}
       });
       
       if (!response.ok) {
@@ -150,6 +151,7 @@ export default function ManageRooms() {
       setIsLoading(true);
       const response = await fetch(`${API_URL}/api/rooms/${roomId}`, {
         method: 'DELETE',
+        headers: {"x-api-key": process.env.REACT_APP_API_KEY}
       });
   
       if (!response.ok) {

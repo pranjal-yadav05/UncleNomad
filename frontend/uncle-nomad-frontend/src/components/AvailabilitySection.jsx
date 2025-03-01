@@ -65,6 +65,11 @@ function AvailabilitySection() {
       try {
         const response = await fetch(
           `${process.env.REACT_APP_API_URL}/api/bookings/check-availability?checkIn=${checkIn.toISOString()}&checkOut=${checkOut.toISOString()}`,
+          {
+            headers:{
+              "x-api-key": process.env.REACT_APP_API_KEY
+            }
+          }
         )
 
        

@@ -57,7 +57,7 @@ export default function ManagePackages() {
   const fetchPackages = async () => {
     try {
       setIsLoading(true)
-      const response = await fetch(`${API_URL}/api/tours`);
+      const response = await fetch(`${API_URL}/api/tours`, {headers: {"x-api-key": process.env.REACT_APP_API_KEY}});
       if (!response.ok) throw new Error("Failed to fetch packages");
       const data = await response.json();
       setPackages(data);
@@ -108,6 +108,7 @@ export default function ManagePackages() {
   
       const response = await fetch(url, {
         method,
+        headers: {"x-api-key": process.env.REACT_APP_API_KEY},
         body: formData, // ✅ Send as FormData, NOT JSON
       });
   
@@ -273,6 +274,7 @@ export default function ManagePackages() {
                         try {
                           const response = await fetch(`${API_URL}/api/tours/${pkg._id}`, {
                             method: "DELETE",
+                            headers: {"x-api-key": process.env.REACT_APP_API_KEY}
                           });
                           if (response.ok) fetchPackages();
                         } catch (error) {

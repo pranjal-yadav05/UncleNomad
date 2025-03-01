@@ -14,7 +14,7 @@ const ManageQueries = () => {
   const fetchQueries = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/query/admin`);
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/query/admin`,{headers:{"x-api-key": process.env.REACT_APP_API_KEY}});
       const data = await response.json();
       console.log(data)
       setQueries(data);
@@ -32,6 +32,7 @@ const ManageQueries = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          "x-api-key": process.env.REACT_APP_API_KEY
         },
         body: JSON.stringify({
           email: query.email,
@@ -65,6 +66,7 @@ const ManageQueries = () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        "x-api-key": process.env.REACT_APP_API_KEY
       },
       body: JSON.stringify({
         query : query

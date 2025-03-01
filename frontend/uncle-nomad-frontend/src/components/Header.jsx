@@ -105,77 +105,75 @@ const Header = () => {
       </div>
       <div
         className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${
-          isMenuOpen ? "max-h-64 opacity-100" : "max-h-0 opacity-0"
+          isMenuOpen ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"
         }`}
       >
-        <div className="container mx-auto w-full ">
-        <nav className="flex flex-col space-y-2 py-2 items-center bg-transparent shadow-lg rounded-lg p-4">
-          {/* Wrap everything in a div to match the Contact Us width */}
-          <div className="flex flex-col">
-            <a
-              href="#about"
-              className="w-full max-w-max inline-flex items-center gap-3 text-black hover:text-brand-purple transition-colors py-2 px-4 justify-start"
-              onClick={(e) => {
-                e.preventDefault();
-                navigate("/", { state: { section: "about" } });
-                setIsMenuOpen(false);
-              }}
-            >
-              <Home className="h-6 w-6" />
-              <span>Home</span>
-            </a>
-            <a
-              href="#tours"
-              className="w-full max-w-max inline-flex items-center gap-3 text-black hover:text-brand-purple transition-colors py-2 px-4 justify-start"
-              onClick={(e) => {
-                e.preventDefault();
-                navigate("/", { state: { section: "tours" } });
-                setIsMenuOpen(false);
-              }}
-            >
-              <Compass className="h-6 w-6" />
-              <span>Tours</span>
-            </a>
-            <a
-              href="#availability"
-              className="w-full max-w-max inline-flex items-center gap-3 text-black hover:text-brand-purple transition-colors py-2 px-4 justify-start"
-              onClick={(e) => {
-                e.preventDefault();
-                navigate("/", { state: { section: "availability" } });
-                setIsMenuOpen(false);
-              }}
-            >
-              <Bed className="h-6 w-6" />
-              <span>Stays</span>
-            </a>
-            <a
-              href="#gallery"
-              className="w-full max-w-max inline-flex items-center gap-3 text-black hover:text-brand-purple transition-colors py-2 px-4 justify-start"
-              onClick={(e) => {
-                e.preventDefault();
-                navigate("/gallery");
-                setIsMenuOpen(false);
-              }}
-            >
-              <Image className="h-6 w-6" />
-              <span>Gallery</span>
-            </a>
-            <a
-              href="#contact"
-              className="w-full max-w-max inline-flex items-center gap-3 text-black hover:text-brand-purple transition-colors py-2 px-4 justify-start"
-              onClick={(e) => {
-                e.preventDefault();
-                navigate("/", { state: { section: "get-in-touch" } });
-                setIsMenuOpen(false);
-              }}
-            >
-              <Mail className="h-6 w-6" />
-              <span>Contact Us</span>
-            </a>
-          </div>
-        </nav>
-
-       </div>
+        <div className="container mx-auto w-full">
+          <nav className="flex flex-col space-y-4 py-2 items-center bg-transparent shadow-lg rounded-lg p-4">
+            <div className="flex flex-col">
+              <a
+                href="#about"
+                className="w-full max-w-max inline-flex my-2 items-center gap-3 text-black hover:text-brand-purple transition-colors py-2 px-4 justify-start"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate("/", { state: { section: "about" } });
+                  setIsMenuOpen(false);
+                }}
+              >
+                <Home className="h-6 w-6" />
+                <span>Home</span>
+              </a>
+              <a
+                href="#tours"
+                className="w-full max-w-max inline-flex my-2 items-center gap-3 text-black hover:text-brand-purple transition-colors py-2 px-4 justify-start"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate("/", { state: { section: "tours" } });
+                  setIsMenuOpen(false);
+                }}
+              >
+                <Compass className="h-6 w-6" />
+                <span>Tours</span>
+              </a>
+              <a
+                href="#availability"
+                className="w-full max-w-max inline-flex  my-2 items-center gap-3 text-black hover:text-brand-purple transition-colors py-2 px-4 justify-start"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate("/", { state: { section: "availability" } });
+                  setIsMenuOpen(false);
+                }}
+              >
+                <Bed className="h-6 w-6" />
+                <span>Stays</span>
+              </a>
+              <a
+                href="#gallery"
+                className="w-full max-w-max inline-flex my-2 items-center gap-3 text-black hover:text-brand-purple transition-colors py-2 px-4 justify-start"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate("/gallery");
+                  setIsMenuOpen(false);
+                }}
+              >
+                <Image className="h-6 w-6" />
+                <span>Gallery</span>
+              </a>
+              <a
+                href="#contact"
+                className="w-full max-w-max inline-flex my-2 items-center gap-3 text-black hover:text-brand-purple transition-colors py-2 px-4 justify-start"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate("/", { state: { section: "get-in-touch" } });
+                  setIsMenuOpen(false);
+                }}
+              >
+                <Mail className="h-6 w-6" />
+                <span>Contact Us</span>
+              </a>
+            </div>
+          </nav>
+        </div>
       </div>
     </header>
   )

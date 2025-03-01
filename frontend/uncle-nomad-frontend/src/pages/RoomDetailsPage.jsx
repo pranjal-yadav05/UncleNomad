@@ -36,7 +36,7 @@ const RoomDetailsPage = () => {
         console.log('fetching details')
         try {
           setLoading(true)
-          const response = await fetch(`${process.env.REACT_APP_API_URL}/api/rooms/${state?.selectedRoom?._id}`)
+          const response = await fetch(`${process.env.REACT_APP_API_URL}/api/rooms/${state?.selectedRoom?._id}`,{headers:{"x-api-key": process.env.REACT_APP_API_KEY}})
 
           if (!response.ok) {
             throw new Error("Failed to fetch room details")

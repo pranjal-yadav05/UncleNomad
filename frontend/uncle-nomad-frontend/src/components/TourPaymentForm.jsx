@@ -59,7 +59,8 @@ const TourPaymentForm = ({
 
         const paymentResponse = await axios.post(
           `${process.env.REACT_APP_API_URL}/api/tours/${paymentData.tourId}/initiate-payment`,
-          paymentInitData
+          paymentInitData,
+          {headers:{"x-api-key": process.env.REACT_APP_API_KEY}}
         );
 
         if (!paymentResponse.data.data.txnToken) {

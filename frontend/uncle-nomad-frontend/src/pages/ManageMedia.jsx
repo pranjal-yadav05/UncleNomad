@@ -37,7 +37,7 @@ const ManageMedia = () => {
   const fetchMedia = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/media`);
+      const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/media`,{headers:{"x-api-key": process.env.REACT_APP_API_KEY}});
       setMedia(response.data);
     } catch (error) {
       setErrorMessage(error.response?.data?.message || "Failed to load media content");
@@ -109,7 +109,8 @@ const ManageMedia = () => {
         const uploadResponse = await axios.post(`${process.env.REACT_APP_API_URL}/api/upload`, formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            "x-api-key": process.env.REACT_APP_API_KEY
           }
         });
   
@@ -120,7 +121,7 @@ const ManageMedia = () => {
         mediaData.url = urlInput;
       }
       
-      await axios.post(`${process.env.REACT_APP_API_URL}/api/media`, mediaData);
+      await axios.post(`${process.env.REACT_APP_API_URL}/api/media`, mediaData,{headers:{"x-api-key": process.env.REACT_APP_API_KEY}});
       await fetchMedia();
       
       setNewMedia({ 
@@ -154,12 +155,15 @@ const handleDeleteMedia = async (id, publicId, type) => {
         data: { 
           publicId: publicId.trim(), // Ensure no whitespace
           resourceType: type === 'video' ? 'video' : 'image'  // Changed 'type' to 'resourceType'
+        },
+        headers:{
+          "x-api-key": process.env.REACT_APP_API_KEY
         }
       });
     }
     
     // Delete from database
-    await axios.delete(`${process.env.REACT_APP_API_URL}/api/media/${id}`);
+    await axios.delete(`${process.env.REACT_APP_API_URL}/api/media/${id}`,{headers:{"x-api-key": process.env.REACT_APP_API_KEY}});
     await fetchMedia();
     
     setSuccessMessage("Media deleted successfully");
@@ -188,7 +192,7 @@ const handleDeleteMedia = async (id, publicId, type) => {
           _id: item._id,
           order: index
         }))
-      });
+      },{headers:{"x-api-key": process.env.REACT_APP_API_KEY}});
     } catch (error) {
       console.error('Error updating media order:', error);
       setErrorMessage("Failed to update media order");

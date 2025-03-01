@@ -135,7 +135,7 @@ export default function BookingModal({
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/send-otp`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-api-key": process.env.REACT_APP_API_KEY },
         body: JSON.stringify({ email: bookingForm.email }),
       })
 
@@ -167,7 +167,7 @@ export default function BookingModal({
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/verify-otp`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-api-key": process.env.REACT_APP_API_KEY },
         body: JSON.stringify({ email: bookingForm.email, otp }),
       })
 
@@ -412,7 +412,7 @@ export default function BookingModal({
       console.log("Initiating payment request to:", `${process.env.REACT_APP_API_URL}/api/payments/initiate`)
       const paymentResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/payments/initiate`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-api-key": process.env.REACT_APP_API_KEY },
         credentials: "include", // Include cookies for session
         body: JSON.stringify({
           bookingData: bookingData,

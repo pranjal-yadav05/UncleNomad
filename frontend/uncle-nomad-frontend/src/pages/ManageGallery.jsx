@@ -20,7 +20,7 @@ const ManageGallery = () => {
 
   const fetchFolders = async () => {
     try {
-      const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/gallery/folders`);
+      const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/gallery/folders`,{headers:{"x-api-key": process.env.REACT_APP_API_KEY}});
       setFolders(response.data);
     } catch (error) {
       console.error("Failed to load folders.", error);
@@ -29,7 +29,7 @@ const ManageGallery = () => {
 
   const fetchMedia = async (folderName) => {
     try {
-      const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/gallery/folders/${folderName}`);
+      const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/gallery/folders/${folderName}`,{headers:{"x-api-key": process.env.REACT_APP_API_KEY}});
       setMedia(response.data);
       setSelectedFolder(folderName);
     } catch (error) {
@@ -40,7 +40,7 @@ const ManageGallery = () => {
   const handleCreateFolder = async () => {
     if (!newFolder.trim()) return;
     try {
-      await axios.post(`${process.env.REACT_APP_API_URL}/api/gallery/folders`, { name: newFolder });
+      await axios.post(`${process.env.REACT_APP_API_URL}/api/gallery/folders`, { name: newFolder },{headers:{"x-api-key": process.env.REACT_APP_API_KEY}});
       setNewFolder("");
       fetchFolders();
     } catch (error) {
@@ -52,6 +52,7 @@ const ManageGallery = () => {
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/api/gallery/folders/${folderName}`, {
         method: "DELETE",
+        headers: {"x-api-key": process.env.REACT_APP_API_KEY}
       });
       if (response.ok) {
         console.log("Folder deleted successfully");
@@ -75,7 +76,7 @@ const ManageGallery = () => {
     formData.append("type", fileType);
 
     try {
-      await axios.post(`${process.env.REACT_APP_API_URL}/api/gallery/folders/${selectedFolder}/media`, formData);
+      await axios.post(`${process.env.REACT_APP_API_URL}/api/gallery/folders/${selectedFolder}/media`, formData,{headers:{"x-api-key": process.env.REACT_APP_API_KEY}});
       fetchMedia(selectedFolder);
     } catch (error) {
       console.error("Upload failed.", error);
@@ -89,6 +90,7 @@ const ManageGallery = () => {
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/api/gallery/folders/${selectedFolder}/media/${publicId}`, {
         method: "DELETE",
+        headers: {"x-api-key": process.env.REACT_APP_API_KEY}
       });
   
       if (response.ok) {

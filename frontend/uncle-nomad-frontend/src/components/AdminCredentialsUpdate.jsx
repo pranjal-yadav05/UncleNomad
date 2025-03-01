@@ -17,11 +17,13 @@ const AdminCredentialsUpdate = () => {
     setError('');
 
     try {
-      const response = await axios.post(`${API_URL}/api/admin-auth/update-credentials`, {
+      const response = await axios.post(`${API_URL}/api/admin-auth/update-credentials`,{
         currentUsername,
         currentPassword,
         newUsername,
         newPassword
+      },{
+        headers:{"x-api-key": process.env.REACT_APP_API_KEY}
       });
 
       setMessage(response.data.message);

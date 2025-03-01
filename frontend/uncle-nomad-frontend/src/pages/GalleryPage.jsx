@@ -30,7 +30,7 @@ export default function GalleryPage() {
 
   async function fetchFolders() {
     try {
-      const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/gallery/folders`);
+      const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/gallery/folders`,{headers:{"x-api-key": process.env.REACT_APP_API_KEY}});
       setFolders(response.data);
       if (response.data.length > 0) {
         setSelectedFolder(response.data[0].name);
@@ -43,7 +43,7 @@ export default function GalleryPage() {
 
   async function fetchImages(folderName) {
     try {
-      const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/gallery/folders/${folderName}`);
+      const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/gallery/folders/${folderName}`,{headers:{"x-api-key": process.env.REACT_APP_API_KEY}});
       setImagesByFolder(prev => ({ ...prev, [folderName]: response.data }));
     } catch (error) {
       console.error("Error fetching images:", error);

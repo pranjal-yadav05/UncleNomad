@@ -49,7 +49,7 @@ export default function TravelPage() {
   // Your existing useEffect and functions
   useEffect(() => {
     // Fetch tours and guides data
-    fetch(`${API_URL}/api/tours`)
+    fetch(`${API_URL}/api/tours`,{headers:{"x-api-key": process.env.REACT_APP_API_KEY}})
       .then((res) => res.json())
       .then((data) => {
         setTours(data)
@@ -58,7 +58,7 @@ export default function TravelPage() {
       })
       .catch((error) => console.error("Error fetching tours:", error))
     
-    fetch(`${API_URL}/api/rooms`)
+    fetch(`${API_URL}/api/rooms`,{headers:{"x-api-key": process.env.REACT_APP_API_KEY}})
     .then((res) => res.json())
     .then((data) => {
       setRooms(data)

@@ -47,6 +47,13 @@ app.use(session({
         maxAge: 1000 * 60 * 30 // 30 minutes
     }
 }));
+app.use((req, res, next) => {
+    const apiKey = req.headers["x-api-key"];
+    if (!apiKey || apiKey !== process.env.API_KEY) {
+        return res.status(401).json({ message: "Unauthorized access" });
+    }
+    next();
+});
 
 
 // Routes

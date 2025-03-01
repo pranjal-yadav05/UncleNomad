@@ -19,6 +19,7 @@ const AdminAuth = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          "x-api-key": process.env.REACT_APP_API_KEY
         },
         body: JSON.stringify({ username, password }),
       });

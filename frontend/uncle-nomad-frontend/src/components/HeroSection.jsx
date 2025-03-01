@@ -20,7 +20,7 @@
           console.log('Fetching media...'); // Log the fetch action
 
           try {
-              const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/media`); // Adjust the endpoint as necessary
+              const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/media`,{headers:{"x-api-key": process.env.REACT_APP_API_KEY}}); // Adjust the endpoint as necessary
               console.log('Media response:', response.data); // Log the response data
               setMediaItems(response.data);
           } catch (error) {

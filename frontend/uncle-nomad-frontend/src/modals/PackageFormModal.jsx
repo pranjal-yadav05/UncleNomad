@@ -109,6 +109,9 @@ const PackageFormModal = ({
     try {
       console.log(`🗑️ Deleting image at index ${index} for package ${tourId}...`);
       const response = await fetch(`${API_URL}/api/tours/${tourId}/image/${imageIndex}`, {
+        headers:{
+          "x-api-key": process.env.REACT_APP_API_KEY
+        },
         method: "DELETE",
       });
 

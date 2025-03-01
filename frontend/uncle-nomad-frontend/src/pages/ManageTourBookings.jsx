@@ -42,7 +42,7 @@ export default function ManageTourBookings() {
 
   const fetchTours = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/tours`);
+      const response = await fetch(`${API_URL}/api/tours`, {headers:{"x-api-key": process.env.REACT_APP_API_KEY}});
       if (!response.ok) throw new Error('Failed to fetch tours');
       const data = await response.json();
       setTours(data);
@@ -57,7 +57,7 @@ export default function ManageTourBookings() {
     setError('');
     try {
       // Using the getAllTourBookings endpoint from tours model
-      const response = await fetch(`${API_URL}/api/tours/bookings`);
+      const response = await fetch(`${API_URL}/api/tours/bookings`,{headers:{"x-api-key": process.env.REACT_APP_API_KEY}});
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -84,6 +84,7 @@ export default function ManageTourBookings() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          "x-api-key": process.env.REACT_APP_API_KEY
         },
         body: JSON.stringify({ 
           status, 
@@ -114,6 +115,7 @@ export default function ManageTourBookings() {
     try {
       const response = await fetch(`${API_URL}/api/tours/booking/${id}`, {
         method: 'DELETE',
+        headers: {"x-api-key": process.env.REACT_APP_API_KEY}
       });
       
       if (!response.ok) {
@@ -134,6 +136,7 @@ export default function ManageTourBookings() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          "x-api-key": process.env.REACT_APP_API_KEY
         },
         body: JSON.stringify({
           tourId,
@@ -196,6 +199,7 @@ export default function ManageTourBookings() {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
+              "x-api-key": process.env.REACT_APP_API_KEY
             },
             body: JSON.stringify({
               status: newBooking.status,
@@ -213,6 +217,7 @@ export default function ManageTourBookings() {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              "x-api-key": process.env.REACT_APP_API_KEY
             },
             body: JSON.stringify({
               tourId: newBooking.tourId,
@@ -273,7 +278,7 @@ export default function ManageTourBookings() {
 
   const handleViewBookingDetails = async (bookingId) => {
     try {
-      const response = await fetch(`${API_URL}/api/tours/booking/${bookingId}`);
+      const response = await fetch(`${API_URL}/api/tours/booking/${bookingId}`,{headers:{"x-api-key": process.env.REACT_APP_API_KEY}});
       if (!response.ok) {
         throw new Error('Failed to fetch booking details');
       }
