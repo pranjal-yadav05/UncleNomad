@@ -154,39 +154,55 @@ export default function BookingModal({
   }
 
   const verifyOtp = async (e) => {
-    e.preventDefault()
-
+    e.preventDefault();
+  
     if (!otp.trim()) {
-      setOtpError("Please enter the OTP")
-      return
+      setOtpError("Please enter the OTP");
+      return;
     }
-
-    setIsVerifyingOtp(true)
-    setOtpError(null)
-
+  
+    setIsVerifyingOtp(true);
+    setOtpError(null);
+  
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/verify-otp`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": process.env.REACT_APP_API_KEY },
-        body: JSON.stringify({ email: bookingForm.email, otp }),
-      })
-
+        headers: { 
+          "Content-Type": "application/json", 
+          "x-api-key": process.env.REACT_APP_API_KEY 
+        },
+        body: JSON.stringify({ 
+          email: bookingForm.email, 
+          otp,
+          name: bookingForm.guestName,
+          phone: bookingForm.phone
+        }),
+      });
+  
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || "Invalid OTP")
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Invalid OTP");
       }
-
-      setIsOtpVerified(true)
+  
+      const data = await response.json();
+      
+      // Store the auth token in localStorage
+      localStorage.setItem('authToken', data.token);
+      localStorage.setItem("userName", data.user.name);
+      localStorage.setItem("userEmail", data.user.email);
+      
+      window.dispatchEvent(new Event("storage"));
+      
+      setIsOtpVerified(true);
       if (validationErrors.otp) {
-        setValidationErrors((prev) => ({ ...prev, otp: "" }))
+        setValidationErrors((prev) => ({ ...prev, otp: "" }));
       }
     } catch (error) {
-      setOtpError(error.message || "Invalid OTP. Please try again.")
+      setOtpError(error.message || "Invalid OTP. Please try again.");
     } finally {
-      setIsVerifyingOtp(false)
+      setIsVerifyingOtp(false);
     }
-  }
-
+  };
   // Generate summary text for verification status
   const getVerificationStatus = () => {
     if (isOtpVerified) return <span className="text-green-500 flex items-center text-sm">✓ Email verified</span>
@@ -387,6 +403,11 @@ export default function BookingModal({
     try {
       setIsLoading(true)
 
+      const authToken = localStorage.getItem('authToken');
+      if (!authToken) {
+        throw new Error('You must verify your email before proceeding');
+      }
+
       // Calculate total amount
       const totalAmount = availableRooms.reduce((sum, room) => {
         const count = bookingForm.selectedRooms[room._id] || 0
@@ -412,7 +433,10 @@ export default function BookingModal({
       console.log("Initiating payment request to:", `${process.env.REACT_APP_API_URL}/api/payments/initiate`)
       const paymentResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/payments/initiate`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": process.env.REACT_APP_API_KEY },
+        headers: { "Content-Type": "application/json", 
+          "x-api-key": process.env.REACT_APP_API_KEY,
+          "Authorization": `Bearer ${authToken}` 
+        },
         credentials: "include", // Include cookies for session
         body: JSON.stringify({
           bookingData: bookingData,

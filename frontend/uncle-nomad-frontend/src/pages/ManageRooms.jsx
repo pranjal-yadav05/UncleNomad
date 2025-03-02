@@ -217,9 +217,9 @@ export default function ManageRooms() {
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <Table>
+          <Table className="border border-gray-300">
             <TableHeader>
-              <TableRow>
+              <TableRow className="bg-gray-100">
                 <TableHead>Type</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead>Capacity</TableHead>

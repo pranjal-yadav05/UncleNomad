@@ -25,6 +25,18 @@ const PackageFormModal = ({
   const [existingImages, setExistingImages] = useState([]);
 
   useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isOpen, onClose]);
+
+
+  useEffect(() => {
     if (!isOpen) {
       setImagePreviews([]);
       setImageFiles([]);

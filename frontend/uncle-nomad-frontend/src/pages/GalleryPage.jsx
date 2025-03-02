@@ -60,8 +60,9 @@ export default function GalleryPage() {
   return (
     <>
       <Header />
-      <section className="container mx-auto px-6 py-16">
-        <h2 className="text-4xl font-extrabold mb-8 text-center text-gray-900 dark:text-white">Photo Gallery</h2>
+      <section className="container mx-auto px-6 min-h-screen">
+      <span className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 block p-5 mb-10">
+        <h2 className="text-4xl font-extrabold my-9 text-center text-gray-900 dark:text-white">Photo Gallery</h2>
 
         {/* Folder Selection */}
         <div className="flex gap-4 overflow-x-auto pb-4 border-b border-gray-300 dark:border-gray-600 mb-8">
@@ -70,8 +71,8 @@ export default function GalleryPage() {
               key={index}
               className={`px-4 py-2 rounded-lg transition ${
                 selectedFolder === folder.name
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
+                  ? "bg-transparent text-white border-2 border-white"  // Solid color for the active button
+                  : "bg-transparent text-white hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 dark:hover:text-white" // Transparent background for others
               }`}
               onClick={() => handleFolderClick(folder.name)}
             >
@@ -79,6 +80,7 @@ export default function GalleryPage() {
             </button>
           ))}
         </div>
+      </span>
 
         {/* Selected Folder Display */}
         {selectedFolder && (

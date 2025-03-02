@@ -26,7 +26,7 @@ const AdminAuth = () => {
 
       if (response.ok) {
         const data = await response.json();
-        localStorage.setItem('authToken', data.token);
+        localStorage.setItem('token', data.token);
         navigate('/admin');
       } else {
         setError('Invalid username or password');

@@ -16,6 +16,7 @@ import RoomDetailsPage from './pages/RoomDetailsPage';
 import RoomSelectionPage from './pages/RoomSelectionPage';
 import ManageTourBookings from './pages/ManageTourBookings';
 import AvailabilityPage from './pages/AvailabilityPage';
+import ProfilePage from './pages/ProfilePage';
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
         <Route path='/gallery' element={<GalleryPage/>} />
         <Route path='/room-selection' element={<RoomSelectionPage/>} />
         <Route path='/availability' element={<AvailabilityPage/>} />
+        <Route path='/profile' element={<ProfilePage/>} />
 
         {/*Admin Route */}
         <Route path="/admin" element={<AdminPanel />}>

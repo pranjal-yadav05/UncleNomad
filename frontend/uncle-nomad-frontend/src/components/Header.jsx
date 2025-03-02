@@ -3,102 +3,184 @@
 import { useState, useEffect } from "react"
 import { Button } from "./ui/button"
 import { Menu } from "lucide-react"
-import { useNavigate, Link } from 'react-router-dom'
-import { Home, Image, Mail, Compass, Bed } from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import { Home, Image, Mail, Compass, Bed, User, LogIn, LogOut } from "lucide-react"
+import LoginModal from "../modals/LoginModal"
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [isAdmin, setIsAdmin] = useState(false)
   const navigate = useNavigate()
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [userName, setUserName] = useState("")
 
+  // Check authentication status
   useEffect(() => {
-    const adminStatus = sessionStorage.getItem('isAdmin')
-    setIsAdmin(adminStatus === 'true')
+    const checkAuth = () => {
+      const authToken = localStorage.getItem("authToken")
+      const storedUserName = localStorage.getItem("userName")
+
+      if (authToken) {
+        // Check if the token is expired
+        const isTokenExpired = checkTokenExpiration(authToken)
+
+        if (isTokenExpired) {
+          // If token is expired, log the user out
+          localStorage.removeItem("authToken")
+          localStorage.removeItem("userName")
+          setIsAuthenticated(false)
+          setUserName("")
+        } else {
+          // If token is valid, set the user as authenticated
+          setIsAuthenticated(true)
+          setUserName(storedUserName || "")
+        }
+      } else {
+        setIsAuthenticated(false)
+        setUserName("")
+      }
+    }
+
+    checkAuth() // Run on mount
+
+    // Listen for changes to authentication status in other windows/tabs
+    window.addEventListener("storage", checkAuth)
+
+    return () => {
+      window.removeEventListener("storage", checkAuth)
+    }
   }, [])
 
+  // Function to check if the token is expired
+  const checkTokenExpiration = (token) => {
+    try {
+      const decodedToken = JSON.parse(atob(token.split('.')[1])) // Decode JWT token
+      const expiryTime = decodedToken.exp * 1000 // Convert to milliseconds
+      const currentTime = Date.now()
+
+      // Check if the token has expired
+      return currentTime > expiryTime
+    } catch (error) {
+      console.error("Error decoding token", error)
+      return true // If token can't be decoded, consider it expired
+    }
+  }
+
+  // Logout function
+  const handleLogout = () => {
+    localStorage.removeItem("authToken")
+    localStorage.removeItem("userName")
+    localStorage.removeItem("userEmail")
+    setIsAuthenticated(false) // Update state
+    setUserName("") // Clear user name
+    navigate("/") // Redirect to home
+  }
+
   return (
-    <header className="bg-white/40 backdrop-blur-md shadow-sm sticky top-0 z-50">
+    <header className="bg-white/40 backdrop-blur-md shadow-sm sticky top-0 z-50 border-b border-gray-100/20">
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 rounded-lg">
+          <div className="flex items-center gap-2 rounded-lg ">
             <img
               onClick={(e) => {
-                e.preventDefault();
-                const section = document.getElementById('hero');
-                if (section) {
-                  const offset = 80;
-                  const elementPosition = section.getBoundingClientRect().top;
-                  const offsetPosition = elementPosition + window.pageYOffset - offset;
-                  window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
-                }
+                e.preventDefault()
+                navigate("/", { state: { section: "hero" } })
               }}
-             src="/logo3-rm.png" alt="Uncle Nomad Logo" width={200} height={60} style={{display:'block'}}/>
+              className="cursor-pointer"
+              src="/logo3-rm.png"
+              alt="Uncle Nomad Logo"
+              width={200}
+              height={60}
+              style={{ display: "block" }}
+            />
           </div>
-          <nav className="hidden md:flex items-center space-x-6">
+          <nav className="hidden md:flex items-center space-x-2 lg:space-x-6">
             <a
-              href="#about" 
-              className="text-black hover:text-yellow"
+              href="#about"
+              className="text-black hover:bg-gradient-to-r hover:from-blue-500 hover:via-purple-500 hover:to-pink-500 hover:bg-clip-text hover:text-transparent"
               onClick={(e) => {
-                e.preventDefault();
-                navigate("/", { state: { section: "about" } });
+                e.preventDefault()
+                navigate("/", { state: { section: "hero" } })
               }}
             >
               Home
             </a>
-            <a 
-              href="#tours" 
-              className="text-black hover:text-yellow"
+            <a
+              href="#tours"
+              className="text-black hover:bg-gradient-to-r hover:from-blue-500 hover:via-purple-500 hover:to-pink-500 hover:bg-clip-text hover:text-transparent"
               onClick={(e) => {
-                e.preventDefault();
-                navigate("/", { state: { section: "tours" } });
+                e.preventDefault()
+                navigate("/", { state: { section: "tours" } })
               }}
             >
               Tours
             </a>
-            <a 
-              href="#availability" 
-              className="text-black hover:text-yellow"
+            <a
+              href="#availability"
+              className="text-black hover:bg-gradient-to-r hover:from-blue-500 hover:via-purple-500 hover:to-pink-500 hover:bg-clip-text hover:text-transparent"
               onClick={(e) => {
-                e.preventDefault();
-                navigate("/", { state: { section: "availability" } });
+                e.preventDefault()
+                navigate("/", { state: { section: "availability" } })
               }}
             >
               Stays
             </a>
-            <a 
-              href="#gallery" 
-              className="text-black hover:text-yellow"
+            <a
+              href="#gallery"
+              className="text-black hover:bg-gradient-to-r hover:from-blue-500 hover:via-purple-500 hover:to-pink-500 hover:bg-clip-text hover:text-transparent"
               onClick={(e) => {
-                e.preventDefault();
-                navigate('/gallery')
+                e.preventDefault()
+                navigate("/gallery")
               }}
             >
               Gallery
             </a>
 
-            <Button
+            <a
+              href="#contact"
+              className="text-black hover:bg-gradient-to-r hover:from-blue-500 hover:via-purple-500 hover:to-pink-500 hover:bg-clip-text hover:text-transparent"
               onClick={(e) => {
-                e.preventDefault();
-                navigate("/", { state: { section: "get-in-touch" } });
-                const getInTouchButton = document.getElementById("get-in-touch");
+                e.preventDefault()
+                navigate("/", { state: { section: "get-in-touch" } })
+                const getInTouchButton = document.getElementById("get-in-touch")
                 if (getInTouchButton) {
-                  getInTouchButton.classList.add("highlight");
+                  getInTouchButton.classList.add("highlight")
                   setTimeout(() => {
-                    getInTouchButton.classList.remove("highlight");
-                  }, 2000); // Remove highlight after 2 seconds
+                    getInTouchButton.classList.remove("highlight")
+                  }, 2000) // Remove highlight after 2 seconds
                 }
               }}
             >
               Contact Us
-            </Button>
+            </a>
 
-
+            {isAuthenticated ? (
+              <div className="flex items-center gap-2 lg:gap-4 ">
+                <Button
+                  onClick={() => navigate("/profile")}
+                  variant="ghost"
+                  className="text-black hover:text-yellow px-2 lg:px-4 "
+                >
+                  <User className="h-4 w-4 mr-1 lg:mr-2" />
+                  <span className="hidden lg:inline text-black hover:bg-gradient-to-r hover:from-blue-500 hover:via-purple-500 hover:to-pink-500 hover:bg-clip-text hover:text-transparent">{userName}</span>
+                </Button>
+                <Button onClick={handleLogout} variant="ghost" className="text-red-500 hover:text-red-600 px-2 lg:px-4">
+                  <LogOut className="h-4 w-4 mr-1 lg:mr-2" />
+                  <span className="hidden lg:inline">Logout</span>
+                </Button>
+              </div>
+            ) : (
+              <Button
+                onClick={() => setIsLoginModalOpen(true)}
+                variant="ghost"
+                className="text-black hover:text-yellow px-2 lg:px-4"
+              >
+                <LogIn className="h-4 w-4 mr-1 lg:mr-2" />
+                <span className="hidden lg:inline">Login</span>
+              </Button>
+            )}
           </nav>
-          <button 
-            className="md:hidden" 
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            aria-expanded={isMenuOpen}
-          >
+          <button className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)} aria-expanded={isMenuOpen}>
             <Menu className="h-6 w-6" />
           </button>
         </div>
@@ -113,11 +195,11 @@ const Header = () => {
             <div className="flex flex-col">
               <a
                 href="#about"
-                className="w-full max-w-max inline-flex my-2 items-center gap-3 text-black hover:text-brand-purple transition-colors py-2 px-4 justify-start"
+                className="w-full max-w-max inline-flex my-2 items-center gap-3 text-black hover:text-brand-purple transition-colors py-2 px-4 justify-start text-black active:bg-gradient-to-r active:from-blue-500 active:via-purple-500 active:to-pink-500 active:bg-clip-text active:text-transparent"
                 onClick={(e) => {
-                  e.preventDefault();
-                  navigate("/", { state: { section: "about" } });
-                  setIsMenuOpen(false);
+                  e.preventDefault()
+                  navigate("/", { state: { section: "about" } })
+                  setIsMenuOpen(false)
                 }}
               >
                 <Home className="h-6 w-6" />
@@ -125,11 +207,11 @@ const Header = () => {
               </a>
               <a
                 href="#tours"
-                className="w-full max-w-max inline-flex my-2 items-center gap-3 text-black hover:text-brand-purple transition-colors py-2 px-4 justify-start"
+                className="w-full max-w-max inline-flex my-2 items-center gap-3 text-black hover:text-brand-purple transition-colors py-2 px-4 justify-start text-black active:bg-gradient-to-r active:from-blue-500 active:via-purple-500 active:to-pink-500 active:bg-clip-text active:text-transparent"
                 onClick={(e) => {
-                  e.preventDefault();
-                  navigate("/", { state: { section: "tours" } });
-                  setIsMenuOpen(false);
+                  e.preventDefault()
+                  navigate("/", { state: { section: "tours" } })
+                  setIsMenuOpen(false)
                 }}
               >
                 <Compass className="h-6 w-6" />
@@ -137,11 +219,11 @@ const Header = () => {
               </a>
               <a
                 href="#availability"
-                className="w-full max-w-max inline-flex  my-2 items-center gap-3 text-black hover:text-brand-purple transition-colors py-2 px-4 justify-start"
+                className="w-full max-w-max inline-flex  my-2 items-center gap-3 text-black hover:text-brand-purple transition-colors py-2 px-4 justify-start text-black active:bg-gradient-to-r active:from-blue-500 active:via-purple-500 active:to-pink-500 active:bg-clip-text active:text-transparent"
                 onClick={(e) => {
-                  e.preventDefault();
-                  navigate("/", { state: { section: "availability" } });
-                  setIsMenuOpen(false);
+                  e.preventDefault()
+                  navigate("/", { state: { section: "availability" } })
+                  setIsMenuOpen(false)
                 }}
               >
                 <Bed className="h-6 w-6" />
@@ -149,11 +231,11 @@ const Header = () => {
               </a>
               <a
                 href="#gallery"
-                className="w-full max-w-max inline-flex my-2 items-center gap-3 text-black hover:text-brand-purple transition-colors py-2 px-4 justify-start"
+                className="w-full max-w-max inline-flex my-2 items-center gap-3 text-black hover:text-brand-purple transition-colors py-2 px-4 justify-start text-black active:bg-gradient-to-r active:from-blue-500 active:via-purple-500 active:to-pink-500 active:bg-clip-text active:text-transparent"
                 onClick={(e) => {
-                  e.preventDefault();
-                  navigate("/gallery");
-                  setIsMenuOpen(false);
+                  e.preventDefault()
+                  navigate("/gallery")
+                  setIsMenuOpen(false)
                 }}
               >
                 <Image className="h-6 w-6" />
@@ -161,20 +243,65 @@ const Header = () => {
               </a>
               <a
                 href="#contact"
-                className="w-full max-w-max inline-flex my-2 items-center gap-3 text-black hover:text-brand-purple transition-colors py-2 px-4 justify-start"
+                className="w-full max-w-max inline-flex my-2 items-center gap-3 text-black hover:text-brand-purple transition-colors py-2 px-4 justify-start text-black active:bg-gradient-to-r active:from-blue-500 active:via-purple-500 active:to-pink-500 active:bg-clip-text active:text-transparent"
                 onClick={(e) => {
-                  e.preventDefault();
-                  navigate("/", { state: { section: "get-in-touch" } });
-                  setIsMenuOpen(false);
+                  e.preventDefault()
+                  navigate("/", { state: { section: "get-in-touch" } })
+                  setIsMenuOpen(false)
                 }}
               >
                 <Mail className="h-6 w-6" />
                 <span>Contact Us</span>
               </a>
+              {/* Add authentication buttons to mobile menu */}
+              <div className="w-full border-t border-gray-200 my-2 pt-2">
+                {isAuthenticated ? (
+                  <>
+                    <a
+                      className="w-full max-w-max inline-flex my-2 items-center gap-3 text-black hover:text-brand-purple transition-colors py-2 px-4 justify-start text-black active:bg-gradient-to-r active:from-blue-500 active:via-purple-500 active:to-pink-500 active:bg-clip-text active:text-transparent"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        navigate("/profile")
+                        setIsMenuOpen(false)
+                      }}
+                    >
+                      <User className="h-6 w-6" />
+                      <span>{userName || "Profile"}</span>
+                    </a>
+                    <a
+                      className="w-full max-w-max inline-flex my-2 items-center gap-3 text-red-500 hover:text-red-600 transition-colors py-2 px-4 justify-start"
+                      onClick={(e) => {
+                        handleLogout()
+                        setIsMenuOpen(false)
+                      }}
+                    >
+                      <LogOut className="h-6 w-6" />
+                      <span>Logout</span>
+                    </a>
+                  </>
+                ) : (
+                  <a
+                    className="w-full max-w-max inline-flex my-2 items-center gap-3 text-black hover:text-brand-purple transition-colors py-2 px-4 justify-start"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      setIsLoginModalOpen(true)
+                      setIsMenuOpen(false)
+                    }}
+                  >
+                    <LogIn className="h-6 w-6" />
+                    <span>Login</span>
+                  </a>
+                )}
+              </div>
             </div>
           </nav>
         </div>
       </div>
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onLogin={() => setIsAuthenticated(true)}
+      />
     </header>
   )
 }

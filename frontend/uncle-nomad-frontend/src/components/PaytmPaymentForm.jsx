@@ -78,9 +78,14 @@ const PaytmPaymentForm = ({
 
           setBookingDetails(bookingData)
 
+          const authToken = localStorage.getItem('authToken');
+          
           const bookingResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/bookings/book`, {
             method: "POST",
-            headers: { "Content-Type": "application/json", "x-api-key": process.env.REACT_APP_API_KEY },
+            headers: { "Content-Type": "application/json", 
+              "x-api-key": process.env.REACT_APP_API_KEY,
+              "Authorization": `Bearer ${authToken}`
+            },
             body: JSON.stringify(bookingData),
           })
 
@@ -89,10 +94,11 @@ const PaytmPaymentForm = ({
           }
 
           const bookingResult = await bookingResponse.json()
+          
 
           const bookingUpdate = await axios.post(`${process.env.REACT_APP_API_URL}/api/payments/verify`, {
             orderId: response.ORDERID,
-          },{headers:{"x-api-key": process.env.REACT_APP_API_KEY}})
+          },{headers:{"x-api-key": process.env.REACT_APP_API_KEY, "Authorization": `Bearer ${authToken}`}})
 
           setBookingDetails(bookingUpdate.data.data.bookingUpdate)
 

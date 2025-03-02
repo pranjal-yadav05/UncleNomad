@@ -1,7 +1,10 @@
 import express from "express";
 import nodemailer from "nodemailer";
 import crypto from "crypto";
-import Otp from "../models/Otp.js"; // Import OTP model
+import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
+import Otp from "../models/Otp.js";
+import User from "../models/User.js";
 
 const router = express.Router();
 
@@ -44,24 +47,94 @@ router.post("/send-otp", async (req, res) => {
 });
 
 router.post("/verify-otp", async (req, res) => {
-    const { email, otp } = req.body;
-    if (!email || !otp) return res.status(400).json({ message: "Email and OTP are required" });
-  
-    try {
-      const storedOtp = await Otp.findOne({ email });
-  
-      if (!storedOtp) return res.status(400).json({ message: "OTP expired or invalid" });
-  
-      if (storedOtp.otp === otp) {
-        await Otp.deleteOne({ email }); // Remove OTP after successful verification
-        res.json({ message: "OTP verified successfully" });
-      } else {
-        res.status(400).json({ message: "Incorrect OTP" });
-      }
-    } catch (error) {
-      console.error("OTP verification failed:", error);
-      res.status(500).json({ message: "OTP verification failed" });
+  const { email, otp, name, phone } = req.body;
+  if (!email || !otp) return res.status(400).json({ message: "Email and OTP are required" });
+
+  try {
+    const storedOtp = await Otp.findOne({ email });
+
+    if (!storedOtp) return res.status(400).json({ message: "OTP expired or invalid" });
+    if (storedOtp.otp !== otp) return res.status(400).json({ message: "Incorrect OTP" });
+
+    // OTP is valid, create or login user
+    let user = await User.findOne({ email });
+    let statusMessage = "Logged in successfully";
+
+    if (!user) {
+      // Create new user if doesn't exist
+      const randomPassword = crypto.randomBytes(16).toString('hex');
+      const hashedPassword = await bcrypt.hash(randomPassword, 10);
+      
+      user = new User({
+        email,
+        name: name || email.split('@')[0], // Use part of email as name if not provided
+        phone: phone || '',
+        hashedPassword,
+        isEmailVerified: true
+      });
+      
+      await user.save();
+      statusMessage = "Account created and logged in successfully";
+    } else {
+      // Update last login time
+      user.lastLogin = new Date();
+      // Update user details if provided
+      if (name) user.name = name;
+      if (phone) user.phone = phone;
+      await user.save();
     }
-  });
+
+    // Generate authentication token
+    const token = jwt.sign(
+      { id: user._id, email: user.email, isVerified: user.isEmailVerified },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    // Remove OTP after successful verification
+    await Otp.deleteOne({ email });
+    
+    // Return token in response
+    res.json({ 
+      message: statusMessage,
+      token,
+      user: {
+        id: user._id,
+        email: user.email,
+        name: user.name
+      }
+    });
+  } catch (error) {
+    console.error("OTP verification failed:", error);
+    res.status(500).json({ message: "OTP verification failed" });
+  }
+});
+
+// Create authentication middleware
+export const authenticateToken = async (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN format
   
+  if (!token) {
+    return res.status(401).json({ message: 'Access denied. No token provided.' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // Check if user still exists in database
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid token. User not found.' });
+    }
+    
+    // Attach user to request
+    req.user = decoded;
+    next();
+  } catch (error) {
+    console.error('Token verification failed:', error);
+    res.status(401).json({ message: 'Invalid token' });
+  }
+};
+
 export default router;

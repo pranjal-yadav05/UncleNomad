@@ -38,7 +38,7 @@ const Footer = () => {
         </div>
 
         {/* Links Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 text-center relative z-10">
           {/* Follow Us */}
           <div className="space-y-6">
             <h3 className="text-xl font-semibold text-white" style={{fontFamily:'Sigmar, sans-serif'}}>Follow Us</h3>
@@ -55,20 +55,6 @@ const Footer = () => {
                   Instagram
                 </a>
               </li>
-            </ul>
-          </div>
-
-          {/* Quick Links */}
-          <div className="space-y-6">
-            <h3 className="text-xl font-semibold text-white" style={{fontFamily:'Sigmar, sans-serif'}}>Quick Links</h3>
-            <ul className="space-y-4">
-              {["About Us", "Our Services", "Tour Packages", "Travel Guide", "Booking Terms"].map((link) => (
-                <li key={link}>
-                  <Link to="#" className="text-gray-300 hover:text-white transition-colors duration-200">
-                    {link}
-                  </Link>
-                </li>
-              ))}
             </ul>
           </div>
 

@@ -37,6 +37,66 @@ export default function ManageBookings() {
   const [rooms, setRooms] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
+  const [modalError, setModalError] = useState('')
+
+  // Handle browser back button to close modals
+  useEffect(() => {
+    const handlePopState = (event) => {
+      if (isModalOpen) {
+        closeBookingModal();
+        // Prevent default behavior to avoid actual navigation
+        event.preventDefault();
+      }
+      if (isDetailsModalOpen) {
+        closeDetailsModal();
+        // Prevent default behavior to avoid actual navigation
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [isModalOpen, isDetailsModalOpen]);
+
+  // Add history state when opening modals
+  const openBookingModal = () => {
+    setModalError('');
+    setIsModalOpen(true);
+    // Add a history entry when opening the modal
+    window.history.pushState({ modal: 'booking' }, '');
+  };
+
+  const closeBookingModal = () => {
+    setIsModalOpen(false);
+    setEditMode(false);
+    setModalError('');
+    setNewBooking({
+      rooms: [],
+      guestName: '',
+      email: '',
+      phone: '',
+      numberOfGuests: 1,
+      numberOfChildren: 0,
+      mealIncluded: false,
+      extraBeds: 0,
+      specialRequests: '',
+      checkIn: new Date(),
+      checkOut: new Date(),
+      totalPrice: 0,
+      status: 'pending'
+    });
+  };
+
+  const openDetailsModal = (booking) => {
+    setSelectedBooking(booking);
+    setIsDetailsModalOpen(true);
+    // Add a history entry when opening the details modal
+    window.history.pushState({ modal: 'details' }, '');
+  };
+
+  const closeDetailsModal = () => {
+    setIsDetailsModalOpen(false);
+  };
 
   useEffect(() => {
     fetchBookings();
@@ -45,7 +105,14 @@ export default function ManageBookings() {
 
   const fetchRooms = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/rooms`,{ headers: { "x-api-key": process.env.REACT_APP_API_KEY }});
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${API_URL}/api/rooms`,
+        { headers: 
+          { 
+            "x-api-key": process.env.REACT_APP_API_KEY,
+            Authorization: `Bearer ${token}`
+          }
+        });
       if (!response.ok) throw new Error('Failed to fetch rooms');
       const data = await response.json();
       setRooms(data);
@@ -58,7 +125,16 @@ export default function ManageBookings() {
     setIsLoading(true);
     setError('');
     try {
-      const response = await fetch(`${API_URL}/api/bookings`,{headers:{"x-api-key": process.env.REACT_APP_API_KEY}});
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${API_URL}/api/bookings`,
+        {
+          headers:
+          {
+            "x-api-key": process.env.REACT_APP_API_KEY,
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -78,12 +154,15 @@ export default function ManageBookings() {
   };
 
   const handleUpdateBooking = async (id, status) => {
-    setError('');
+    setModalError('');
     try {
+      const token = localStorage.getItem('token')
       const response = await fetch(`${API_URL}/api/bookings/${id}`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json', "x-api-key": process.env.REACT_APP_API_KEY
+          'Content-Type': 'application/json', 
+          "x-api-key": process.env.REACT_APP_API_KEY,
+          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({ status }),
       });
@@ -91,20 +170,24 @@ export default function ManageBookings() {
       if (!response.ok) {
         throw new Error('Failed to update booking');
       }
-      setIsModalOpen(false)
+      closeBookingModal();
       await fetchBookings();
     } catch (error) {
       console.error('Error updating booking:', error);
-      setError('Failed to update booking. Please try again.');
+      setModalError('Failed to update booking. Please try again.');
     }
   };
 
   const handleDeleteBooking = async (id) => {
     setError('');
     try {
+      const token = localStorage.getItem('token')
       const response = await fetch(`${API_URL}/api/bookings/${id}`, {
         method: 'DELETE',
-        headers: {"x-api-key": process.env.REACT_APP_API_KEY}
+        headers: {
+          "x-api-key": process.env.REACT_APP_API_KEY,
+          Authorization: `Bearer ${token}`
+        }
       });
       
       if (!response.ok) {
@@ -120,24 +203,25 @@ export default function ManageBookings() {
 
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
+    setModalError('');
     
     // Date validation
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
     if (newBooking.checkIn < today) {
-      setError('Check-in date cannot be in the past');
+      setModalError('Check-in date cannot be in the past');
       return;
     }
     
     if (newBooking.checkOut <= newBooking.checkIn) {
-      setError('Check-out date must be after check-in date');
+      setModalError('Check-out date must be after check-in date');
       return;
     }
 
     // Room selection validation
     if (newBooking.rooms.length === 0) {
-      setError('Please select at least one room');
+      setModalError('Please select at least one room');
       return;
     }
 
@@ -153,13 +237,13 @@ export default function ManageBookings() {
     }, 0);
 
 
-    setNewBooking(prev => ({ ...prev, totalPrice }), fetchBookings);
+    setNewBooking(prev => ({ ...prev, totalPrice }));
 
 
 
     // Number of guests validation
     if (!newBooking.numberOfGuests || newBooking.numberOfGuests <= 0) {
-      setError('Invalid number of guests. Please provide a positive number.');
+      setModalError('Invalid number of guests. Please provide a positive number.');
       return;
     }
 
@@ -168,12 +252,13 @@ export default function ManageBookings() {
     try {
       const url = editMode ? `${API_URL}/api/bookings/${currentBookingId}` : `${API_URL}/api/bookings/book`;
       const method = editMode ? 'PUT' : 'POST';
-      
+      const token = localStorage.getItem('token')
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
-          "x-api-key": process.env.REACT_APP_API_KEY
+          "x-api-key": process.env.REACT_APP_API_KEY,
+          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify(newBooking),
       });
@@ -201,11 +286,15 @@ export default function ManageBookings() {
       });
       
       setEditMode(false);
-      setIsModalOpen(false)
+      closeBookingModal();
+      // When successful, go back in history to remove the modal state
+      if (window.history.state?.modal === 'booking') {
+        window.history.back();
+      }
       setCurrentBookingId(null);
     } catch (error) {
       console.error('Booking creation error:', error);
-      setError(error.message);
+      setModalError(error.message);
     }
   };
 
@@ -231,7 +320,7 @@ export default function ManageBookings() {
       )}
 
       <div className="mb-8">
-        <Button variant='custom' onClick={() => setIsModalOpen(true)}>
+        <Button variant='custom' onClick={openBookingModal}>
           Add New Booking
         </Button>
       </div>
@@ -239,29 +328,18 @@ export default function ManageBookings() {
       <BookingFormModal
         isOpen={isModalOpen}
         onClose={() => {
-          setIsModalOpen(false);
-          setEditMode(false);
-          setNewBooking({
-            rooms: [],
-            guestName: '',
-            email: '',
-            phone: '',
-            numberOfGuests: 1,
-            numberOfChildren: 0,
-            mealIncluded: false,
-            extraBeds: 0,
-            specialRequests: '',
-            checkIn: new Date(),
-            checkOut: new Date(),
-            totalPrice: 0,
-            status: 'pending'
-          });
+          closeBookingModal();
+          // When manually closing, go back in history to remove the modal state
+          if (window.history.state?.modal === 'booking') {
+            window.history.back();
+          }
         }}
         newBooking={newBooking}
         setNewBooking={setNewBooking}
         handleBookingSubmit={handleBookingSubmit}
         editMode={editMode}
         rooms={rooms}
+        modalError={modalError}
       />
 
 
@@ -294,14 +372,42 @@ export default function ManageBookings() {
                   <TableCell className="capitalize">{booking.status}</TableCell>
                   <TableCell>₹{booking.totalPrice}</TableCell>
                   <TableCell>
-                    <Button 
-                      onClick={() => {
-                        setSelectedBooking(booking);
-                        setIsDetailsModalOpen(true);
-                      }}
-                    >
-                      View Details
-                    </Button>
+                    <div className="flex space-x-2">
+                      <Button 
+                        onClick={() => openDetailsModal(booking)}
+                        variant="outline"
+                        size="sm"
+                      >
+                        View Details
+                      </Button>
+                      <Button 
+                        onClick={() => {
+                          setNewBooking({
+                            ...booking,
+                            checkIn: new Date(booking.checkIn),
+                            checkOut: new Date(booking.checkOut)
+                          });
+                          setEditMode(true);
+                          setCurrentBookingId(booking._id);
+                          openBookingModal();
+                        }}
+                        variant="outline"
+                        size="sm"
+                      >
+                        Edit
+                      </Button>
+                      <Button 
+                        onClick={() => {
+                          if (window.confirm('Are you sure you want to delete this booking?')) {
+                            handleDeleteBooking(booking._id);
+                          }
+                        }}
+                        variant="destructive"
+                        size="sm"
+                      >
+                        Delete
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -313,8 +419,21 @@ export default function ManageBookings() {
       {/* Booking Details Modal */}
       <BookingDetailsModal 
         isOpen={isDetailsModalOpen} 
-        onClose={() => setIsDetailsModalOpen(false)} 
-        booking={selectedBooking} 
+        onClose={() => {
+          closeDetailsModal();
+          // When manually closing, go back in history to remove the modal state
+          if (window.history.state?.modal === 'details') {
+            window.history.back();
+          }
+        }} 
+        booking={selectedBooking}
+        onUpdateStatus={handleUpdateBooking}
+        onDelete={(id) => {
+          if (window.confirm('Are you sure you want to delete this booking?')) {
+            handleDeleteBooking(id);
+            closeDetailsModal();
+          }
+        }} 
       />
     </div>
   );

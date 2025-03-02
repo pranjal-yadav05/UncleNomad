@@ -363,3 +363,24 @@ function isValidPhone(phone) {
     return phoneRegex.test(phone);
 }
 
+export const getUserBooking = async (req, res) => {
+    try {
+        console.log("Authenticated User:", req.user); // Debugging
+
+        if (!req.user || !req.user.email) {
+            return res.status(400).json({ message: "User email not found" });
+        }
+
+        const bookings = await Booking.find({ email: new RegExp(`^${req.user.email}$`, "i") }).sort({ checkIn: -1 });
+
+        // console.log("Bookings Found:", bookings); // Debugging
+        if (!bookings.length) {
+            return res.status(404).json({ message: "No bookings found for this user" });
+        }
+
+        res.json(bookings);
+    } catch (error) {
+        console.error("Error fetching bookings:", error);
+        res.status(500).json({ message: "Failed to fetch bookings" });
+    }
+};

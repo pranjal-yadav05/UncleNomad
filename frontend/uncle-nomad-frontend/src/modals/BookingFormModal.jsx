@@ -2,6 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
+import { useEffect } from "react"
 
 export default function BookingFormModal({
   isOpen,
@@ -10,19 +11,53 @@ export default function BookingFormModal({
   setNewBooking,
   handleBookingSubmit,
   editMode,
-  rooms
+  rooms,
+  modalError
 }) {
+  // Handle escape key to close modal properly
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
 
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isOpen, onClose]);
+
+  // In BookingFormModal component
+  useEffect(() => {
+    if (editMode && isOpen) {
+      // Ensure dates are properly formatted
+      if (typeof newBooking.checkIn === 'string') {
+        setNewBooking(prev => ({
+          ...prev,
+          checkIn: new Date(prev.checkIn)
+        }));
+      }
+      if (typeof newBooking.checkOut === 'string') {
+        setNewBooking(prev => ({
+          ...prev,
+          checkOut: new Date(prev.checkOut)
+        }));
+      }
+    }
+  }, [editMode, isOpen]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-
         <DialogHeader>
           <DialogTitle>
             {editMode ? 'Edit Booking' : 'Add New Booking'}
           </DialogTitle>
         </DialogHeader>
+        {modalError && (
+        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded mb-4">
+            {modalError}
+        </div>
+        )}
         <form onSubmit={handleBookingSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
