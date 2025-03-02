@@ -62,6 +62,15 @@
       }
     };
 
+    const optimizedVideoUrl = (url) => {
+      return url.replace('/upload/', '/upload/f_auto,q_auto,br_800k/');
+    };
+    
+    const getVideoThumbnail = (url) => {
+      return url.replace('/upload/', '/upload/so_0/').replace('.mp4', '.jpg');
+    };
+    
+
     const handleTouchMove = (e) => {
       if (touchStartX === null || isTransitioning) return;
       
@@ -127,18 +136,17 @@
       >
         <div className='hero-overlay'></div>
 
-        {loading ? ( 
-          <div>Loading...</div> // Show loading message
-        ) : mediaItems.length > 0 && mediaItems[currentIndex] ? (
+        { mediaItems.length > 0 && mediaItems[currentIndex] && (
           mediaItems[currentIndex].type === 'video' ? (
             <video
               key={currentIndex} // Add key to ensure proper remounting
               ref={videoRef}
-              src={mediaItems[currentIndex].url}
+              src={optimizedVideoUrl(mediaItems[currentIndex].url)}
               autoPlay
               muted
               className='hero-media'
               preload="metadata"
+              poster={getVideoThumbnail(mediaItems[currentIndex].url)}
             />
           ) : (
             <img 
@@ -148,8 +156,6 @@
               loading="lazy"
             />
           )
-        ) : (
-          <div>No media available</div> // Handle case where mediaItems is empty
         )}
 
         <div className='hero-content'>
