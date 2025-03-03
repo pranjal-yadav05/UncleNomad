@@ -80,7 +80,6 @@ function AvailabilitySection() {
         }
 
         const data = await response.json()
-        ('repsosns',data)
         // Process availability data from backend
         const availableRooms = data
           .map((room) => ({

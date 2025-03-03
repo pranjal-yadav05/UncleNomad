@@ -28,13 +28,13 @@ const AdminPanel = () => {
   }, [navigate, location])
 
   const navItems = [
-    { path: "bookings", label: "Manage Bookings" },
-    { path: "tourbookings", label: "Manage Tour Bookings" },
-    { path: "rooms", label: "Manage Rooms" },
-    { path: "packages", label: "Manage Packages" },
-    { path: "queries", label: "Manage Queries" },
-    { path: "media", label: "Manage Hero Media" },
-    { path: "gallery", label: "Manage Gallery" },
+    { path: "bookings", label: "Bookings" },
+    { path: "tourbookings", label: "Tour Bookings" },
+    { path: "rooms", label: "Rooms" },
+    { path: "packages", label: "Packages" },
+    { path: "queries", label: "Queries" },
+    { path: "media", label: "Media" },
+    { path: "gallery", label: "Gallery" },
     { path: "credentials", label: "Update Credentials" },
   ]
 

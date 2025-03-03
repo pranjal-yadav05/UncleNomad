@@ -33,7 +33,6 @@ const RoomDetailsPage = () => {
     window.scrollTo(0, 0)
     if (!room) {
       const fetchRoomDetails = async () => {
-        ('fetching details')
         try {
           setLoading(true)
           const response = await fetch(`${process.env.REACT_APP_API_URL}/api/rooms/${state?.selectedRoom?._id}`,{headers:{"x-api-key": process.env.REACT_APP_API_KEY}})
