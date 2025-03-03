@@ -82,24 +82,19 @@ export const updateMediaOrder = async (req, res) => {
 // Delete media
 export const deleteMedia = async (req, res) => {
     try {
-      // Log the full request params to debug
-      console.log('Delete request params:', req.params);
       
       // Get the ID from req.params._id (if using Mongoose) or req.params.id
       const mediaId = req.params._id || req.params.id;
       
       if (!mediaId) {
-        console.log('No ID provided in request parameters');
         return res.status(400).json({ message: 'Media ID is required' });
       }
   
-      console.log('Attempting to delete media with ID:', mediaId);
   
       // First find the media item to ensure it exists
       const mediaItem = await Media.findById(mediaId);
       
       if (!mediaItem) {
-        console.log('Media not found with ID:', mediaId);
         return res.status(404).json({ message: 'Media not found' });
       }
   
@@ -107,11 +102,9 @@ export const deleteMedia = async (req, res) => {
       const result = await Media.findByIdAndDelete(mediaId);
       
       if (!result) {
-        console.log('Delete operation returned no result');
         return res.status(400).json({ message: 'Failed to delete media from database' });
       }
   
-      console.log('Successfully deleted media:', result);
       
       res.json({ 
         message: 'Media deleted successfully from database',

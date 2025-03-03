@@ -16,7 +16,7 @@ const ManageQueries = () => {
       setIsLoading(true);
       const response = await fetch(`${process.env.REACT_APP_API_URL}/api/query/admin`,{headers:{"x-api-key": process.env.REACT_APP_API_KEY}});
       const data = await response.json();
-      console.log(data)
+
       setQueries(data);
     } catch (error) {
       console.error('Error fetching queries:', error);

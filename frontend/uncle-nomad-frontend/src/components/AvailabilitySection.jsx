@@ -80,7 +80,7 @@ function AvailabilitySection() {
         }
 
         const data = await response.json()
-        console.log('repsosns',data)
+        ('repsosns',data)
         // Process availability data from backend
         const availableRooms = data
           .map((room) => ({
@@ -104,8 +104,6 @@ function AvailabilitySection() {
         if (availableRooms.length === 0) {
           throw new Error("No rooms available for the selected dates")
         }
-
-        console.log("Available rooms:", availableRooms)
 
         // Navigate to the room selection page with available rooms
         navigate("/room-selection", {

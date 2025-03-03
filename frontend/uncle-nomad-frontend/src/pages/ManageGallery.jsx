@@ -55,7 +55,6 @@ const ManageGallery = () => {
         headers: {"x-api-key": process.env.REACT_APP_API_KEY}
       });
       if (response.ok) {
-        console.log("Folder deleted successfully");
         fetchFolders()
         // Update UI accordingly
       } else {
@@ -94,7 +93,6 @@ const ManageGallery = () => {
       });
   
       if (response.ok) {
-        console.log("Media deleted successfully");
         fetchMedia(selectedFolder); // Refresh media list
       } else {
         console.error("Failed to delete media");

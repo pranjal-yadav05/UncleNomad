@@ -77,7 +77,6 @@ export const verifyBooking = async (req, res) => {
   
 
 // Check room availability
-// Check room availability
 export const checkAvailabiltiy = async (req, res) => {
     const { checkIn, checkOut } = req.query;
    
@@ -221,7 +220,6 @@ export const deleteBooking = async (req, res) => {
 
 // Book a room
 export const createBooking = async (req, res) => {
-    console.log("Received booking request:", JSON.stringify(req.body, null, 2));
     const { rooms, checkIn, checkOut, guestName, email, phone, numberOfGuests, specialRequests, totalAmount, paymentReference } = req.body;
   
     try {
@@ -365,7 +363,6 @@ function isValidPhone(phone) {
 
 export const getUserBooking = async (req, res) => {
     try {
-        console.log("Authenticated User:", req.user); // Debugging
 
         if (!req.user || !req.user.email) {
             return res.status(400).json({ message: "User email not found" });
@@ -373,7 +370,6 @@ export const getUserBooking = async (req, res) => {
 
         const bookings = await Booking.find({ email: new RegExp(`^${req.user.email}$`, "i") }).sort({ checkIn: -1 });
 
-        // console.log("Bookings Found:", bookings); // Debugging
         if (!bookings.length) {
             return res.status(404).json({ message: "No bookings found for this user" });
         }

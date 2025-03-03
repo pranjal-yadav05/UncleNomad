@@ -100,7 +100,6 @@ const TourDetailsPage = () => {
         );
     }
 
-    console.log('tour',tour)
     // Format dates
     const formatDate = (dateString) => {
         if (!dateString) return 'TBD';

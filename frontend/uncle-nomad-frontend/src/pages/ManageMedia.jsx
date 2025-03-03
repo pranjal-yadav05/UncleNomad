@@ -104,7 +104,6 @@ const ManageMedia = () => {
         // Explicitly append type to ensure it's included in the request
         formData.append('type', newMedia.type);
         
-        console.log('Uploading file with type:', newMedia.type);
         
         const uploadResponse = await axios.post(`${process.env.REACT_APP_API_URL}/api/upload`, formData, {
           headers: {
@@ -146,8 +145,6 @@ const handleDeleteMedia = async (id, publicId, type) => {
   if (!window.confirm("Are you sure you want to delete this media?")) return;
 
   try {
-    // First log what we're trying to delete
-    console.log('Attempting to delete:', { id, publicId, type });
     
     // Delete from Cloudinary if it has a publicId
     if (publicId) {

@@ -30,6 +30,7 @@ const PaytmPaymentForm = ({
   // Prevent multiple initializations
   const isInitialized = useRef(false);
   const isScriptLoaded = useRef(false);
+  const paymentProcessed = useRef(false);
 
   const handleCloseConfirmation = useCallback(() => {
     setShowConfirmation(false)
@@ -39,9 +40,12 @@ const PaytmPaymentForm = ({
 
   const handlePaymentFailure = useCallback(
     (errorMsg) => {
-      setError(errorMsg)
-      setIsFailedModalOpen(true)
-      onPaymentFailure?.(errorMsg)
+      // Only handle failure if we haven't already processed a successful payment
+      if (!paymentProcessed.current) {
+        setError(errorMsg)
+        setIsFailedModalOpen(true)
+        onPaymentFailure?.(errorMsg)
+      }
     },
     [onPaymentFailure],
   )
@@ -49,8 +53,23 @@ const PaytmPaymentForm = ({
   const handleTransactionStatus = useCallback(
     async (response) => {
       try {
+        
+        // Close the payment gateway immediately regardless of status
+        if (window.Paytm && window.Paytm.CheckoutJS) {
+          try {
+            window.Paytm.CheckoutJS.close();
+          } catch (closeError) {
+            console.error('Error closing payment gateway:', closeError);
+          }
+        }
+        
+        // Show checking payment modal
+        setChecking(true);
+        
         if (response.STATUS === "TXN_SUCCESS") {
-          setChecking(true)
+          // Mark as processed to prevent duplicate handling
+          paymentProcessed.current = true;
+          
           const selectedRooms = Object.entries(bookingForm.selectedRooms)
             .filter(([roomId, quantity]) => quantity > 0)
             .map(([roomId, quantity]) => ({
@@ -82,7 +101,8 @@ const PaytmPaymentForm = ({
           
           const bookingResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/bookings/book`, {
             method: "POST",
-            headers: { "Content-Type": "application/json", 
+            headers: { 
+              "Content-Type": "application/json", 
               "x-api-key": process.env.REACT_APP_API_KEY,
               "Authorization": `Bearer ${authToken}`
             },
@@ -95,29 +115,32 @@ const PaytmPaymentForm = ({
 
           const bookingResult = await bookingResponse.json()
           
-
           const bookingUpdate = await axios.post(`${process.env.REACT_APP_API_URL}/api/payments/verify`, {
             orderId: response.ORDERID,
-          },{headers:{"x-api-key": process.env.REACT_APP_API_KEY, "Authorization": `Bearer ${authToken}`}})
+          }, {headers:{"x-api-key": process.env.REACT_APP_API_KEY, "Authorization": `Bearer ${authToken}`}})
 
           setBookingDetails(bookingUpdate.data.data.bookingUpdate)
 
-          window.Paytm.CheckoutJS.close();
-
+          // Hide checking modal
+          setChecking(false)
+          
           setShowConfirmation(true)
           setIsBookingConfirmed(true)
           // onPaymentSuccess?.(bookingResult)
-          setChecking(false)
         } else {
-          window.Paytm.CheckoutJS.close();
+          // Hide checking modal
+          setChecking(false)
+          
           handlePaymentFailure("Payment failed or was cancelled")
         }
       } catch (error) {
+        // Hide checking modal in case of error
+        setChecking(false)
         
         handlePaymentFailure(error.message || "Payment verification failed")
       }
     },
-    [bookingForm, onPaymentSuccess, handlePaymentFailure, setBookingDetails, setChecking, setIsBookingConfirmed],
+    [bookingForm, setBookingDetails, setChecking, setIsBookingConfirmed, handlePaymentFailure],
   )
 
   useEffect(() => {
@@ -134,7 +157,6 @@ const PaytmPaymentForm = ({
     isInitialized.current = true;
 
     setIsLoading(true);
-    console.log("Initializing payment - starting process");
 
     // ✅ Check if script is already loaded
     if (!isScriptLoaded.current) {
@@ -149,7 +171,6 @@ const PaytmPaymentForm = ({
       script.id = "paytm-checkout-script";
 
       script.onload = () => {
-        console.log("Paytm SDK loaded.");
         isScriptLoaded.current = true;
 
         if (!window.Paytm) {
@@ -157,10 +178,7 @@ const PaytmPaymentForm = ({
           return;
         }
 
-        console.log("Initializing Paytm Checkout...");
-
         window.Paytm.CheckoutJS.onLoad(() => {
-          console.log("Paytm SDK ready. Initializing checkout...");
 
           const config = {
             root: "",
@@ -173,9 +191,11 @@ const PaytmPaymentForm = ({
             },
             handler: {
               notifyMerchant: (eventName, data) => {
-                console.log("Paytm event:", eventName, data);
                 if (eventName === "APP_CLOSED") {
-                  handlePaymentFailure("Payment window closed");
+                  // Only handle if we haven't already processed a successful payment
+                  if (!paymentProcessed.current) {
+                    handlePaymentFailure("Payment window closed");
+                  }
                 }
               },
               transactionStatus: handleTransactionStatus,
@@ -192,7 +212,6 @@ const PaytmPaymentForm = ({
           if (window.Paytm.CheckoutJS.init) {
             window.Paytm.CheckoutJS.init(config)
               .then(() => {
-                console.log("Paytm initialization successful");
                 setIsLoading(false);
                 closeModal?.();
                 setIsModalOpen?.(false);
@@ -216,9 +235,8 @@ const PaytmPaymentForm = ({
     }
 
     return () => {
-      console.log("Cleaning up Paytm script...");
     };
-  }, [paymentData, handlePaymentFailure, handleTransactionStatus, setIsLoading]);
+  }, [paymentData, handlePaymentFailure, handleTransactionStatus, setIsLoading, closeModal, setIsModalOpen]);
   
   if (error) {
     return (
@@ -271,4 +289,3 @@ const PaytmPaymentForm = ({
 }
 
 export default PaytmPaymentForm
-

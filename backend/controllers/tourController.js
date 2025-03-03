@@ -45,7 +45,6 @@ const uploadToCloudinary = async (file, tourId, index) => {
   if (!file) return null;
   const publicId = `tour-${tourId}-${Date.now()}-${index}`;
   try {
-    console.log(`Starting upload to Cloudinary: ${publicId}`);
     return await new Promise((resolve, reject) => {
       const uploadStream = cloudinaryV2.uploader.upload_stream(
         {
@@ -60,7 +59,6 @@ const uploadToCloudinary = async (file, tourId, index) => {
             console.error("Cloudinary upload error:", error);
             reject(error);
           } else {
-            console.log(`Cloudinary upload success: ${result.secure_url}`);
             resolve(result.secure_url);
           }
         }
@@ -104,11 +102,9 @@ export const createTour = async (req, res) => {
     
     // Save tour to get a valid ID
     await newTour.save();
-    console.log(`Tour created with ID: ${newTour._id}`);
     
     // Upload images if available
     if (req.files && req.files.length > 0) {
-      console.log(`Processing ${req.files.length} image uploads for tour ${newTour._id}`);
       
       // Upload each image and collect URLs
       const uploadPromises = req.files.map((file, index) => 
@@ -117,7 +113,6 @@ export const createTour = async (req, res) => {
       
       const uploadedUrls = await Promise.all(uploadPromises);
       const validUrls = uploadedUrls.filter(url => url !== null);
-      console.log(`Successfully uploaded ${validUrls.length} images`);
       
       // Update tour with image URLs - use findByIdAndUpdate for reliability
       const updatedTour = await Tour.findByIdAndUpdate(
@@ -126,7 +121,6 @@ export const createTour = async (req, res) => {
         { new: true }
       );
       
-      console.log(`Tour updated with ${updatedTour.images.length} images`);
       return res.status(201).json(updatedTour);
     }
     
@@ -157,16 +151,12 @@ export const updateTour = async (req, res) => {
   try {
     const { id } = req.params;
 
-    console.log(`\n➡️ Received update request for tour ID: ${id}`);
-    console.log("➡️ Request body:", req.body);
-
     // Check if the tour exists
     const existingTour = await Tour.findById(id);
     if (!existingTour) {
       console.error("❌ Tour not found");
       return res.status(404).json({ message: "Tour not found" });
     }
-    console.log("✅ Existing tour found");
 
     // Helper function to parse JSON safely
     const parseJSON = (data, defaultValue) => {
@@ -196,27 +186,14 @@ export const updateTour = async (req, res) => {
       images: existingTour.images || [],
     };
 
-    console.log("🛠️ Preparing to update tour data...");
 
     // Check if images were uploaded
     if (req.files && req.files.length > 0) {
-      console.log(`🖼️ Received ${req.files.length} files for upload`);
-
-      // Log received files
-      req.files.forEach((file, index) => {
-        console.log(`📂 File ${index + 1}:`, {
-          originalName: file.originalname,
-          size: file.size,
-          mimetype: file.mimetype,
-        });
-      });
 
       // Delete old images from Cloudinary
-      console.log("🗑️ Deleting old images from Cloudinary...");
       const deletePromises = existingTour.images.map(async (url) => {
         try {
           const result = await deleteCloudinaryImage(url);
-          console.log(`✅ Deleted: ${url}`);
           return result;
         } catch (error) {
           console.error(`❌ Failed to delete ${url}:`, error);
@@ -225,7 +202,6 @@ export const updateTour = async (req, res) => {
       await Promise.all(deletePromises);
 
       // Upload new images
-      console.log("🚀 Uploading new images to Cloudinary...");
       const uploadPromises = req.files.map((file, index) =>
         uploadToCloudinary(file, id, index)
       );
@@ -233,17 +209,13 @@ export const updateTour = async (req, res) => {
       const uploadedUrls = await Promise.all(uploadPromises);
       const validUrls = uploadedUrls.filter((url) => url !== null);
 
-      console.log(`✅ Successfully uploaded ${validUrls.length} images`);
       updateData.images = validUrls;
     } else {
       console.log("⚠️ No new images uploaded, keeping existing ones");
     }
 
-    // Update the tour in MongoDB
-    console.log("🛠️ Updating tour in MongoDB...");
     const updatedTour = await Tour.findByIdAndUpdate(id, updateData, { new: true });
 
-    console.log("✅ MongoDB update result:", updatedTour);
     res.status(200).json(updatedTour);
   } catch (error) {
     console.error("❌ Error updating tour:", error);
@@ -359,12 +331,10 @@ export const verifyTourBooking = async (req, res) => {
 
 // Initiate tour payment
 export const initiatePayment = async (req, res) => {
-  console.log('called init')
   try {
     const { tourId, bookingId, amount, email, phone, guestName, groupSize, specialRequests } = req.body;
     const totalAmount = amount;
 
-    console.log(req.body)
     // Validate required fields
     if (!tourId || !bookingId || !amount) {
       return res.status(400).json({ message: 'Missing required fields' });
@@ -729,7 +699,6 @@ export const confirmTourBooking = async (req, res) => {
   try {
     const { bookingId } = req.params;
     const { paymentReference, status } = req.body;
-    console.log('inside confirm')
     // Find the booking
     const booking = await TourBooking.findById(bookingId);
     if (!booking) {
@@ -743,7 +712,6 @@ export const confirmTourBooking = async (req, res) => {
 
     // Find the corresponding tour
     const tour = await Tour.findById(booking.tour);
-    console.log('tour',tour)
     if (!tour) {
       return res.status(404).json({ message: "Tour not found" });
     }
@@ -797,7 +765,6 @@ export const deleteTourImage = async (req, res) => {
   try {
     let { tourId, imageIndex } = req.params;
 
-    console.log(`🗑️ Request to delete image at index ${imageIndex} for tour ${tourId}`);
 
     // Ensure `tourId` is a valid ObjectId
     if (!mongoose.Types.ObjectId.isValid(tourId)) {
@@ -827,7 +794,6 @@ export const deleteTourImage = async (req, res) => {
 
     // Delete from Cloudinary (only if it's a valid Cloudinary URL)
     if (imageUrl.includes("cloudinary.com")) {
-      console.log(`🗑️ Deleting from Cloudinary: ${imageUrl}`);
       try {
         await deleteCloudinaryImage(imageUrl);
       } catch (error) {
@@ -841,7 +807,6 @@ export const deleteTourImage = async (req, res) => {
     // Save updated tour
     await tour.save();
 
-    console.log("✅ Image deleted successfully");
     res.status(200).json({ message: "Image deleted successfully", images: tour.images });
 
   } catch (error) {

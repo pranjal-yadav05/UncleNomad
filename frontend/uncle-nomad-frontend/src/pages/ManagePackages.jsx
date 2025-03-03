@@ -101,8 +101,7 @@ export default function ManagePackages() {
           }
         });
       }
-  
-      console.log("🚀 Sending FormData to API...");
+
       const url = editMode ? `${API_URL}/api/tours/${currentPackageId}` : `${API_URL}/api/tours`;
       const method = editMode ? "PUT" : "POST";
   
@@ -117,7 +116,6 @@ export default function ManagePackages() {
         throw new Error(errorData.message || "Failed to save package");
       }
   
-      console.log("✅ Package saved successfully!");
       fetchPackages();
       resetForm();
     } catch (error) {

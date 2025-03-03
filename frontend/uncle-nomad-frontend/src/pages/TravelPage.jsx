@@ -53,7 +53,7 @@ export default function TravelPage() {
       .then((res) => res.json())
       .then((data) => {
         setTours(data)
-        console.log('tours',data)
+        ('tours',data)
         setIsLoading((prev) => ({ ...prev, tours: false }))
       })
       .catch((error) => console.error("Error fetching tours:", error))

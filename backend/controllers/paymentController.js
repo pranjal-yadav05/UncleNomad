@@ -6,13 +6,10 @@ import Booking from '../models/Booking.js';
 const router = Router();
 
 export const initiatePayment = async (req, res) => {
-    console.log('Incoming request body:', req.body);
 
     try {
         const { bookingData, amount, customerId, email, phone } = req.body;
         
-        console.log('Payment initiated with booking data:', bookingData);
-
         // Validate required fields
         if (!bookingData || !amount || !email || !phone) {
             return res.status(400).json({
@@ -23,12 +20,9 @@ export const initiatePayment = async (req, res) => {
 
         // Validate configuration
         const config = validatePaytmConfig();
-        console.log('Paytm configuration validated:', config);
         
         // Validate amount format
         const numericAmount = parseFloat(bookingData.totalAmount);
-        console.log('Parsed numeric amount:', numericAmount);
-
         if (isNaN(numericAmount) || numericAmount <= 0) {
             return res.status(400).json({
                 status: 'ERROR',
@@ -39,7 +33,6 @@ export const initiatePayment = async (req, res) => {
         // Format order ID with timestamp to ensure uniqueness
         const timestamp = new Date().getTime();
         const formattedOrderId = `ORDER_${timestamp}_${email.split('@')[0].substring(0, 6)}`;
-        console.log('Generated order ID:', formattedOrderId);
 
         // Prepare parameters with strict validation
         const paytmParams = {
@@ -77,18 +70,6 @@ export const initiatePayment = async (req, res) => {
         const hostname = process.env.PAYTM_HOSTNAME;
         const apiPath = `/theia/api/v1/initiateTransaction?mid=${config.PAYTM_MID}&orderId=${formattedOrderId}`;
 
-        // Log the request details before making the API call
-        console.log('Making request to Paytm API with details:', {
-
-            url: `https://${hostname}${apiPath}`,
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Content-Length': post_data.length
-            },
-            body: paytmParams
-        });
-
         // Make API call with enhanced error handling
         const response = await new Promise((resolve, reject) => {
             const options = {
@@ -111,13 +92,10 @@ export const initiatePayment = async (req, res) => {
                 });
                 
                 response.on('end', () => {
-                    // Log the raw response for debugging
-        console.log('Raw Paytm response received:', data);
 
 
                     try {
                         const parsedData = JSON.parse(data);
-        console.log('Parsed Paytm response details:', parsedData);
 
                         
                         // Check if the response has the expected structure
@@ -148,13 +126,6 @@ export const initiatePayment = async (req, res) => {
             req.end();
         });
 
-        // Enhanced response validation
-        console.log('Validating response structure and content:', {
-
-            hasBody: !!response.body,
-            bodyContent: response.body,
-            resultInfo: response.body?.resultInfo
-        });
 
         if (!response.body) {
             throw new Error('Invalid response structure from payment gateway');
@@ -192,16 +163,6 @@ export const initiatePayment = async (req, res) => {
             console.warn('Session not available for storing booking data');
         }
 
-        console.log('Sending response to client:', {
-            status: 'SUCCESS',
-            data: {
-                mid: config.PAYTM_MID,
-                orderId: formattedOrderId,
-                txnToken: response.body.txnToken,
-                amount: numericAmount.toFixed(2),
-                callbackUrl: config.PAYTM_CALLBACK_URL,
-            }
-        });
 
         return res.json({
             status: 'SUCCESS',
@@ -252,15 +213,9 @@ const validatePaytmConfig = () => {
 
 export const paymentCallback = async (req, res) => {
     try {
-        console.log('Payment callback received:', req.body);
-        console.log('Headers:', req.headers);
-        console.log('Callback URL:', process.env.PAYTM_CALLBACK_URL);
-        console.log('Request method:', req.method);
-        console.log('Request URL:', req.originalUrl);
 
         const receivedData = req.body;
         
-        console.log('Raw request body:', JSON.stringify(req.body, null, 2));
         
         if (!receivedData || !receivedData.body || !receivedData.head) {
 
@@ -279,41 +234,19 @@ export const paymentCallback = async (req, res) => {
         }
 
         // Verify checksum
-        console.log('Verifying checksum...');
         const isValidChecksum = await PaytmChecksum.verifySignature(
             JSON.stringify(receivedData.body),
             process.env.PAYTM_MERCHANT_KEY,
             receivedData.head.signature
         );
-        console.log('Checksum verification result:', isValidChecksum);
 
         if (!isValidChecksum) {
             console.error('Checksum verification failed for order:', receivedData.body?.ORDERID);
             return res.status(400).json({ status: 'ERROR', message: 'Checksum verification failed' });
         }
 
-        // Log entire received data for debugging
-        console.log('Full callback data:', JSON.stringify(receivedData, null, 2));
 
         const { ORDERID, STATUS, TXNAMOUNT, TXNDATE, BANKTXNID, RESPCODE, RESPMSG } = receivedData.body;
-
-        // Log payment response with additional details
-        console.log('Payment response details:', {
-            orderId: ORDERID,
-            status: STATUS,
-            amount: TXNAMOUNT,
-            responseCode: RESPCODE,
-            responseMessage: RESPMSG,
-            callbackTime: new Date().toISOString(),
-            ipAddress: req.ip
-        });
-
-        // Debug log to check if we're reaching the success condition
-        console.log('Checking payment status:', {
-            STATUS,
-            RESPCODE,
-            isSuccess: STATUS === 'TXN_SUCCESS' && RESPCODE === '01'
-        });
 
         // Get temporary booking from session
         const tempBooking = req.session.tempBooking;
@@ -329,14 +262,12 @@ export const paymentCallback = async (req, res) => {
         const updateBooking = async (statusData) => {
             try {
                 await Booking.findByIdAndUpdate(ORDERID, statusData);
-                console.log('Booking status updated successfully:', ORDERID);
             } catch (updateError) {
                 console.error('Failed to update booking status:', updateError);
                 // Retry once after 1 second
                 await new Promise(resolve => setTimeout(resolve, 1000));
                 try {
                     await Booking.findByIdAndUpdate(ORDERID, statusData);
-                    console.log('Booking status updated on retry:', ORDERID);
                 } catch (retryError) {
                     console.error('Failed to update booking status on retry:', retryError);
                     throw retryError;
@@ -345,7 +276,6 @@ export const paymentCallback = async (req, res) => {
         };
 
         if (STATUS === 'TXN_SUCCESS' && RESPCODE === '01') {
-            console.log('Payment successful, updating booking status');
             
             await Booking.findOneAndUpdate(
                 { paymentReference: ORDERID },
@@ -362,10 +292,8 @@ export const paymentCallback = async (req, res) => {
             // Clear temporary booking from session
             delete req.session.tempBooking;
 
-            console.log('Payment successful, redirecting to success page');
             return res.redirect(`${process.env.FRONTEND_URL}/booking-success/${ORDERID}`);
         } else {
-            console.log('Payment failed, updating status');
             await updateBooking({
                 paymentStatus: 'FAILED',
                 status: 'PAYMENT_FAILED',
@@ -373,7 +301,6 @@ export const paymentCallback = async (req, res) => {
                 paymentErrorCode: RESPCODE
             });
 
-            console.log('Payment failed, redirecting to failure page');
             return res.redirect(`${process.env.FRONTEND_URL}/booking-failed?orderId=${ORDERID}&error=${encodeURIComponent(RESPMSG)}`);
         }
 
@@ -421,16 +348,6 @@ export const verifyPayment = async (req, res) => {
         const hostname = process.env.PAYTM_HOSTNAME;
         const apiPath = `/v3/order/status`;
 
-        // Log the request details before making the API call
-        console.log('Making request to Paytm Status API:', {
-            url: `https://${hostname}${apiPath}`,
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Content-Length': post_data.length
-            },
-            body: paytmParams
-        });
 
         // Make API call to check transaction status
         const response = await new Promise((resolve, reject) => {
@@ -451,7 +368,6 @@ export const verifyPayment = async (req, res) => {
                     data += chunk;
                 });
                 response.on('end', () => {
-                    console.log('Raw Paytm status response:', data);
                     try {
                         const parsedData = JSON.parse(data);
                         resolve(parsedData);
@@ -473,14 +389,6 @@ export const verifyPayment = async (req, res) => {
         // Extract response body and head
         const { body, head } = response;
         
-        // Log response structure for debugging
-        console.log('Response structure:', {
-            hasBody: !!body,
-            hasHead: !!head,
-            headSignature: head?.signature,
-            bodyKeys: body ? Object.keys(body) : []
-        });
-
         // Verify response checksum only for the body
         const isValidChecksum = await PaytmChecksum.verifySignature(
             JSON.stringify(body),
@@ -498,12 +406,9 @@ export const verifyPayment = async (req, res) => {
 
         // Process the response
         if (body?.resultInfo?.resultStatus === 'TXN_SUCCESS') {
-            // Find and update booking status using paymentReference
-            console.log('orderId searching :',orderId)
             
             const booking = await Booking.findOne({ paymentReference: orderId });
             if (!booking) {
-                console.log('booking not found....')
                 return res.status(404).json({
                     status: 'ERROR',
                     message: 'Booking not found'

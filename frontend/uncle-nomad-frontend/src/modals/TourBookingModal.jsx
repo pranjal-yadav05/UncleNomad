@@ -11,6 +11,7 @@ import TourBookingConfirmationDialog from "../modals/TourBookingConfirmationDial
 import { useNavigate } from "react-router-dom"
 import FailedTransactionModal from "./FailedTransactionModal"
 import { Alert, AlertDescription, AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogCancel } from "../components/ui/alert"
+import CheckingPaymentModal from "./CheckingPaymentModal"
 
 export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsCheckingOpen, isCheckingOpen }) {
   const [bookingDetails, setBookingDetails] = useState({
@@ -608,6 +609,14 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsC
         onClose={handleConfirmationClose}
       />
     )}
+    
+    {isCheckingOpen && (
+      <CheckingPaymentModal
+        isOpen={isCheckingOpen}
+        onClose={()=>setIsCheckingOpen(false)}
+      />
+    )}
+
 
     <FailedTransactionModal
       open={isPaymentFailedOpen}

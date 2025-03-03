@@ -17,11 +17,11 @@
 
     useEffect(() => {
       const fetchMedia = async () => { 
-          console.log('Fetching media...'); // Log the fetch action
+          ('Fetching media...'); // Log the fetch action
 
           try {
               const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/media`,{headers:{"x-api-key": process.env.REACT_APP_API_KEY}}); // Adjust the endpoint as necessary
-              console.log('Media response:', response.data); // Log the response data
+              
               setMediaItems(response.data);
           } catch (error) {
               console.error('Error fetching media:', error);
@@ -38,7 +38,7 @@
         try {
           await videoRef.current.play();
         } catch (error) {
-          console.log('Video playback failed:', error);
+          console.error('Video playback failed:', error);
         }
       }
     };

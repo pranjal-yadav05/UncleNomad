@@ -19,6 +19,7 @@ const TourPaymentForm = ({
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [paymentStatus, setPaymentStatus] = useState('idle');
+  const [isCheckingPayment, setIsCheckingPayment] = useState(false);
   const initializationAttempted = useRef(false);
   const paymentGatewayOpened = useRef(false);
 
@@ -32,7 +33,6 @@ const TourPaymentForm = ({
 
     const initializePayment = async () => {
       try {
-        console.log("Initializing payment - starting process");
         setIsLoading(true);
         setPaymentStatus('initializing_payment');
 
@@ -67,7 +67,6 @@ const TourPaymentForm = ({
           throw new Error('Failed to get transaction token');
         }
         
-        console.log('before config');
         
         if (!process.env.REACT_APP_PAYTM_MID) {
           throw new Error('Paytm Merchant ID (MID) is not defined');
@@ -85,9 +84,11 @@ const TourPaymentForm = ({
           
           handler: {
             notifyMerchant: function(eventName, data) {
-              console.log("Paytm event:", eventName, data);
               if (eventName === "APP_CLOSED") {
-                onPaymentFailure?.("Payment window closed");
+                // Only handle if we haven't already processed a success
+                if (paymentStatus !== 'success') {
+                  onPaymentFailure?.("Payment window closed");
+                }
               }
               
               // Close the dialog once payment UI is ready
@@ -103,7 +104,23 @@ const TourPaymentForm = ({
             },
             transactionStatus: async (response) => {
               try {
-                console.log('Transaction status received:', response);
+                
+                // Close the payment gateway immediately regardless of status
+                if (window.Paytm && window.Paytm.CheckoutJS) {
+                  try {
+                    window.Paytm.CheckoutJS.close();
+                    console.log('Payment gateway closed');
+                  } catch (closeError) {
+                    console.error('Error closing payment gateway:', closeError);
+                  }
+                }
+                
+                // Show checking payment modal
+                setIsCheckingPayment(true);
+                if (setIsCheckingOpen) {
+                  setIsCheckingOpen(true);
+                }
+                
                 setPaymentStatus('processing');
                 
                 if (response.STATUS === 'TXN_SUCCESS') {
@@ -114,42 +131,43 @@ const TourPaymentForm = ({
                       bookingId: paymentData.bookingId,
                       tourId: paymentData.tourId,
                       paymentStatus: 'SUCCESS',
-                    }
+                    },
+                    {headers:{"x-api-key": process.env.REACT_APP_API_KEY}}
                   );
                   
-                  console.log('Payment verification response:', verificationResponse.data);
                   
-                  // Close the payment gateway after successful verification
-                  if (window.Paytm && window.Paytm.CheckoutJS) {
-                    try {
-                      window.Paytm.CheckoutJS.close();
-                      console.log('Payment gateway closed');
-                    } catch (closeError) {
-                      console.error('Error closing payment gateway:', closeError);
-                    }
+                  // Hide checking payment modal
+                  setIsCheckingPayment(false);
+                  if (setIsCheckingOpen) {
+                    setIsCheckingOpen(false);
                   }
                   
-                  // Notify success and close the form
+                  // Notify success
+                  setPaymentStatus('success');
                   onPaymentSuccess?.(response);
                   onClose?.();
                 } else {
-                  // Close the payment gateway first
-                  if (window.Paytm && window.Paytm.CheckoutJS) {
-                    try {
-                      window.Paytm.CheckoutJS.close();
-                      console.log('Payment gateway closed after failure');
-                    } catch (closeError) {
-                      console.error('Error closing payment gateway:', closeError);
-                    }
+                  // Hide checking payment modal
+                  setIsCheckingPayment(false);
+                  if (setIsCheckingOpen) {
+                    setIsCheckingOpen(false);
                   }
                   
-                  // Then trigger the failure callback
+                  // Trigger the failure callback
                   const errorMessage = 'Payment failed: ' + (response.RESPMSG || 'Unknown error');
+                  setPaymentStatus('failed');
                   onPaymentFailure?.(errorMessage);
                   onClose?.();
                 }
               } catch (error) {
                 console.error('Error in transaction status handler:', error);
+                
+                // Hide checking payment modal
+                setIsCheckingPayment(false);
+                if (setIsCheckingOpen) {
+                  setIsCheckingOpen(false);
+                }
+                
                 onPaymentFailure?.(error.message);
                 onClose?.();
               }
@@ -164,8 +182,6 @@ const TourPaymentForm = ({
           }
         };
         
-        console.log('after config');
-
         const script = document.createElement("script");
         script.src = `https://${process.env.REACT_APP_PAYTM_HOSTNAME}/merchantpgpui/checkoutjs/merchants/${process.env.REACT_APP_PAYTM_MID}.js`;
         script.async = true;
@@ -176,11 +192,9 @@ const TourPaymentForm = ({
           }
 
           window.Paytm.CheckoutJS.onLoad(function() {
-            console.log("Paytm SDK loaded, initializing with config:", JSON.stringify(config));
             
             window.Paytm.CheckoutJS.init(config)
               .then(() => {
-                console.log("Paytm initialization successful");
                 if (isSubscribed) setIsLoading(false);
                 
                 // Set up a backup plan to close the dialog if the notifyMerchant event doesn't fire
@@ -223,7 +237,7 @@ const TourPaymentForm = ({
         script.remove();
       }
     };
-  }, [paymentData, bookingForm, onPaymentSuccess, onPaymentFailure, onClose]);
+  }, [paymentData, bookingForm, onPaymentSuccess, onPaymentFailure, onClose, setIsCheckingOpen]);
 
   if (error) {
     return (
@@ -249,15 +263,19 @@ const TourPaymentForm = ({
   }
 
   return (
-    <div className="text-center w-full">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-purple mx-auto"></div>
-      <p className="mt-4 font-medium">
-        {paymentStatus === 'creating_booking' && 'Creating booking...'}
-        {paymentStatus === 'initializing_payment' && 'Initializing payment...'}
-        {paymentStatus === 'processing' && 'Processing payment...'}
-      </p>
-      <p className="text-sm text-gray-500 mt-2">Please do not refresh the page.</p>
-    </div>
+    <>
+      <div className="text-center w-full">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-purple mx-auto"></div>
+        <p className="mt-4 font-medium">
+          {paymentStatus === 'creating_booking' && 'Creating booking...'}
+          {paymentStatus === 'initializing_payment' && 'Initializing payment...'}
+          {paymentStatus === 'processing' && 'Processing payment...'}
+        </p>
+        <p className="text-sm text-gray-500 mt-2">Please do not refresh the page.</p>
+      </div>
+      
+      {/* This will be handled by parent component through setIsCheckingOpen */}
+    </>
   );
 };
 

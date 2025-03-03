@@ -17,8 +17,6 @@ const BookingConfirmationDialog = ({ booking, onClose }) => {
     )
   }
 
-  console.log('booking',booking)
-
   return (
     <Dialog open={true} onOpenChange={(open) => {
       if (!open) {

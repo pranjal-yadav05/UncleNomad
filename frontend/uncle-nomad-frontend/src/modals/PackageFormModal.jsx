@@ -119,7 +119,6 @@ const PackageFormModal = ({
     const imageIndex = index;
 
     try {
-      console.log(`🗑️ Deleting image at index ${index} for package ${tourId}...`);
       const response = await fetch(`${API_URL}/api/tours/${tourId}/image/${imageIndex}`, {
         headers:{
           "x-api-key": process.env.REACT_APP_API_KEY
@@ -136,7 +135,6 @@ const PackageFormModal = ({
       setExistingImages(updatedImages);
       setNewPackage({ ...newPackage, images: [...updatedImages, ...imageFiles] });
 
-      console.log("✅ Image deleted successfully!");
     } catch (error) {
       console.error("❌ Error removing image:", error);
       alert("Failed to remove image. Please try again.");

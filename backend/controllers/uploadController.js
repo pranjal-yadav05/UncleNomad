@@ -21,7 +21,6 @@ export const uploadMedia = async (req, res) => {
       const file = req.file;
       const type = req.body.type || 'image';
       
-      console.log('Upload request received:', { type, mimetype: file.mimetype, size: file.size });
       
       // Validate file type
       const allowedImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
@@ -81,7 +80,6 @@ export const deleteMedia = async (req, res) => {
   try {
     const { publicId, resourceType } = req.body;
     
-    console.log('Delete request received:', { publicId, resourceType });
 
     if (!publicId) {
       return res.status(400).json({ message: 'Public ID is required' });
@@ -90,7 +88,6 @@ export const deleteMedia = async (req, res) => {
     // Clean up the publicId by removing any duplicate folder references
     const cleanPublicId = publicId.replace('uncle-nomad/uncle-nomad/', 'uncle-nomad/');
     
-    console.log('Attempting to delete with cleaned publicId:', cleanPublicId);
 
     try {
       const result = await cloudinary.v2.uploader.destroy(cleanPublicId, {
@@ -98,7 +95,6 @@ export const deleteMedia = async (req, res) => {
         invalidate: true
       });
 
-      console.log('Cloudinary delete result:', result);
 
       if (result.result === 'not found') {
         // If the resource wasn't found, we should still consider this a success

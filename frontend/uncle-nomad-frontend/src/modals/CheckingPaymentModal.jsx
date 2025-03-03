@@ -1,9 +1,9 @@
 import React from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "../components/ui/dialog"; // Import your Dialog components
 
-const CheckingPaymentModal = ({ open, onClose }) => {
+const CheckingPaymentModal = ({ isOpen, onClose }) => {
   return (
-    <Dialog open={open}>
+    <Dialog open={isOpen}>
       <DialogContent>
         <DialogTitle>Checking Payment...</DialogTitle>
         <DialogDescription className="text-center">

@@ -121,9 +121,9 @@ export default function ProfilePage() {
     <>
       <Header />
       <div className="max-w-screen min-h-screen mx-auto px-4 sm:px-6 flex justify-center items-center bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-20">
+        <div className="grid grid-cols-1 md:grid-cols-3 mt-10 gap-6 mb-20">
           {/* Profile Card */}
-          <Card className="md:col-span-1 bg-white">
+          <Card className="md:col-span-1 max-h-fit bg-white">
             <CardHeader className="pb-3">
               <CardTitle>Profile</CardTitle>
               <CardDescription>Your personal information</CardDescription>

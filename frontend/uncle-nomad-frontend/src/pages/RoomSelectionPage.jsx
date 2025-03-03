@@ -11,6 +11,7 @@ import { format } from "date-fns"
 import BookingConfirmationDialog from "../modals/BookingConfirmationDialog"
 import BookingFailedDialog from "../modals/BookingFailedDialog"
 import AnimatedSection from "../components/AnimatedSection"
+import CheckingPaymentModal from "../modals/CheckingPaymentModal"
 
 const RoomSelectionPage = () => {
   const location = useLocation()
@@ -40,11 +41,11 @@ const RoomSelectionPage = () => {
   const [bookingError, setBookingError] = useState("")
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [checking, setChecking] = useState(false)
   const [isBookingConfirmed, setIsBookingConfirmed] = useState(false)
   const [bookingDetails, setBookingDetails] = useState(null)
   const [isBookingFailed, setIsBookingFailed] = useState(false)
   const [error, setError] = useState(null)
+  const [checking, setChecking] = useState(false)
 
   useEffect(() => {
     if (isBookingConfirmed) {
@@ -353,7 +354,6 @@ const RoomSelectionPage = () => {
           setBookingForm={setBookingForm}
           isLoading={isLoading}
           setIsLoading={setIsLoading}
-          setChecking={setChecking}
           availableRooms={availableRooms}
           handleRoomSelection={handleRoomSelection}
           error={error}
@@ -363,6 +363,7 @@ const RoomSelectionPage = () => {
           setBookingDetails={setBookingDetails}
           bookingDetails={bookingDetails}
           setIsBookingFailed={setIsBookingFailed}
+          setChecking={setChecking}
         />
       )}
       {isBookingConfirmed && 
@@ -382,6 +383,13 @@ const RoomSelectionPage = () => {
           errorMessage="Payment processing failed. Please try again."
           onClose={() => setIsBookingFailed(false)}
         />
+      }
+      {
+        checking && (
+          <CheckingPaymentModal
+            isOpen={checking}
+          />
+        )
       }
 
       <Footer />

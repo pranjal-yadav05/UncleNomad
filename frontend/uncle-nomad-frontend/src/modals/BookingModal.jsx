@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom"
 import DisclaimerDialog from "./DisclaimerDialog"
 import { Loader2 } from "lucide-react"
 import PaytmPaymentForm from "../components/PaytmPaymentForm"
+import CheckingPaymentModal from "./CheckingPaymentModal"
 import FailedTransactionModal from "../modals/FailedTransactionModal"
 
 export default function BookingModal({
@@ -20,13 +21,13 @@ export default function BookingModal({
   setBookingForm,
   isLoading,
   setIsLoading,
-  setChecking,
   availableRooms,
   handleRoomSelection,
   error,
   setError,
   setIsModalOpen,
   setIsBookingConfirmed,
+  setChecking,
   setBookingDetails,
   bookingDetails,
   setIsBookingFailed,
@@ -40,7 +41,7 @@ export default function BookingModal({
   const [step, setStep] = useState(1)
   const [validationErrors, setValidationErrors] = useState({})
   const [showError, setShowError] = useState(true)
-
+  
   // OTP related states
   const [otp, setOtp] = useState("")
   const [isOtpSent, setIsOtpSent] = useState(false)
@@ -192,7 +193,7 @@ export default function BookingModal({
       localStorage.setItem("userEmail", data.user.email);
       
       window.dispatchEvent(new Event("storage"));
-      
+
       setIsOtpVerified(true);
       if (validationErrors.otp) {
         setValidationErrors((prev) => ({ ...prev, otp: "" }));
@@ -428,9 +429,6 @@ export default function BookingModal({
 
       setBookingForm(bookingData)
 
-      console.log("Sending booking data:", JSON.stringify(bookingData, null, 2))
-
-      console.log("Initiating payment request to:", `${process.env.REACT_APP_API_URL}/api/payments/initiate`)
       const paymentResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/payments/initiate`, {
         method: "POST",
         headers: { "Content-Type": "application/json", 
@@ -446,8 +444,6 @@ export default function BookingModal({
           phone: bookingForm.phone,
         }),
       })
-
-      console.log("Payment response status:", paymentResponse.status)
 
       if (!paymentResponse.ok) {
         console.error("Payment initiation failed with status:", paymentResponse.status)
@@ -465,11 +461,9 @@ export default function BookingModal({
       const paymentData = await paymentResponse.json()
 
       if (paymentData.status === "SUCCESS" && paymentData.data) {
-        console.log("Payment data received:", paymentData.data)
         setPaymentData(paymentData.data)
         setIsPaymentActive(true)
 
-        console.log("Payment initiated with data:", paymentData.data)
       } else {
         throw new Error("Payment initialization failed")
       }

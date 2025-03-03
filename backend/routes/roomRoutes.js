@@ -14,16 +14,10 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 router.post('/', upload.array('images', 5), (req, res, next) => {
-  console.log('POST request received for room creation');
-  console.log('Files:', req.files);
-  console.log('Body:', req.body);
   next();
 }, createRoom);
 
 router.put('/:id', upload.array('images', 5), (req, res, next) => {
-  console.log(`PUT request received for room ${req.params.id}`);
-  console.log('Files:', req.files);
-  console.log('Body:', req.body);
   next();
 }, updateRoom);
 
