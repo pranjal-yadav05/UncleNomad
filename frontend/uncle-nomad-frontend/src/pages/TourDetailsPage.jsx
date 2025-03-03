@@ -33,7 +33,8 @@ const TourDetailsPage = () => {
             const fetchTourDetails = async () => {
                 try {
                     setLoading(true);
-                    const response = await fetch(`${process.env.REACT_APP_API_URL}/api/tours/${state?.selectedTour?._id}`,{headers:{"x-api-key": process.env.REACT_APP_API_KEY}});
+                    const token = localStorage.getItem('authToken')
+                    const response = await fetch(`${process.env.REACT_APP_API_URL}/api/tours/${state?.selectedTour?._id}`,{headers:{"x-api-key": process.env.REACT_APP_API_KEY, "Authorization": `Bearer ${token}`}});
                     
                     if (!response.ok) {
                         throw new Error('Failed to fetch tour details');

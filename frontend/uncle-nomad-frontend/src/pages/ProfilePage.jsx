@@ -8,19 +8,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
 import { Badge } from "../components/ui/badge"
 import { Skeleton } from "../components/ui/skeleton"
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar"
-import { CalendarDays, LogOut, MapPin, User } from "lucide-react"
+import { CalendarDays, LogOut, MapPin, User, Compass } from "lucide-react"
 import Footer from "../components/Footer"
 import Header from "../components/Header"
 
 export default function ProfilePage() {
   const navigate = useNavigate()
   const [user, setUser] = useState(null)
-  const [bookings, setBookings] = useState([])
+  const [roomBookings, setRoomBookings] = useState([])
+  const [tourBookings, setTourBookings] = useState([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(()=>{
-    window.scroll(0,0)
-  },[])
+  useEffect(() => {
+    window.scroll(0, 0)
+  }, [])
 
   useEffect(() => {
     const authToken = localStorage.getItem("authToken")
@@ -31,11 +32,12 @@ export default function ProfilePage() {
       navigate("/login") // Redirect if not authenticated
     } else {
       setUser({ name: userName || "", email: userEmail || "" })
-      fetchBookings(authToken)
+      fetchRoomBookings(authToken)
+      fetchTourBookings(authToken)
     }
   }, [navigate])
 
-  const fetchBookings = async (authToken) => {
+  const fetchRoomBookings = async (authToken) => {
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/api/bookings/user-bookings`, {
         method: "GET",
@@ -47,13 +49,41 @@ export default function ProfilePage() {
       })
 
       if (!response.ok) {
-        throw new Error("Failed to fetch bookings")
+        throw new Error("Failed to fetch room bookings")
       }
 
       const data = await response.json()
-      setBookings(data)
+      // Sort bookings with newest (by checkIn date) first
+      const sortedBookings = data.sort((a, b) => new Date(b.checkIn) - new Date(a.checkIn))
+      setRoomBookings(sortedBookings)
     } catch (error) {
-      console.error("Error fetching bookings:", error)
+      console.error("Error fetching room bookings:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchTourBookings = async (authToken) => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/tours/user-tour-booking`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": process.env.REACT_APP_API_KEY || "",
+          Authorization: `Bearer ${authToken}`,
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch tour bookings")
+      }
+
+      const data = await response.json()
+      // Sort bookings with newest (by tourDate) first
+      const sortedBookings = data.sort((a, b) => new Date(b.tourDate) - new Date(a.tourDate))
+      setTourBookings(sortedBookings)
+    } catch (error) {
+      console.error("Error fetching tour bookings:", error)
     } finally {
       setLoading(false)
     }
@@ -66,10 +96,6 @@ export default function ProfilePage() {
     localStorage.removeItem("token")
     navigate("/") // Redirect to homepage
   }
-
-  // Separate past and current bookings
-  const currentBookings = bookings.filter((b) => new Date(b.checkOut) >= new Date())
-  const pastBookings = bookings.filter((b) => new Date(b.checkOut) < new Date())
 
   // Get status badge color
   const getStatusColor = (status) => {
@@ -143,11 +169,6 @@ export default function ProfilePage() {
               </div>
 
               <div className="space-y-4">
-                {/* <Button variant="outline" className="w-full justify-start" onClick={() => navigate("/edit-profile")}>
-                  <User className="mr-2 h-4 w-4" />
-                  Edit Profile
-                </Button> */}
-
                 <Button variant="destructive" className="w-full justify-start" onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
                   Logout
@@ -161,25 +182,26 @@ export default function ProfilePage() {
             <Card>
               <CardHeader>
                 <CardTitle>Your Bookings</CardTitle>
-                <CardDescription>Manage your upcoming and past stays</CardDescription>
+                <CardDescription>View your room and tour bookings</CardDescription>
               </CardHeader>
               <CardContent>
-                <Tabs defaultValue="current" className="w-full">
+                <Tabs defaultValue="rooms" className="w-full">
                   <TabsList className="grid w-full grid-cols-2 mb-4">
-                    <TabsTrigger value="current">Current Bookings</TabsTrigger>
-                    <TabsTrigger value="past">Past Bookings</TabsTrigger>
+                    <TabsTrigger value="rooms">Room Bookings</TabsTrigger>
+                    <TabsTrigger value="tours">Tour Bookings</TabsTrigger>
                   </TabsList>
 
-                  <TabsContent value="current">
+                  {/* Room Bookings Tab */}
+                  <TabsContent value="rooms">
                     {loading ? (
                       <div className="space-y-3">
                         <Skeleton className="h-24 w-full" />
                         <Skeleton className="h-24 w-full" />
                       </div>
-                    ) : currentBookings.length > 0 ? (
+                    ) : roomBookings.length > 0 ? (
                       <div className="space-y-4">
-                        {currentBookings.map((booking) => (
-                          <BookingCard
+                        {roomBookings.map((booking) => (
+                          <RoomBookingCard
                             key={booking._id}
                             booking={booking}
                             getStatusColor={getStatusColor}
@@ -190,8 +212,8 @@ export default function ProfilePage() {
                     ) : (
                       <div className="text-center py-8">
                         <CalendarDays className="mx-auto h-12 w-12 text-muted-foreground mb-3" />
-                        <h3 className="text-lg font-medium">No current bookings</h3>
-                        <p className="text-muted-foreground mt-1">You don't have any upcoming stays.</p>
+                        <h3 className="text-lg font-medium">No room bookings</h3>
+                        <p className="text-muted-foreground mt-1">You don't have any room bookings yet.</p>
                         <Button className="mt-4" onClick={() => navigate("/availability")}>
                           Book a Room
                         </Button>
@@ -199,16 +221,17 @@ export default function ProfilePage() {
                     )}
                   </TabsContent>
 
-                  <TabsContent value="past">
+                  {/* Tour Bookings Tab */}
+                  <TabsContent value="tours">
                     {loading ? (
                       <div className="space-y-3">
                         <Skeleton className="h-24 w-full" />
                         <Skeleton className="h-24 w-full" />
                       </div>
-                    ) : pastBookings.length > 0 ? (
+                    ) : tourBookings.length > 0 ? (
                       <div className="space-y-4">
-                        {pastBookings.map((booking) => (
-                          <BookingCard
+                        {tourBookings.map((booking) => (
+                          <TourBookingCard
                             key={booking._id}
                             booking={booking}
                             getStatusColor={getStatusColor}
@@ -218,9 +241,12 @@ export default function ProfilePage() {
                       </div>
                     ) : (
                       <div className="text-center py-8">
-                        <CalendarDays className="mx-auto h-12 w-12 text-muted-foreground mb-3" />
-                        <h3 className="text-lg font-medium">No past bookings</h3>
-                        <p className="text-muted-foreground mt-1">Your booking history will appear here.</p>
+                        <Compass className="mx-auto h-12 w-12 text-muted-foreground mb-3" />
+                        <h3 className="text-lg font-medium">No tour bookings</h3>
+                        <p className="text-muted-foreground mt-1">You don't have any tour bookings yet.</p>
+                        <Button className="mt-4" onClick={() => navigate("/tours")}>
+                          Book a Tour
+                        </Button>
                       </div>
                     )}
                   </TabsContent>
@@ -235,7 +261,7 @@ export default function ProfilePage() {
   )
 }
 
-function BookingCard({ booking, getStatusColor, formatDate }) {
+function RoomBookingCard({ booking, getStatusColor, formatDate }) {
   return (
     <Card className="overflow-hidden">
       <div className="flex flex-col sm:flex-row">
@@ -274,6 +300,53 @@ function BookingCard({ booking, getStatusColor, formatDate }) {
             <div>
               <div className="text-sm text-muted-foreground">Check-out</div>
               <div className="font-medium">{formatDate(booking.checkOut)}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+function TourBookingCard({ booking, getStatusColor, formatDate }) {
+  return (
+    <Card className="overflow-hidden">
+      <div className="flex flex-col sm:flex-row">
+        <div className="sm:w-1/3 bg-muted p-4 flex flex-col justify-center items-center">
+          <div className="text-center">
+            <h4 className="font-medium">{booking.tourName || "Tour"}</h4>
+            {booking.location && (
+              <div className="flex items-center justify-center text-sm text-muted-foreground mt-1">
+                <MapPin className="h-3 w-3 mr-1" />
+                <span>{booking.location}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="p-4 sm:w-2/3">
+          <div className="flex justify-between items-start mb-3">
+            <div>
+              <h3 className="font-semibold">Tour #{booking._id.slice(-6)}</h3>
+              <Badge className={getStatusColor(booking.status)} variant="outline">
+                {booking.status}
+              </Badge>
+            </div>
+            {booking.totalAmount && (
+              <div className="text-right">
+                <span className="font-semibold">${booking.totalAmount}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col sm:flex-row justify-between mt-3">
+            <div className="mb-2 sm:mb-0">
+              <div className="text-sm text-muted-foreground">Tour Date</div>
+              <div className="font-medium">{formatDate(booking.tourDate)}</div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground">Participants</div>
+              <div className="font-medium">{booking.participants || "N/A"}</div>
             </div>
           </div>
         </div>

@@ -168,32 +168,83 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsC
     }
   };
 
+  // const verifyOtp = async (e) => {
+  //   e.preventDefault();
+    
+  //   if (!otp.trim()) {
+  //     setOtpError("Please enter the OTP");
+  //     return;
+  //   }
+    
+  //   setIsVerifyingOtp(true);
+  //   setOtpError(null);
+    
+  //   try {
+  //     const response = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/verify-otp`, {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json", "x-api-key": process.env.REACT_APP_API_KEY },
+  //       body: JSON.stringify({ email: bookingDetails.email, otp })
+  //     });
+      
+  //     if (!response.ok) {
+  //       const errorData = await response.json();
+  //       throw new Error(errorData.message || "Invalid OTP");
+  //     }
+      
+  //     setIsOtpVerified(true);
+  //     if (validationErrors.otp) {
+  //       setValidationErrors(prev => ({ ...prev, otp: "" }));
+  //     }
+  //   } catch (error) {
+  //     setOtpError(error.message || "Invalid OTP. Please try again.");
+  //   } finally {
+  //     setIsVerifyingOtp(false);
+  //   }
+  // };
+
   const verifyOtp = async (e) => {
     e.preventDefault();
-    
+  
     if (!otp.trim()) {
       setOtpError("Please enter the OTP");
       return;
     }
-    
+  
     setIsVerifyingOtp(true);
     setOtpError(null);
-    
+  
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/verify-otp`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": process.env.REACT_APP_API_KEY },
-        body: JSON.stringify({ email: bookingDetails.email, otp })
+        headers: { 
+          "Content-Type": "application/json", 
+          "x-api-key": process.env.REACT_APP_API_KEY 
+        },
+        body: JSON.stringify({ 
+          email: bookingDetails.email, 
+          otp,
+          name: bookingDetails.guestName,
+          phone: bookingDetails.phone
+        }),
       });
-      
+  
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || "Invalid OTP");
       }
+  
+      const data = await response.json();
       
+      // Store the auth token in localStorage
+      localStorage.setItem('authToken', data.token);
+      localStorage.setItem("userName", data.user.name);
+      localStorage.setItem("userEmail", data.user.email);
+      
+      window.dispatchEvent(new Event("storage"));
+
       setIsOtpVerified(true);
       if (validationErrors.otp) {
-        setValidationErrors(prev => ({ ...prev, otp: "" }));
+        setValidationErrors((prev) => ({ ...prev, otp: "" }));
       }
     } catch (error) {
       setOtpError(error.message || "Invalid OTP. Please try again.");
@@ -237,9 +288,11 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsC
         return;
       }
 
+      const token = localStorage.getItem('authToken')
+
       const response = await fetch(`${process.env.REACT_APP_API_URL}/api/tours/${selectedTour._id}/book`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": process.env.REACT_APP_API_KEY },
+        headers: { "Content-Type": "application/json", "x-api-key": process.env.REACT_APP_API_KEY,"Authorization": `Bearer ${token}`  },
         body: JSON.stringify(bookingData),
       });
 
@@ -263,11 +316,12 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsC
   const handlePaymentSuccess = async (paymentResponse) => {
     try {
       setIsCheckingOpen(true)
+      const token = localStorage.getItem('authToken')
       const response = await fetch(
         `${process.env.REACT_APP_API_URL}/api/tours/booking/${bookingData._id}`,
         {
           method: "GET",
-          headers: { "Content-Type": "application/json", "x-api-key": process.env.REACT_APP_API_KEY },
+          headers: { "Content-Type": "application/json", "x-api-key": process.env.REACT_APP_API_KEY, "Authorization": `Bearer ${token}` },
         }
       );
 
@@ -609,7 +663,7 @@ export default function TourBookingModal({ isOpen, onClose, selectedTour, setIsC
         onClose={handleConfirmationClose}
       />
     )}
-    
+
     {isCheckingOpen && (
       <CheckingPaymentModal
         isOpen={isCheckingOpen}

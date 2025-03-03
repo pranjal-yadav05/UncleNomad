@@ -204,6 +204,7 @@ export default function BookingModal({
       setIsVerifyingOtp(false);
     }
   };
+  
   // Generate summary text for verification status
   const getVerificationStatus = () => {
     if (isOtpVerified) return <span className="text-green-500 flex items-center text-sm">✓ Email verified</span>

@@ -104,10 +104,10 @@ export default function ManagePackages() {
 
       const url = editMode ? `${API_URL}/api/tours/${currentPackageId}` : `${API_URL}/api/tours`;
       const method = editMode ? "PUT" : "POST";
-  
+      const token = localStorage.getItem('token')
       const response = await fetch(url, {
         method,
-        headers: {"x-api-key": process.env.REACT_APP_API_KEY},
+        headers: {"x-api-key": process.env.REACT_APP_API_KEY, "Authorization": `Bearer ${token}`},
         body: formData, // ✅ Send as FormData, NOT JSON
       });
   
@@ -270,9 +270,10 @@ export default function ManagePackages() {
                     onClick={async () => {
                       if (window.confirm("Are you sure you want to delete this package?")) {
                         try {
+                          const token = localStorage.getItem('token')
                           const response = await fetch(`${API_URL}/api/tours/${pkg._id}`, {
                             method: "DELETE",
-                            headers: {"x-api-key": process.env.REACT_APP_API_KEY}
+                            headers: {"x-api-key": process.env.REACT_APP_API_KEY, "Authorization": `Bearer ${token}`}
                           });
                           if (response.ok) fetchPackages();
                         } catch (error) {

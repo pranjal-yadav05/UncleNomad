@@ -56,11 +56,14 @@ const TourPaymentForm = ({
         if (!paymentInitData.phone || paymentInitData.phone.length !== 10) {
           throw new Error('Invalid phone number');
         }
-
+        
+        const token = localStorage.getItem('authToken')
         const paymentResponse = await axios.post(
           `${process.env.REACT_APP_API_URL}/api/tours/${paymentData.tourId}/initiate-payment`,
           paymentInitData,
-          {headers:{"x-api-key": process.env.REACT_APP_API_KEY}}
+          {headers:{"x-api-key": process.env.REACT_APP_API_KEY,
+            "Authorization": `Bearer ${token}`
+          }}
         );
 
         if (!paymentResponse.data.data.txnToken) {
@@ -124,6 +127,7 @@ const TourPaymentForm = ({
                 setPaymentStatus('processing');
                 
                 if (response.STATUS === 'TXN_SUCCESS') {
+                  const token = localStorage.getItem('authToken')
                   const verificationResponse = await axios.post(
                     `${process.env.REACT_APP_API_URL}/api/tours/${paymentData.tourId}/verify-payment`, 
                     {
@@ -132,7 +136,9 @@ const TourPaymentForm = ({
                       tourId: paymentData.tourId,
                       paymentStatus: 'SUCCESS',
                     },
-                    {headers:{"x-api-key": process.env.REACT_APP_API_KEY}}
+                    {headers:{"x-api-key": process.env.REACT_APP_API_KEY,
+                      "Authorization": `Bearer ${token}`
+                    }}
                   );
                   
                   

@@ -117,11 +117,13 @@ const PackageFormModal = ({
 
     const tourId = newPackage._id;
     const imageIndex = index;
+    const token = localStorage.getItem('token')
 
     try {
       const response = await fetch(`${API_URL}/api/tours/${tourId}/image/${imageIndex}`, {
         headers:{
-          "x-api-key": process.env.REACT_APP_API_KEY
+          "x-api-key": process.env.REACT_APP_API_KEY,
+          "Authorization": `Bearer ${token}`
         },
         method: "DELETE",
       });

@@ -814,3 +814,52 @@ export const deleteTourImage = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+export const getUserTourBooking = async (req, res) => {
+  try {
+    if (!req.user || !req.user.email) {
+      return res.status(400).json({ message: "User email not found" });
+    }
+
+    // Find only CONFIRMED and PAID bookings for the user
+    const bookings = await TourBooking.find({ 
+      email: new RegExp(`^${req.user.email}$`, "i"),
+      status: "CONFIRMED",
+      paymentStatus: "PAID"
+    })
+    .populate({
+      path: 'tour',
+      select: 'title location images startDate endDate duration price itinerary'
+    })
+    .sort({ bookingDate: -1 });
+
+    if (!bookings.length) {
+      return res.status(404).json({ message: "No bookings found for this user" });
+    }
+
+    // Format the response to include relevant tour data
+    const formattedBookings = bookings.map(booking => {
+      const bookingObj = booking.toObject();
+      
+      // Add tour-specific data to the booking object
+      if (bookingObj.tour) {
+        bookingObj.tourName = bookingObj.tour.title;
+        bookingObj.location = bookingObj.tour.location;
+        bookingObj.tourImage = bookingObj.tour.images && bookingObj.tour.images.length > 0 
+          ? bookingObj.tour.images[0] 
+          : null;
+        bookingObj.tourDate = bookingObj.tour.startDate;
+        bookingObj.tourEndDate = bookingObj.tour.endDate;
+        bookingObj.participants = bookingObj.groupSize;
+        bookingObj.totalAmount = bookingObj.totalPrice;
+      }
+      
+      return bookingObj;
+    });
+
+    res.json(formattedBookings);
+  } catch (error) {
+    console.error("Error fetching bookings:", error);
+    res.status(500).json({ message: "Failed to fetch bookings" });
+  }
+};

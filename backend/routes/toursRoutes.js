@@ -14,8 +14,11 @@ import {
   getTourBookingById,
   deleteTourImage,
   getAllTourBookings,
-  deleteTourBooking
+  deleteTourBooking,
+  getUserTourBooking
 } from '../controllers/tourController.js';
+import { authenticateToken } from '../middleware/auth.js';
+import { auth } from 'googleapis/build/src/apis/abusiveexperiencereport/index.js';
 
 const router = express.Router();
 
@@ -45,26 +48,27 @@ const validateItinerary = (req, res, next) => {
 };
 
 // Booking routes
-router.get('/bookings', getAllTourBookings); 
-router.post('/:id/verify-booking', verifyTourBooking);
-router.post('/:id/book', createTourBooking);
-router.get('/booking/:id', getTourBookingById);
-router.put('/:tourId/book/:bookingId/confirm', confirmTourBooking);
-router.delete('/:tourId/image/:imageIndex', deleteTourImage);
-router.delete('/booking/:id', deleteTourBooking);
+router.get('/bookings', authenticateToken, getAllTourBookings); 
+router.get("/user-tour-booking", authenticateToken, getUserTourBooking);
+router.post('/:id/verify-booking', authenticateToken, verifyTourBooking);
+router.post('/:id/book', authenticateToken, createTourBooking);
+router.get('/booking/:id', authenticateToken, getTourBookingById);
+router.put('/:tourId/book/:bookingId/confirm', authenticateToken, confirmTourBooking);
+router.delete('/:tourId/image/:imageIndex', authenticateToken, deleteTourImage);
+router.delete('/booking/:id', authenticateToken, deleteTourBooking);
 
 
 // CRUD routes
 router.get('/', getTours);
-router.post('/', upload.array('images', 5), validateItinerary, validateTourData, createTour);
+router.post('/', authenticateToken, upload.array('images', 5), validateItinerary, validateTourData, createTour);
 router.get('/:id', getTourById);
-router.put('/:id', upload.array('images', 5), validateItinerary, validateTourData, updateTour);
-router.delete('/:id', deleteTour);
+router.put('/:id', authenticateToken, upload.array('images', 5), validateItinerary, validateTourData, updateTour);
+router.delete('/:id', authenticateToken, deleteTour);
 
 
 
 // Payment routes
-router.post('/:id/initiate-payment', initiatePayment);
-router.post('/:id/verify-payment', verifyTourPayment);
+router.post('/:id/initiate-payment', authenticateToken, initiatePayment);
+router.post('/:id/verify-payment', authenticateToken, verifyTourPayment);
 
 export default router;

@@ -57,7 +57,8 @@ export default function ManageTourBookings() {
     setError('');
     try {
       // Using the getAllTourBookings endpoint from tours model
-      const response = await fetch(`${API_URL}/api/tours/bookings`,{headers:{"x-api-key": process.env.REACT_APP_API_KEY}});
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${API_URL}/api/tours/bookings`,{headers:{"x-api-key": process.env.REACT_APP_API_KEY, "Authorization": `Bearer ${token}` }});
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -80,11 +81,13 @@ export default function ManageTourBookings() {
     setLoading(true);
     setError('');
     try {
+      const token = localStorage.getItem('token')
       const response = await fetch(`${API_URL}/api/tours/${tourId}/book/${bookingId}/confirm`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          "x-api-key": process.env.REACT_APP_API_KEY
+          "x-api-key": process.env.REACT_APP_API_KEY,
+          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({ 
           status, 
@@ -113,9 +116,10 @@ export default function ManageTourBookings() {
     if (!confirmDelete) return;
     setError('');
     try {
+      const token = localStorage.getItem('token')
       const response = await fetch(`${API_URL}/api/tours/booking/${id}`, {
         method: 'DELETE',
-        headers: {"x-api-key": process.env.REACT_APP_API_KEY}
+        headers: {"x-api-key": process.env.REACT_APP_API_KEY, "Authorization": `Bearer ${token}`}
       });
       
       if (!response.ok) {
@@ -132,11 +136,13 @@ export default function ManageTourBookings() {
 
   const handleVerifyBooking = async (tourId, groupSize, bookingDate) => {
     try {
+      const token = localStorage.getItem('token')
       const response = await fetch(`${API_URL}/api/tours/${tourId}/verify-booking`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          "x-api-key": process.env.REACT_APP_API_KEY
+          "x-api-key": process.env.REACT_APP_API_KEY,
+          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({
           tourId,
@@ -195,11 +201,13 @@ export default function ManageTourBookings() {
     try {
         if (editMode && currentBookingId) {
           // Update existing booking
+          const token = localStorage.getItem('token')
           const response = await fetch(`${API_URL}/api/tours/${newBooking.tourId}/book/${currentBookingId}/confirm`, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
-              "x-api-key": process.env.REACT_APP_API_KEY
+              "x-api-key": process.env.REACT_APP_API_KEY,
+              "Authorization": `Bearer ${token}`
             },
             body: JSON.stringify({
               status: newBooking.status,
@@ -213,11 +221,13 @@ export default function ManageTourBookings() {
           }
         } else {
           // Create new booking
+          const token = localStorage.getItem('token')
           const response = await fetch(`${API_URL}/api/tours/${newBooking.tourId}/book`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              "x-api-key": process.env.REACT_APP_API_KEY
+              "x-api-key": process.env.REACT_APP_API_KEY,
+              "Authorization": `Bearer ${token}`
             },
             body: JSON.stringify({
               tourId: newBooking.tourId,
@@ -278,7 +288,8 @@ export default function ManageTourBookings() {
 
   const handleViewBookingDetails = async (bookingId) => {
     try {
-      const response = await fetch(`${API_URL}/api/tours/booking/${bookingId}`,{headers:{"x-api-key": process.env.REACT_APP_API_KEY}});
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${API_URL}/api/tours/booking/${bookingId}`,{headers:{"x-api-key": process.env.REACT_APP_API_KEY, "Authorization": `Bearer ${token}`}});
       if (!response.ok) {
         throw new Error('Failed to fetch booking details');
       }
