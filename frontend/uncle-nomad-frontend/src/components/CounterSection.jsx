@@ -12,8 +12,8 @@ const CounterSection = () => {
           />
         </div>
         <div className="w-full md:w-1/2 flex flex-col justify-center p-6 bg-white bg-opacity-70 rounded-lg shadow-lg">
-          <h2 className="text-2xl font-bold text-gray-800">About Our Tours</h2>
-          <p className="text-gray-600 mt-2">
+          <h2 className="text-2xl font-bold text-gray-800" style={{'fontFamily': 'Poppins'}}>About Our Tours</h2>
+          <p className="text-gray-600 mt-2" style={{'fontFamily': 'Poppins'}}>
             We have been providing unforgettable travel experiences for years,
             ensuring every adventure is unique and filled with excitement.
           </p>

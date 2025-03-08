@@ -29,8 +29,8 @@ const TourCard = ({ tour, onClick, handleBookNowClick, setSelectedTour, handleTo
       </div>
 
       <div className="p-4 flex flex-col flex-grow">
-        <h3 className="text-xl font-bold mb-2 line-clamp-2">{tour.title}</h3>
-        <p className="text-gray-600 text-sm line-clamp-3 mb-4 flex-grow">{tour.description}</p>
+        <h3 className="text-xl font-bold mb-2 line-clamp-2" style={{'fontFamily': 'Poppins'}}>{tour.title}</h3>
+        <p className="text-gray-600 text-sm line-clamp-3 mb-4 flex-grow" style={{'fontFamily': 'Poppins'}}>{tour.description}</p>
         
         <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
           <div className="flex items-center">
@@ -43,7 +43,7 @@ const TourCard = ({ tour, onClick, handleBookNowClick, setSelectedTour, handleTo
           </div>
         </div>
 
-        <Button onClick={handleButtonClick} className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white hover:opacity-90 mt-6 py-3 rounded-lg shadow-lg">
+        <Button onClick={handleButtonClick} style={{'fontFamily': 'Poppins'}} className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white hover:opacity-90 mt-6 py-3 rounded-lg shadow-lg">
           Book Now
         </Button>
       </div>

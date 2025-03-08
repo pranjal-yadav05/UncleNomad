@@ -1,5 +1,5 @@
 import { Compass, Mountain, Users, User } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useRef } from "react";
 
 const cardData = [
   {
@@ -30,36 +30,7 @@ const cardData = [
 ];
 
 export default function AboutSection() {
-  const [activeIndex, setActiveIndex] = useState(0);
   const carouselRef = useRef(null);
-
-  // Automatic animation every 4 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveIndex((prevIndex) => (prevIndex + 1) % cardData.length);
-    }, 4000); // Change every 4 seconds
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // Scroll to the active card and center it on small screens
-  useEffect(() => {
-    if (carouselRef.current) {
-      const container = carouselRef.current;
-      const activeCard = container.children[activeIndex];
-
-      if (activeCard) {
-        const containerWidth = container.offsetWidth;
-        const cardWidth = activeCard.offsetWidth;
-        const scrollLeft = activeCard.offsetLeft - (containerWidth - cardWidth) / 2;
-
-        container.scrollTo({
-          left: scrollLeft,
-          behavior: "smooth",
-        });
-      }
-    }
-  }, [activeIndex]);
 
   return (
     <section id="about" className="bg-brand-purple bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white py-16">
@@ -67,19 +38,19 @@ export default function AboutSection() {
         <h2 className="text-4xl font-extrabold mb-12 text-center">About Us</h2>
 
         {/* Scrollable Row on Small Screens, Grid on Large Screens */}
-        <div className="relative py-8">
-          <div
+        <div className="relative py-8 flex lg:grid lg:grid-cols-4 gap-6">
+          {/* <div
             ref={carouselRef}
             className="flex lg:grid lg:grid-cols-4 gap-6 overflow-x-auto scroll-smooth snap-x scrollbar-hide pb-8 px-2 sm:justify-start lg:place-items-center"
-          >
+          > */}
             {cardData.map((card, index) => (
-              <Card key={index} {...card} isActive={index === activeIndex} />
+              <Card key={index} {...card} />
             ))}
-          </div>
+          {/* </div> */}
         </div>
 
         {/* Description */}
-        <p className="text-center mt-6 text-white/80 max-w-2xl mx-auto text-lg px-4">
+        <p className="text-center mt-6 text-white/80 max-w-2xl mx-auto text-xl px-4" style={{'fontFamily': 'Poppins'}}>
           Whether you're a solo backpacker, a group traveler, or someone looking for a personalized trip, we help you
           explore the beautiful, unexplored parts of the world effortlessly.
         </p>
@@ -88,14 +59,12 @@ export default function AboutSection() {
   );
 }
 
-function Card({ title, description, imageSrc, icon: Icon, isActive }) {
+function Card({ title, description, imageSrc, icon: Icon }) {
   return (
     <div
-      className={`bg-white/10 rounded-xl shadow-lg transition-all duration-1000 transform flex flex-col 
-      ${isActive ? "opacity-100 scale-110 z-10" : "opacity-70 scale-95 z-0"} flex-shrink-0 w-[300px] h-[380px] snap-start`}
+      className="bg-white/10 rounded-xl shadow-lg transition-transform duration-300 hover:scale-110 hover:z-10 flex flex-col flex-shrink-0 w-[300px] h-[380px] snap-start"
       style={{
-        transition: "transform 0.8s ease-in-out, opacity 0.8s ease-in-out",
-        boxShadow: isActive ? "0 4px 20px rgba(0, 0, 0, 0.2)" : "0 10px 20px rgba(0, 0, 0, 0.2)",
+        boxShadow: "0 4px 20px rgba(0, 0, 0, 0.2)",
       }}
     >
       {/* Image with Overlay */}
@@ -113,7 +82,7 @@ function Card({ title, description, imageSrc, icon: Icon, isActive }) {
 
       {/* Card Content */}
       <div className="p-4 flex-grow flex items-center">
-        <p className="text-white/80 text-sm text-center w-full">{description}</p>
+        <p className="text-white/80 text-base text-center w-full" style={{'fontFamily': 'Poppins'}}>{description}</p>
       </div>
     </div>
   );
