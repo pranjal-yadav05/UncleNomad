@@ -77,7 +77,7 @@ const TourDetailsPage = () => {
           <div className="text-red-500 text-5xl mb-4">!</div>
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Something went wrong</h2>
           <p className="text-gray-600 mb-6">{error}</p>
-          <Button onClick={() => navigate(-1)} className="bg-blue-600 hover:bg-blue-700 text-white">
+          <Button onClick={() => navigate('/',{ state : { section : 'tours' } })} className="bg-blue-600 hover:bg-blue-700 text-white">
             Go Back
           </Button>
         </div>

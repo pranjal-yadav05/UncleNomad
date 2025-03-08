@@ -32,19 +32,40 @@ export default function TravelPage() {
 
   const location = useLocation();
 
+  useEffect(()=>{
+    window.scrollTo(0,0)
+  },[])
+
   useEffect(() => {
     if (location.state?.section) {
-      setTimeout(() => {
+      const scrollToSection = () => {
         const section = document.getElementById(location.state.section);
         if (section) {
-          const offset = 120;
-          const elementPosition = section.getBoundingClientRect().top;
-          const offsetPosition = elementPosition + window.pageYOffset - offset;
+          const offset = 120; // Adjust based on header height
+          const elementPosition = section.getBoundingClientRect().top + window.scrollY;
+          const offsetPosition = elementPosition - offset;
           window.scrollTo({ top: offsetPosition, behavior: "smooth" });
         }
-      }, 100); // Timeout ensures the DOM has loaded
+      };
+  
+      // Try immediately
+      scrollToSection();
+  
+      // If not found, observe until it's rendered
+      const observer = new MutationObserver(() => {
+        if (document.getElementById(location.state.section)) {
+          scrollToSection();
+          observer.disconnect();
+        }
+      });
+  
+      observer.observe(document.body, { childList: true, subtree: true });
+  
+      // Cleanup
+      return () => observer.disconnect();
     }
   }, [location]);
+  
 
   // Your existing useEffect and functions
   useEffect(() => {
@@ -97,11 +118,14 @@ export default function TravelPage() {
           }}
         >
           <div className="absolute inset-0 bg-black opacity-50"></div>
+          <div id='tours'>
           <TourSection
             setIsBookingModalOpen={setIsBookingModalOpen} 
             isBookingModalOpen={isBookingModalOpen} 
             tours={tours}
           />
+          </div>
+          
           <CounterSection/>
           </div>
         </AnimatedSection>

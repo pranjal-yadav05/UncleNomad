@@ -5,6 +5,8 @@ import https from 'https';
 import streamifier from 'streamifier';
 import { v2 as cloudinaryV2 } from 'cloudinary';
 import mongoose from 'mongoose';
+import crypto from "crypto"
+import Razorpay from "razorpay"
 
 // Configure Cloudinary
 cloudinaryV2.config({
@@ -332,116 +334,66 @@ export const verifyTourBooking = async (req, res) => {
 // Initiate tour payment
 export const initiatePayment = async (req, res) => {
   try {
-    const { tourId, bookingId, amount, email, phone, guestName, groupSize, specialRequests } = req.body;
-    const totalAmount = amount;
+    const { tourId, bookingId, amount, email, phone, guestName, groupSize, specialRequests } = req.body
+    const totalAmount = amount
 
     // Validate required fields
     if (!tourId || !bookingId || !amount) {
-      return res.status(400).json({ message: 'Missing required fields' });
+      return res.status(400).json({ message: "Missing required fields" })
     }
 
-    // Find the existing booking instead of creating a new one
-    const booking = await TourBooking.findById(bookingId);
-    
+    // Find the existing booking
+    const booking = await TourBooking.findById(bookingId)
+
     if (!booking) {
-      return res.status(404).json({ message: 'Booking not found' });
+      return res.status(404).json({ message: "Booking not found" })
     }
-    
-    if (booking.status !== 'PENDING' || booking.paymentStatus !== 'PENDING') {
-      return res.status(400).json({ message: 'Booking is not in PENDING state' });
+
+    if (booking.status !== "PENDING" || booking.paymentStatus !== "PENDING") {
+      return res.status(400).json({ message: "Booking is not in PENDING state" })
     }
 
     // Validate that amount matches the booking's totalPrice
     if (Math.abs(booking.totalPrice - totalAmount) > 0.01) {
-      return res.status(400).json({ message: 'Amount mismatch with booking total price' });
+      return res.status(400).json({ message: "Amount mismatch with booking total price" })
     }
-    
-    // Validate Paytm configuration
-    const config = validatePaytmConfig()
 
-    // Generate a unique order ID using booking ID
-    const orderId = `TOUR_ORDER_${Date.now()}_${booking._id}`
+    // Validate Razorpay configuration
+    const config = validateRazorpayConfig()
 
-    // Prepare parameters for Paytm
-    const paytmParams = {
-      body: {
-        requestType: "Payment",
-        mid: config.PAYTM_MID,
-        websiteName: config.PAYTM_WEBSITE,
-        orderId: orderId,
-        callbackUrl: config.PAYTM_CALLBACK_URL,
-        txnAmount: {
-          value: booking.totalPrice.toString(),
-          currency: "INR",
-        },
-        userInfo: {
-          custId: booking.email,
-        },
+    // Initialize Razorpay instance
+    const razorpay = new Razorpay({
+      key_id: config.RAZORPAY_KEY_ID,
+      key_secret: config.RAZORPAY_KEY_SECRET,
+    })
+
+    // Create Razorpay order
+    const orderOptions = {
+      amount: Math.round(booking.totalPrice * 100), // Razorpay expects amount in paise
+      currency: "INR",
+      receipt: `booking_${booking._id}`,
+      notes: {
+        bookingId: booking._id.toString(),
+        tourId: tourId,
+        email: email,
+        phone: phone,
+        guestName: guestName,
       },
     }
 
-    // Generate checksum
-    const checksum = await PaytmChecksum.generateSignature(JSON.stringify(paytmParams.body), config.PAYTM_MERCHANT_KEY)
-
-    paytmParams.head = {
-      signature: checksum,
-    }
-
-    // Make API call to Paytm
-    const response = await new Promise((resolve, reject) => {
-      const post_data = JSON.stringify(paytmParams)
-      const options = {
-        hostname: process.env.PAYTM_HOSTNAME,
-        port: 443,
-        path: `/theia/api/v1/initiateTransaction?mid=${config.PAYTM_MID}&orderId=${orderId}`,
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Content-Length": post_data.length,
-        },
-      }
-
-      const req = https.request(options, (response) => {
-        let data = ""
-        response.on("data", (chunk) => {
-          data += chunk
-        })
-        response.on("end", () => {
-          try {
-            resolve(JSON.parse(data))
-          } catch (e) {
-            reject(new Error("Failed to parse payment gateway response"))
-          }
-        })
-      })
-
-      req.on("error", (error) => {
-        reject(new Error(`Payment gateway connection error: ${error.message}`))
-      })
-
-      req.write(post_data)
-      req.end()
-    })
+    const order = await razorpay.orders.create(orderOptions)
 
     // Update booking with payment initiation details
     await TourBooking.findByIdAndUpdate(booking._id, {
-      paymentReference: orderId,
-      paymentStatus: 'INITIATED'
-    });
-
-    // Store booking ID in session for callback (though not needed anymore with our DB-based approach)
-    req.session.tempBooking = {
-      bookingId: booking._id,
-      orderId: orderId
-    };
+      paymentReference: order.id,
+      paymentStatus: "INITIATED",
+    })
 
     res.json({
       status: "SUCCESS",
       data: {
-        orderId: orderId,
-        txnToken: response.body.txnToken,
+        orderId: order.id,
         amount: booking.totalPrice,
-        callbackUrl: config.PAYTM_CALLBACK_URL,
       },
     })
   } catch (error) {
@@ -453,183 +405,117 @@ export const initiatePayment = async (req, res) => {
   }
 }
 
-// Verify tour payment
 export const verifyTourPayment = async (req, res) => {
   try {
-    const { orderId, tourId } = req.body;
-    
-    // Find booking in database by payment reference instead of using session
-    const booking = await TourBooking.findOne({ 
+    const { orderId, bookingId, tourId, razorpay_payment_id, razorpay_order_id, razorpay_signature } = req.body
+
+    // Find booking in database by payment reference
+    const booking = await TourBooking.findOne({
       paymentReference: orderId,
       status: "PENDING",
-      paymentStatus: "INITIATED"
-    });
+      paymentStatus: "INITIATED",
+    })
 
     if (!booking) {
-      return res.status(400).json({ message: 'Invalid booking reference or booking not found' });
+      return res.status(400).json({ message: "Invalid booking reference or booking not found" })
     }
-    
-    // Validate Paytm configuration
-    const config = validatePaytmConfig();
-    
-    // Prepare parameters for status check
-    const paytmParams = {
-      body: {
-        mid: config.PAYTM_MID,
-        orderId: orderId,
-      },
-    };
-    
-    // Generate checksum
-    const checksum = await PaytmChecksum.generateSignature(
-      JSON.stringify(paytmParams.body),
-      config.PAYTM_MERCHANT_KEY
-    );
-    
-    paytmParams.head = {
-      signature: checksum,
-    };
-    
-    // Make API call to Paytm
-    const response = await new Promise((resolve, reject) => {
-      const post_data = JSON.stringify(paytmParams);
-      const options = {
-        hostname: process.env.PAYTM_HOSTNAME,
-        port: 443,
-        path: `/v3/order/status`,
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Content-Length": post_data.length,
-        },
-      };
-      
-      const req = https.request(options, (response) => {
-        let data = "";
-        response.on("data", (chunk) => {
-          data += chunk;
-        });
-        
-        response.on("end", () => {
-          try {
-            resolve(JSON.parse(data));
-          } catch (e) {
-            reject(new Error("Failed to parse payment gateway response"));
-          }
-        });
-      });
-      
-      req.on("error", (error) => {
-        reject(new Error(`Payment gateway connection error: ${error.message}`));
-      });
-      
-      req.write(post_data);
-      req.end();
-    });
-    
-    // Process the response
-    if (response.body.resultInfo.resultStatus === "TXN_SUCCESS") {
-      // Update booking status directly (no need to find it again since we already have it)
-      const session = await mongoose.startSession();
-      session.startTransaction();
 
+    // Verify signature
+    const generatedSignature = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+      .update(razorpay_order_id + "|" + razorpay_payment_id)
+      .digest("hex")
+
+    const isSignatureValid = generatedSignature === razorpay_signature
+
+    if (!isSignatureValid) {
+      // Update booking status as failed
+      await TourBooking.findByIdAndUpdate(booking._id, {
+        paymentStatus: "FAILED",
+        status: "PAYMENT_FAILED",
+        paymentError: "Payment signature verification failed",
+      })
+
+      return res.status(400).json({
+        status: "ERROR",
+        message: "Payment verification failed: Invalid signature",
+      })
+    }
+
+    // If signature is valid, update booking status
+    const session = await mongoose.startSession()
+    session.startTransaction()
+
+    try {
       const updatedBooking = await TourBooking.findByIdAndUpdate(
         booking._id,
         {
           paymentStatus: "PAID",
           status: "CONFIRMED",
           paymentDate: new Date(),
-          paymentAmount: response.body.txnAmount,
-          paymentReference: response.body.txnId,
+          paymentAmount: booking.totalPrice,
+          paymentReference: razorpay_payment_id,
         },
-        { new: true }
-      );
+        { new: true, session },
+      )
 
-      
       if (!updatedBooking) {
-        return res.status(404).json({
-          status: "ERROR",
-          message: "Booking not found during update",
-        });
+        throw new Error("Booking not found during update")
       }
 
       const updatedTour = await Tour.findByIdAndUpdate(
         tourId,
         { $inc: { bookedSlots: updatedBooking.groupSize } }, // Increase booked slots
-        { new: true, session }
-      );
+        { new: true, session },
+      )
 
       if (!updatedTour) {
-        throw new Error("Tour not found while updating bookedSlots");
+        throw new Error("Tour not found while updating bookedSlots")
       }
 
-      await session.commitTransaction();
-      session.endSession();
+      await session.commitTransaction()
 
-      
       return res.json({
         status: "SUCCESS",
         message: "Payment verified successfully",
         data: {
-          orderId: orderId,
-          txnId: response.body.txnId,
-          txnAmount: response.body.txnAmount,
-          status: response.body.resultInfo.resultStatus,
-          bankTxnId: response.body.bankTxnId,
-          bookingId: updatedBooking._id
+          orderId: razorpay_order_id,
+          paymentId: razorpay_payment_id,
+          bookingId: updatedBooking._id,
         },
-      });
-    } else {
-      // Update booking status as failed
-      await TourBooking.findByIdAndUpdate(
-        booking._id,
-        {
-          paymentStatus: "FAILED",
-          status: "PAYMENT_FAILED",
-          paymentError: response.body.resultInfo.resultMsg,
-          paymentErrorCode: response.body.resultInfo.resultCode,
-        }
-      );
-      
-      return res.status(400).json({
-        status: "ERROR",
-        message: response.body.resultInfo.resultMsg || "Payment verification failed",
-        data: {
-          orderId: orderId,
-          statusCode: response.body.resultInfo.resultCode,
-          statusMessage: response.body.resultInfo.resultMsg,
-          bookingId: booking._id
-        },
-      });
+      })
+    } catch (error) {
+      await session.abortTransaction()
+      throw error
+    } finally {
+      session.endSession()
     }
   } catch (error) {
-    console.error("Error verifying tour payment:", error);
+    console.error("Error verifying tour payment:", error)
     res.status(500).json({
       status: "ERROR",
       message: error.message || "Failed to verify payment",
-    });
+    })
   }
-};
+}
 
-// Validate Paytm configuration
-const validatePaytmConfig = () => {
+const validateRazorpayConfig = () => {
   const requiredConfig = {
-    PAYTM_MID: process.env.PAYTM_MID,
-    PAYTM_MERCHANT_KEY: process.env.PAYTM_MERCHANT_KEY,
-    PAYTM_WEBSITE: process.env.PAYTM_WEBSITE,
-    PAYTM_CALLBACK_URL: process.env.PAYTM_CALLBACK_URL
-  };
+    RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID,
+    RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET,
+  }
 
   const missingConfig = Object.entries(requiredConfig)
     .filter(([_, value]) => !value)
-    .map(([key]) => key);
+    .map(([key]) => key)
 
   if (missingConfig.length > 0) {
-    throw new Error(`Missing configuration: ${missingConfig.join(', ')}`);
+    throw new Error(`Missing configuration: ${missingConfig.join(", ")}`)
   }
 
-  return requiredConfig;
-};
+  return requiredConfig
+}
+
 
 export const createTourBooking = async (req, res) => {
   const { tourId, groupSize, bookingDate, guestName, email, phone, specialRequests, totalAmount } = req.body

@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react"
 import axios from "axios"
 import { Button } from "./ui/button"
+import { loadScript } from "../utils/razorpay-utils"
 
 const TourPaymentForm = ({
   paymentData,
@@ -70,141 +71,102 @@ const TourPaymentForm = ({
           },
         )
 
-        if (!paymentResponse.data.data.txnToken) {
-          throw new Error("Failed to get transaction token")
+        if (!paymentResponse.data.data.orderId) {
+          throw new Error("Failed to get order ID")
         }
 
-        if (!process.env.REACT_APP_PAYTM_MID) {
-          throw new Error("Paytm Merchant ID (MID) is not defined")
+        // Load Razorpay script
+        const res = await loadScript("https://checkout.razorpay.com/v1/checkout.js")
+        if (!res) {
+          throw new Error("Razorpay SDK failed to load")
         }
 
-        const config = {
-          root: "",
-          flow: "DEFAULT",
-          data: {
-            orderId: paymentResponse.data.data.orderId,
-            token: paymentResponse.data.data.txnToken,
-            tokenType: "TXN_TOKEN",
-            amount: paymentResponse.data.data.amount,
-          },
+        setIsLoading(false)
 
-          handler: {
-            notifyMerchant: (eventName, data) => {
-              if (eventName === "APP_CLOSED") {
-                // Only handle if we haven't already processed a success
-                if (paymentStatus !== "success") {
-                  onPaymentFailure?.("Payment window closed")
-                }
+        // Configure Razorpay options
+        const options = {
+          key: process.env.REACT_APP_RAZORPAY_KEY_ID,
+          amount: paymentResponse.data.data.amount * 100, // Razorpay expects amount in paise
+          currency: "INR",
+          name: "Uncle Nomad",
+          description: "Tour Booking Payment",
+          order_id: paymentResponse.data.data.orderId,
+          handler: async (response) => {
+            try {
+              // Show checking payment modal
+              setIsCheckingPayment(true)
+              if (setIsCheckingOpen) {
+                setIsCheckingOpen(true)
               }
-            },
-            transactionStatus: async (response) => {
-              try {
-                // Close the payment gateway immediately regardless of status
-                if (window.Paytm && window.Paytm.CheckoutJS) {
-                  try {
-                    window.Paytm.CheckoutJS.close()
-                    console.log("Payment gateway closed")
-                  } catch (closeError) {
-                    console.error("Error closing payment gateway:", closeError)
-                  }
-                }
 
-                // Show checking payment modal
-                setIsCheckingPayment(true)
-                if (setIsCheckingOpen) {
-                  setIsCheckingOpen(true)
-                }
+              setPaymentStatus("processing")
 
-                setPaymentStatus("processing")
+              const token = localStorage.getItem("authToken")
+              const verificationResponse = await axios.post(
+                `${process.env.REACT_APP_API_URL}/api/tours/${paymentData.tourId}/verify-payment`,
+                {
+                  orderId: paymentResponse.data.data.orderId,
+                  bookingId: paymentData.bookingId,
+                  tourId: paymentData.tourId,
+                  paymentStatus: "SUCCESS",
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_signature: response.razorpay_signature,
+                },
+                {
+                  headers: {
+                    "x-api-key": process.env.REACT_APP_API_KEY,
+                    Authorization: `Bearer ${token}`,
+                  },
+                },
+              )
 
-                if (response.STATUS === "TXN_SUCCESS") {
-                  const token = localStorage.getItem("authToken")
-                  const verificationResponse = await axios.post(
-                    `${process.env.REACT_APP_API_URL}/api/tours/${paymentData.tourId}/verify-payment`,
-                    {
-                      orderId: response.ORDERID,
-                      bookingId: paymentData.bookingId,
-                      tourId: paymentData.tourId,
-                      paymentStatus: "SUCCESS",
-                    },
-                    {
-                      headers: {
-                        "x-api-key": process.env.REACT_APP_API_KEY,
-                        Authorization: `Bearer ${token}`,
-                      },
-                    },
-                  )
+              // Hide checking payment modal
+              setIsCheckingPayment(false)
+              if (setIsCheckingOpen) {
+                setIsCheckingOpen(false)
+              }
 
-                  // Hide checking payment modal
-                  setIsCheckingPayment(false)
-                  if (setIsCheckingOpen) {
-                    setIsCheckingOpen(false)
-                  }
+              // Notify success
+              setPaymentStatus("success")
+              onPaymentSuccess?.(response)
+            } catch (error) {
+              console.error("Error in payment verification:", error)
 
-                  // Notify success
-                  setPaymentStatus("success")
-                  onPaymentSuccess?.(response)
-                } else {
-                  // Hide checking payment modal
-                  setIsCheckingPayment(false)
-                  if (setIsCheckingOpen) {
-                    setIsCheckingOpen(false)
-                  }
+              // Hide checking payment modal
+              setIsCheckingPayment(false)
+              if (setIsCheckingOpen) {
+                setIsCheckingOpen(false)
+              }
 
-                  // Trigger the failure callback
-                  const errorMessage = "Payment failed: " + (response.RESPMSG || "Unknown error")
-                  setPaymentStatus("failed")
-                  onPaymentFailure?.(errorMessage)
-                }
-              } catch (error) {
-                console.error("Error in transaction status handler:", error)
-
-                // Hide checking payment modal
-                setIsCheckingPayment(false)
-                if (setIsCheckingOpen) {
-                  setIsCheckingOpen(false)
-                }
-
-                onPaymentFailure?.(error.message)
+              onPaymentFailure?.(error.message)
+            }
+          },
+          prefill: {
+            name: bookingForm.guestName,
+            email: bookingForm.email,
+            contact: bookingForm.phone,
+          },
+          notes: {
+            bookingId: paymentData.bookingId,
+            tourId: paymentData.tourId,
+          },
+          theme: {
+            color: "#3399cc",
+          },
+          modal: {
+            ondismiss: () => {
+              // Only handle if we haven't already processed a success
+              if (paymentStatus !== "success") {
+                onPaymentFailure?.("Payment window closed")
               }
             },
           },
-          merchant: {
-            mid: process.env.REACT_APP_PAYTM_MID,
-            redirect: false,
-          },
-          env: {
-            stage: process.env.NODE_ENV === "production" ? "PROD" : "STAGE",
-          },
         }
 
-        const script = document.createElement("script")
-        script.src = `https://${process.env.REACT_APP_PAYTM_HOSTNAME}/merchantpgpui/checkoutjs/merchants/${process.env.REACT_APP_PAYTM_MID}.js`
-        script.async = true
-
-        script.onload = () => {
-          if (!window.Paytm) {
-            throw new Error("Paytm SDK not loaded")
-          }
-
-          window.Paytm.CheckoutJS.onLoad(() => {
-            window.Paytm.CheckoutJS.init(config)
-              .then(() => {
-                if (isSubscribed) setIsLoading(false)
-                window.Paytm.CheckoutJS.invoke()
-              })
-              .catch((error) => {
-                console.error("Paytm initialization failed:", error)
-                throw new Error("Failed to initialize Paytm: " + error.message)
-              })
-          })
-        }
-
-        script.onerror = () => {
-          throw new Error("Failed to load Paytm script")
-        }
-
-        document.body.appendChild(script)
+        // Create Razorpay instance and open payment form
+        const razorpay = new window.Razorpay(options)
+        razorpay.open()
       } catch (error) {
         if (isSubscribed) {
           setError(error.message)
@@ -219,10 +181,6 @@ const TourPaymentForm = ({
 
     return () => {
       isSubscribed = false
-      const script = document.querySelector(`script[src*="${process.env.REACT_APP_PAYTM_HOSTNAME}"]`)
-      if (script) {
-        script.remove()
-      }
     }
   }, [paymentData, bookingForm, onPaymentSuccess, onPaymentFailure, onClose, setIsCheckingOpen, paymentStatus])
 

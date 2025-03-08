@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/
 import { useNavigate } from "react-router-dom"
 import DisclaimerDialog from "./DisclaimerDialog"
 import { Loader2 } from "lucide-react"
-import PaytmPaymentForm from "../components/PaytmPaymentForm"
+import RazorpayPaymentForm from "../components/RazorpayPaymentForm"
 import CheckingPaymentModal from "./CheckingPaymentModal"
 import FailedTransactionModal from "../modals/FailedTransactionModal"
 
@@ -594,7 +594,7 @@ export default function BookingModal({
     if (!isPaymentActive || !paymentData) return null
 
     return (
-      <PaytmPaymentForm
+      <RazorpayPaymentForm
         setChecking={setChecking}
         closeModal={onClose}
         setIsBookingConfirmed={setIsBookingConfirmed}
