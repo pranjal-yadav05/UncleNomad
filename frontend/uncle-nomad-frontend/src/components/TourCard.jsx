@@ -3,20 +3,19 @@ import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Calendar, MapPin } from 'lucide-react';
 
-const TourCard = ({ tour, onClick, handleBookNowClick, setSelectedTour, handleTourClick }) => {
+const TourCard = ({ tour, onClick, handleTourClick }) => {
   const handleButtonClick = (event) => {
     event.stopPropagation();
-    // setSelectedTour(tour);
-    // handleBookNowClick();
-    handleTourClick(tour)
+    handleTourClick(tour);
   };
 
   return (
     <Card
-      className="w-[300px] h-[400px] flex flex-col bg-white shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer rounded-2xl overflow-hidden group"
+      className="w-[300px] flex flex-col bg-white shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer rounded-2xl overflow-hidden group"
       onClick={onClick}
     >
-      <div className="w-full h-48 overflow-hidden relative">
+      {/* Fixed Image Height */}
+      <div className="w-full h-48 flex-shrink-0 overflow-hidden relative">
         <img
           src={tour.images[0] || "/placeholder.svg"}
           alt={tour.title}
@@ -28,10 +27,16 @@ const TourCard = ({ tour, onClick, handleBookNowClick, setSelectedTour, handleTo
         </span>
       </div>
 
-      <div className="p-4 flex flex-col flex-grow">
-        <h3 className="text-xl font-bold mb-2 line-clamp-2" style={{'fontFamily': 'Poppins'}}>{tour.title}</h3>
-        <p className="text-gray-600 text-sm line-clamp-3 mb-4 flex-grow" style={{'fontFamily': 'Poppins'}}>{tour.description}</p>
-        
+      {/* Content with Fixed Height */}
+      <div className="p-4 flex flex-col h-full">
+        <h3 className="text-xl font-bold min-h-20 line-clamp-2" style={{ fontFamily: 'Poppins' }}>
+          {tour.title}
+        </h3>
+        <p className="text-gray-600 text-sm min-h-16 line-clamp-3 flex-grow" style={{ fontFamily: 'Poppins' }}>
+          {tour.description}
+        </p>
+
+        {/* Duration & Location */}
         <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
           <div className="flex items-center">
             <Calendar className="w-4 h-4 mr-1" />
@@ -43,7 +48,12 @@ const TourCard = ({ tour, onClick, handleBookNowClick, setSelectedTour, handleTo
           </div>
         </div>
 
-        <Button onClick={handleButtonClick} style={{'fontFamily': 'Poppins'}} className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white hover:opacity-90 mt-6 py-3 rounded-lg shadow-lg">
+        {/* Book Now Button - Stays at Bottom */}
+        <Button
+          onClick={handleButtonClick}
+          className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white hover:opacity-90 py-3 rounded-lg shadow-lg"
+          style={{ fontFamily: 'Poppins' }}
+        >
           Book Now
         </Button>
       </div>

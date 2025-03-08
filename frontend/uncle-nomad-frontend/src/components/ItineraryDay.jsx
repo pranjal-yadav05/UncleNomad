@@ -4,20 +4,16 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 const ItineraryDay = ({ day, isLast }) => {
   const [expanded, setExpanded] = useState(false);
 
-  // If day is a string, convert it to an object format
-  const dayData = typeof day === 'string' 
-    ? { title: `Day ${day}`, description: 'Activities for this day will be updated soon.' } 
-    : day;
-
   const {
+    day: dayNumber = '',
     title = '',
-    description = '',
+    description = 'Activities for this day will be updated soon.',
     activities = '',
-    meals = [],
-    accommodation = ''
-  } = dayData;
+    accommodation = '',
+    meals = []
+  } = day;
 
-  // ✅ Convert comma-separated activities string into an array
+  // Convert activities to an array if it’s a string
   const activityList = typeof activities === 'string' 
     ? activities.split(',').map(activity => activity.trim()) 
     : activities;
@@ -27,12 +23,13 @@ const ItineraryDay = ({ day, isLast }) => {
       {!isLast && (
         <div className="absolute left-6 top-14 bottom-0 border-l-2 border-dashed border-gray-300 z-0"></div>
       )}
-      
+
       <div className="relative z-10 flex">
-        <div className="flex-shrink-0 w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold">
-          {parseInt(title.replace(/\D/g, '')) || ''}
+        {/* Blue Dot with Day Number */}
+        <div className="flex-shrink-0 w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
+          {dayNumber}
         </div>
-        
+
         <div className="ml-6 flex-grow">
           <div 
             className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer"
@@ -46,9 +43,9 @@ const ItineraryDay = ({ day, isLast }) => {
             </div>
             
             <p className="text-gray-700 mt-2 line-clamp-2">
-              {description || 'Enjoy a day full of exciting activities and experiences.'}
+              {description}
             </p>
-            
+
             {expanded && (
               <div className="mt-4 space-y-4 pt-4 border-t border-gray-200">
                 {activityList.length > 0 && (
@@ -61,14 +58,14 @@ const ItineraryDay = ({ day, isLast }) => {
                     </ul>
                   </div>
                 )}
-                
-                {meals && meals.length > 0 && (
+
+                {meals.length > 0 && (
                   <div>
                     <h4 className="font-medium text-gray-800 mb-2">Meals:</h4>
                     <p className="text-gray-700">{meals.join(', ')}</p>
                   </div>
                 )}
-                
+
                 {accommodation && (
                   <div>
                     <h4 className="font-medium text-gray-800 mb-2">Accommodation:</h4>

@@ -148,7 +148,7 @@ export default function ProfilePage() {
     <>
       <Header />
       <div className="max-w-screen min-h-screen mx-auto px-4 sm:px-6 flex justify-center items-center bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500">
-        <div className="grid grid-cols-1 md:grid-cols-3 mt-10 gap-6 mb-20">
+        <div className="grid grid-cols-1 md:grid-cols-3 mt-10 gap-6 mb-20 w-full max-w-6xl">
           {/* Profile Card */}
           <Card className="md:col-span-1 max-h-fit bg-white">
             <CardHeader className="pb-3">
@@ -180,27 +180,37 @@ export default function ProfilePage() {
 
           {/* Bookings Section */}
           <div className="md:col-span-2 bg-white">
-            <Card>
+            <Card className="h-full">
               <CardHeader>
                 <CardTitle>Your Bookings</CardTitle>
                 <CardDescription>View your room and tour bookings</CardDescription>
               </CardHeader>
               <CardContent>
                 <Tabs defaultValue="rooms" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2 mb-4">
-                    <TabsTrigger value="rooms">Room Bookings</TabsTrigger>
-                    <TabsTrigger value="tours">Tour Bookings</TabsTrigger>
+                  <TabsList className="grid w-full grid-cols-2 mb-4 border rounded-lg overflow-hidden">
+                    <TabsTrigger 
+                      value="rooms" 
+                      className="py-2 px-4 text-gray-600 font-medium transition-all data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+                    >
+                      Room Bookings
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="tours" 
+                      className="py-2 px-4 text-gray-600 font-medium transition-all data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+                    >
+                      Tour Bookings
+                    </TabsTrigger>
                   </TabsList>
 
                   {/* Room Bookings Tab */}
-                  <TabsContent value="rooms">
+                  <TabsContent value="rooms" className="w-full mt-4">
                     {loading ? (
                       <div className="space-y-3">
                         <Skeleton className="h-24 w-full" />
                         <Skeleton className="h-24 w-full" />
                       </div>
                     ) : roomBookings.length > 0 ? (
-                      <div className="space-y-4 max-h-[300px] overflow-y-auto">
+                      <div className="space-y-4 max-h-[500px] overflow-y-auto w-full">
                         {roomBookings.map((booking, index) => (
                           <RoomBookingCard
                             key={booking._id}
@@ -211,7 +221,7 @@ export default function ProfilePage() {
                         ))}
                       </div>
                     ) : (
-                      <div className="text-center py-8">
+                      <div className="text-center py-8 w-full">
                         <CalendarDays className="mx-auto h-12 w-12 text-muted-foreground mb-3" />
                         <h3 className="text-lg font-medium">No room bookings</h3>
                         <p className="text-muted-foreground mt-1">You don't have any room bookings yet.</p>
@@ -223,14 +233,14 @@ export default function ProfilePage() {
                   </TabsContent>
 
                   {/* Tour Bookings Tab */}
-                  <TabsContent value="tours">
+                  <TabsContent value="tours" className="w-full mt-4">
                     {loading ? (
                       <div className="space-y-3">
                         <Skeleton className="h-24 w-full" />
                         <Skeleton className="h-24 w-full" />
                       </div>
                     ) : tourBookings.length > 0 ? (
-                      <div className="space-y-4 max-h-[300px] overflow-y-auto">
+                      <div className="space-y-4 max-h-[500px] overflow-y-auto w-full">
                         {tourBookings.map((booking, index) => (
                           <TourBookingCard
                             key={booking._id}
@@ -241,7 +251,7 @@ export default function ProfilePage() {
                         ))}
                       </div>
                     ) : (
-                      <div className="text-center py-8">
+                      <div className="text-center py-8 w-full">
                         <Compass className="mx-auto h-12 w-12 text-muted-foreground mb-3" />
                         <h3 className="text-lg font-medium">No tour bookings</h3>
                         <p className="text-muted-foreground mt-1">You don't have any tour bookings yet.</p>
@@ -265,11 +275,11 @@ export default function ProfilePage() {
 
 function RoomBookingCard({ booking, getStatusColor, formatDate }) {
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden w-full">
       <div className="flex flex-col sm:flex-row">
         
         {/* Image Section */}
-        <div className="sm:w-1/3 bg-muted p-4 flex flex-col justify-center items-center">
+        <div className="sm:w-1/3 bg-muted p-4 flex flex-col justify-center items-center min-w-[150px]">
           {booking.rooms.length > 0 && booking.rooms[0].images.length > 0 ? (
             <img
               src={booking.rooms[0].images[0]} 
@@ -297,7 +307,7 @@ function RoomBookingCard({ booking, getStatusColor, formatDate }) {
         <div className="p-4 sm:w-2/3">
           <div className="flex justify-between items-start mb-3">
             <div>
-              <h3 className="font-semibold">Booking #{booking._id.slice(-6)}</h3>
+              <h3 className="font-semibold truncate">Booking #{booking._id.slice(-6)}</h3>
               <Badge className={getStatusColor(booking.status)} variant="outline">
                 {booking.status}
               </Badge>
@@ -327,7 +337,7 @@ function RoomBookingCard({ booking, getStatusColor, formatDate }) {
 
 function TourBookingCard({ booking, getStatusColor, formatDate }) {
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden w-full">
       <div className="flex flex-col sm:flex-row">
         
         {/* Image Section */}

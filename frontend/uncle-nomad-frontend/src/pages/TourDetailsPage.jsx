@@ -299,7 +299,17 @@ const TourDetailsPage = () => {
                     <div className="mt-8 border-t pt-6">
                       <div className="flex items-center justify-center gap-2 text-gray-600">
                         <span>Have questions?</span>
-                        <a href="#" className="text-blue-600 hover:underline">
+                        <a 
+                          onClick={() => {
+                            const element = document.getElementById("get-in-touch")
+                            if (element) {
+                              element.scrollIntoView({ behavior: "smooth" })
+                            } else {
+                              navigate("/#get-in-touch") // Fallback if section isn't on the current page
+                            }
+                          }} 
+                          className="text-blue-600 hover:underline"
+                        >
                           Contact us
                         </a>
                       </div>
