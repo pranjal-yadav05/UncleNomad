@@ -5,14 +5,14 @@ const cardData = [
   {
     title: "We are Uncle Nomad",
     description: "A travel community dedicated to making travel easy, accessible, and sustainable.",
-    imageSrc: 'nomad.jpeg',
+    imageSrc: "nomad.jpeg",
     icon: Mountain,
   },
   {
     title: "Our Goal",
     description:
       "To provide authentic experiences while ensuring responsible travel practices that benefit both travelers and local communities.",
-    imageSrc: 'goal.jpeg',
+    imageSrc: "goal.jpeg",
     icon: Compass,
   },
   {
@@ -33,24 +33,22 @@ export default function AboutSection() {
   const carouselRef = useRef(null);
 
   return (
-    <section id="about" className="bg-brand-purple bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white py-16">
+    <section id="about" className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white py-16">
       <div className="container mx-auto px-6">
         <h2 className="text-4xl font-extrabold mb-12 text-center">About Us</h2>
 
-        {/* Scrollable Row on Small Screens, Grid on Large Screens */}
-        <div className="relative py-8 flex lg:grid lg:grid-cols-4 gap-6">
-          {/* <div
-            ref={carouselRef}
-            className="flex lg:grid lg:grid-cols-4 gap-6 overflow-x-auto scroll-smooth snap-x scrollbar-hide pb-8 px-2 sm:justify-start lg:place-items-center"
-          > */}
-            {cardData.map((card, index) => (
-              <Card key={index} {...card} />
-            ))}
-          {/* </div> */}
+        {/* Scrollable Row for Small Screens, Grid for Large Screens */}
+        <div
+          ref={carouselRef}
+          className="flex lg:grid lg:grid-cols-4 gap-6 overflow-x-auto scroll-smooth snap-x scrollbar-hide pb-8 px-2"
+        >
+          {cardData.map((card, index) => (
+            <Card key={index} {...card} />
+          ))}
         </div>
 
         {/* Description */}
-        <p className="text-center mt-6 text-white/80 max-w-2xl mx-auto text-xl px-4" style={{'fontFamily': 'Poppins'}}>
+        <p className="text-center mt-6 text-white/80 max-w-2xl mx-auto text-xl px-4 font-poppins">
           Whether you're a solo backpacker, a group traveler, or someone looking for a personalized trip, we help you
           explore the beautiful, unexplored parts of the world effortlessly.
         </p>
@@ -82,7 +80,7 @@ function Card({ title, description, imageSrc, icon: Icon }) {
 
       {/* Card Content */}
       <div className="p-4 flex-grow flex items-center">
-        <p className="text-white/80 text-base text-center w-full" style={{'fontFamily': 'Poppins'}}>{description}</p>
+        <p className="text-white/80 text-base text-center w-full font-poppins">{description}</p>
       </div>
     </div>
   );
