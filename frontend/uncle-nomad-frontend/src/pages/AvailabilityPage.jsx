@@ -7,7 +7,7 @@ import AvailableRooms from "../components/AvailableRooms"
 
 const AvailabilityPage = ()=>{
     useEffect(()=>{
-        window.scroll(0,0)
+        window.scrollTo(0,0)
     },[])
 
     return (

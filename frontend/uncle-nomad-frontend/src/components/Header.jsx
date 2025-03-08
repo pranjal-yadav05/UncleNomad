@@ -16,41 +16,59 @@ const Header = () => {
 
   // Check authentication status
   useEffect(() => {
-    const checkAuth = () => {
-      const authToken = localStorage.getItem("authToken")
-      const storedUserName = localStorage.getItem("userName")
-
+    const checkAuth = async () => {
+      const authToken = localStorage.getItem("authToken");
+      const storedUserName = localStorage.getItem("userName");
+  
       if (authToken) {
-        // Check if the token is expired
-        const isTokenExpired = checkTokenExpiration(authToken)
-
+        // Check if the token is expired locally
+        const isTokenExpired = checkTokenExpiration(authToken);
+  
         if (isTokenExpired) {
-          // If token is expired, log the user out
-          localStorage.removeItem("authToken")
-          localStorage.removeItem("userName")
-          setIsAuthenticated(false)
-          setUserName("")
-        } else {
-          // If token is valid, set the user as authenticated
-          setIsAuthenticated(true)
-          setUserName(storedUserName || "")
+          console.warn("Token expired, logging out.");
+          handleLogout();
+          return;
+        }
+  
+        try {
+          // Validate token with the backend
+          const response = await fetch(`${process.env.REACT_APP_API_URL}/api/token/validate-token`, {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+              "Content-Type": "application/json",
+              'x-api-key': process.env.REACT_APP_API_KEY
+            },
+          });
+  
+          const data = await response.json();
+  
+          if (!response.ok) {
+            console.warn("Token invalid, logging out:", data.message);
+            handleLogout();
+          } else {
+            setIsAuthenticated(true);
+            setUserName(storedUserName || "");
+          }
+        } catch (error) {
+          console.error("Error validating token:", error);
+          handleLogout(); // Logout on request failure
         }
       } else {
-        setIsAuthenticated(false)
-        setUserName("")
+        setIsAuthenticated(false);
+        setUserName("");
       }
-    }
-
-    checkAuth() // Run on mount
-
-    // Listen for changes to authentication status in other windows/tabs
-    window.addEventListener("storage", checkAuth)
-
+    };
+  
+    checkAuth(); // Run on mount
+  
+    window.addEventListener("storage", checkAuth);
+  
     return () => {
-      window.removeEventListener("storage", checkAuth)
-    }
-  }, [])
-
+      window.removeEventListener("storage", checkAuth);
+    };
+  }, []);
+  
   // Function to check if the token is expired
   const checkTokenExpiration = (token) => {
     try {

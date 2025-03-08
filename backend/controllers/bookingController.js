@@ -363,20 +363,42 @@ function isValidPhone(phone) {
 
 export const getUserBooking = async (req, res) => {
     try {
-
         if (!req.user || !req.user.email) {
             return res.status(400).json({ message: "User email not found" });
         }
 
-        const bookings = await Booking.find({ email: new RegExp(`^${req.user.email}$`, "i") }).sort({ checkIn: -1 });
+        // Fetch user bookings
+        const bookings = await Booking.find({ email: new RegExp(`^${req.user.email}$`, "i") })
+            .sort({ checkIn: -1 })
+            .lean(); // Use lean() for better performance
 
         if (!bookings.length) {
             return res.status(404).json({ message: "No bookings found for this user" });
         }
 
-        res.json(bookings);
+        // Extract unique room IDs from bookings
+        const roomIds = [...new Set(bookings.flatMap(booking => booking.rooms.map(room => room.roomId)))];
+
+        // Fetch room details with images
+        const rooms = await Room.find({ _id: { $in: roomIds } }, "_id type imageUrls").lean();
+        const roomMap = rooms.reduce((acc, room) => {
+            acc[room._id.toString()] = room.imageUrls || [];
+            return acc;
+        }, {});
+
+        // Attach images to each booked room
+        const enrichedBookings = bookings.map(booking => ({
+            ...booking,
+            rooms: booking.rooms.map(room => ({
+                ...room,
+                images: roomMap[room.roomId.toString()] || []
+            }))
+        }));
+
+        res.json(enrichedBookings);
     } catch (error) {
         console.error("Error fetching bookings:", error);
         res.status(500).json({ message: "Failed to fetch bookings" });
     }
 };
+

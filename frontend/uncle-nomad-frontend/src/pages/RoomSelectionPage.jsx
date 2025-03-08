@@ -6,7 +6,6 @@ import { Button } from "../components/ui/button"
 import { Star } from "lucide-react"
 import Header from "../components/Header"
 import Footer from "../components/Footer"
-import BookingModal from "../modals/BookingModal"
 import { format } from "date-fns"
 import BookingConfirmationDialog from "../modals/BookingConfirmationDialog"
 import BookingFailedDialog from "../modals/BookingFailedDialog"
@@ -28,8 +27,8 @@ const RoomSelectionPage = () => {
     email: "",
     phone: "",
     numberOfGuests: 1,
-    imageUrl:'',
-    imageUrls:'',
+    imageUrl: "",
+    imageUrls: "",
     numberOfChildren: 0,
     mealIncluded: false,
     extraBeds: 0,
@@ -39,7 +38,6 @@ const RoomSelectionPage = () => {
   })
 
   const [bookingError, setBookingError] = useState("")
-  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [isBookingConfirmed, setIsBookingConfirmed] = useState(false)
   const [bookingDetails, setBookingDetails] = useState(null)
@@ -50,13 +48,12 @@ const RoomSelectionPage = () => {
   useEffect(() => {
     if (isBookingConfirmed) {
       // Push a new state and prevent back navigation
-      window.history.pushState(null, null, window.location.href);
+      window.history.pushState(null, null, window.location.href)
       window.onpopstate = () => {
-        navigate("/", { replace: true }); // Redirect to home page if they try to go back
-      };
+        navigate("/", { replace: true }) // Redirect to home page if they try to go back
+      }
     }
-  }, [isBookingConfirmed, navigate]);
-  
+  }, [isBookingConfirmed, navigate])
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -101,10 +98,16 @@ const RoomSelectionPage = () => {
     return true
   }
 
-  // Proceed to booking modal
+  // Proceed to booking page
   const proceedToBooking = () => {
     if (validateRoomSelection()) {
-      setIsBookingModalOpen(true)
+      // Navigate to booking page instead of opening modal
+      navigate("/booking", {
+        state: {
+          bookingForm,
+          availableRooms,
+        },
+      })
       setBookingError("")
     }
   }
@@ -118,10 +121,10 @@ const RoomSelectionPage = () => {
         checkIn: bookingForm.checkIn,
         checkOut: bookingForm.checkOut,
         returnToSelection: true, // Flag to indicate we should return to selection page
-        availableRooms: availableRooms, 
+        availableRooms: availableRooms,
         imageUrl: room.imageUrl || "/placeholder.svg", // ✅ Pass imageUrl
         imageUrls: room.imageUrls || [], // Pass all available rooms
-        amenities: room.amenities || []
+        amenities: room.amenities || [],
       },
     })
   }
@@ -151,7 +154,7 @@ const RoomSelectionPage = () => {
   }
 
   return (
-      <AnimatedSection animation="slide-up" duration={1000}>
+    <AnimatedSection animation="slide-up" duration={1000}>
       <Header />
 
       {/* Hero Section */}
@@ -345,55 +348,27 @@ const RoomSelectionPage = () => {
         </div>
       </div>
 
-      {/* Booking Modal */}
-      {isBookingModalOpen && (
-        <BookingModal
-          isOpen={isBookingModalOpen}
-          onClose={() => setIsBookingModalOpen(false)}
-          bookingForm={bookingForm}
-          setBookingForm={setBookingForm}
-          isLoading={isLoading}
-          setIsLoading={setIsLoading}
-          availableRooms={availableRooms}
-          handleRoomSelection={handleRoomSelection}
-          error={error}
-          setError={setError}
-          setIsModalOpen={setIsBookingModalOpen}
-          setIsBookingConfirmed={setIsBookingConfirmed}
-          setBookingDetails={setBookingDetails}
-          bookingDetails={bookingDetails}
-          setIsBookingFailed={setIsBookingFailed}
-          setChecking={setChecking}
-        />
-      )}
-      {isBookingConfirmed && 
+      {isBookingConfirmed && (
         <BookingConfirmationDialog
           isOpen={isBookingConfirmed}
           onClose={() => {
-            setIsBookingConfirmed(false);
-            navigate("/", { replace: true }); // Replace current history entry with home page
-            window.history.pushState(null, null, "/"); // Ensure back button doesn't work
+            setIsBookingConfirmed(false)
+            navigate("/", { replace: true }) // Replace current history entry with home page
+            window.history.pushState(null, null, "/") // Ensure back button doesn't work
           }}
           booking={bookingDetails}
         />
-      }
-      {
-        isBookingFailed &&
+      )}
+      {isBookingFailed && (
         <BookingFailedDialog // Pass booking details if available
           errorMessage="Payment processing failed. Please try again."
           onClose={() => setIsBookingFailed(false)}
         />
-      }
-      {
-        checking && (
-          <CheckingPaymentModal
-            isOpen={checking}
-          />
-        )
-      }
+      )}
+      {checking && <CheckingPaymentModal isOpen={checking} />}
 
       <Footer />
-      </AnimatedSection>
+    </AnimatedSection>
   )
 }
 

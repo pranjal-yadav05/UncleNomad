@@ -17,6 +17,8 @@ import RoomSelectionPage from './pages/RoomSelectionPage';
 import ManageTourBookings from './pages/ManageTourBookings';
 import AvailabilityPage from './pages/AvailabilityPage';
 import ProfilePage from './pages/ProfilePage';
+import RoomBookingPage from './pages/RoomBookingPage';
+import TourBookingPage from './pages/TourBookingPage';
 
 function App() {
   return (
@@ -30,6 +32,9 @@ function App() {
         <Route path='/room-selection' element={<RoomSelectionPage/>} />
         <Route path='/availability' element={<AvailabilityPage/>} />
         <Route path='/profile' element={<ProfilePage/>} />
+        <Route path='/booking' element={<RoomBookingPage/>}/>
+        <Route path="/tour-booking" element={<TourBookingPage />} />
+
 
         {/*Admin Route */}
         <Route path="/admin" element={<AdminPanel />}>

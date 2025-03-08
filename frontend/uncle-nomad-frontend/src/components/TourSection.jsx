@@ -65,7 +65,7 @@ const TourSection = ({ tours, setIsBookingModalOpen, isBookingModalOpen }) => {
         {/* Scrollable Tour Cards Container */}
         <div
           ref={scrollRef}
-          className="flex space-x-6 overflow-x-auto scroll-smooth scrollbar-hide pb-8 pt-4 px-4 md:px-12"
+          className="flex space-x-6 overflow-x-auto scroll-smooth justify-center scrollbar-hide pb-8 pt-4 px-4 md:px-12"
           style={{
             scrollSnapType: "x mandatory",
             scrollPaddingLeft: "1rem",

@@ -17,7 +17,7 @@ import queryRoutes from './routes/queryRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
 import galleryRoutes from './routes/galleryRoutes.js';
 import emailVerifyRoutes from './routes/emailVerifyRoutes.js'
-
+import tokenValidationRoutes from './routes/tokenValidationRoutes.js'
 dotenv.config();
 
 
@@ -27,13 +27,26 @@ connectDB();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-const frontendUrl = process.env.FRONTEND_URL;
+// const frontendUrl = process.env.FRONTEND_URL;
+
+const allowedOrigins = [
+    process.env.FRONTEND_URL,
+    process.env.PROD_IN,
+    process.env.PROD_COM
+];
 
 // Middleware
 app.use(cors({
-    origin: frontendUrl,
+    origin: function (origin, callback) {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error("Not allowed by CORS"));
+        }
+    },
     credentials: true
 }));
+
 app.use(express.json());
 
 // Session configuration
@@ -68,7 +81,7 @@ app.use('/api/admin-auth', adminAuthRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/query',queryRoutes)
 app.use('/api/upload', uploadRoutes);
-
+app.use('/api/token',tokenValidationRoutes)
 app.use('/api/media',mediaRoutes)
 
 // Error handling middleware

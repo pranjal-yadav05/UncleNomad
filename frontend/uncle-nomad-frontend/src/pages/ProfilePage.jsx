@@ -20,7 +20,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    window.scroll(0, 0)
+    window.scrollTo(0, 0)
   }, [])
 
   useEffect(() => {
@@ -79,6 +79,7 @@ export default function ProfilePage() {
       }
 
       const data = await response.json()
+
       // Sort bookings with newest (by tourDate) first
       const sortedBookings = data.sort((a, b) => new Date(b.tourDate) - new Date(a.tourDate))
       setTourBookings(sortedBookings)
@@ -155,18 +156,18 @@ export default function ProfilePage() {
               <CardDescription>Your personal information</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col items-center space-y-4 mb-6">
-                <Avatar className="h-24 w-24">
-                  <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${user.name}`} alt={user.name} />
-                  <AvatarFallback>
-                    <User className="h-12 w-12" />
-                  </AvatarFallback>
-                </Avatar>
-                <div className="text-center">
-                  <h3 className="text-xl font-semibold">{user.name}</h3>
-                  <p className="text-sm text-muted-foreground">{user.email}</p>
-                </div>
+            <div className="flex flex-col items-center space-y-4 mb-6">
+              <img 
+                className="h-24 w-24 rounded-full object-cover"
+                src={`https://api.dicebear.com/7.x/initials/svg?seed=${user.name ? user.name[0] : 'U'}`} 
+                alt={user.name} 
+              />
+              <div className="text-center">
+                <h3 className="text-xl font-semibold">{user.name}</h3>
+                <p className="text-sm text-muted-foreground">{user.email}</p>
               </div>
+            </div>
+
 
               <div className="space-y-4">
                 <Button variant="destructive" className="w-full justify-start" onClick={handleLogout}>
@@ -199,8 +200,8 @@ export default function ProfilePage() {
                         <Skeleton className="h-24 w-full" />
                       </div>
                     ) : roomBookings.length > 0 ? (
-                      <div className="space-y-4">
-                        {roomBookings.map((booking) => (
+                      <div className="space-y-4 max-h-[300px] overflow-y-auto">
+                        {roomBookings.map((booking, index) => (
                           <RoomBookingCard
                             key={booking._id}
                             booking={booking}
@@ -229,8 +230,8 @@ export default function ProfilePage() {
                         <Skeleton className="h-24 w-full" />
                       </div>
                     ) : tourBookings.length > 0 ? (
-                      <div className="space-y-4">
-                        {tourBookings.map((booking) => (
+                      <div className="space-y-4 max-h-[300px] overflow-y-auto">
+                        {tourBookings.map((booking, index) => (
                           <TourBookingCard
                             key={booking._id}
                             booking={booking}
@@ -250,6 +251,7 @@ export default function ProfilePage() {
                       </div>
                     )}
                   </TabsContent>
+
                 </Tabs>
               </CardContent>
             </Card>
@@ -265,8 +267,22 @@ function RoomBookingCard({ booking, getStatusColor, formatDate }) {
   return (
     <Card className="overflow-hidden">
       <div className="flex flex-col sm:flex-row">
+        
+        {/* Image Section */}
         <div className="sm:w-1/3 bg-muted p-4 flex flex-col justify-center items-center">
-          <div className="text-center">
+          {booking.rooms.length > 0 && booking.rooms[0].images.length > 0 ? (
+            <img
+              src={booking.rooms[0].images[0]} 
+              alt={booking.rooms[0].roomType}
+              className="w-full h-32 object-cover rounded-lg"
+            />
+          ) : (
+            <div className="w-full h-32 bg-gray-300 flex items-center justify-center text-sm text-gray-500">
+              No Image Available
+            </div>
+          )}
+          
+          <div className="text-center mt-2">
             <h4 className="font-medium">{booking.rooms.map((r) => r.roomType).join(", ")}</h4>
             {booking.location && (
               <div className="flex items-center justify-center text-sm text-muted-foreground mt-1">
@@ -277,6 +293,7 @@ function RoomBookingCard({ booking, getStatusColor, formatDate }) {
           </div>
         </div>
 
+        {/* Booking Details Section */}
         <div className="p-4 sm:w-2/3">
           <div className="flex justify-between items-start mb-3">
             <div>
@@ -305,15 +322,29 @@ function RoomBookingCard({ booking, getStatusColor, formatDate }) {
         </div>
       </div>
     </Card>
-  )
+  );
 }
 
 function TourBookingCard({ booking, getStatusColor, formatDate }) {
   return (
     <Card className="overflow-hidden">
       <div className="flex flex-col sm:flex-row">
+        
+        {/* Image Section */}
         <div className="sm:w-1/3 bg-muted p-4 flex flex-col justify-center items-center">
-          <div className="text-center">
+          {booking.tourImage ? (
+            <img
+              src={booking.tourImage}
+              alt={booking.tourName || "Tour"}
+              className="w-full h-32 object-cover rounded-lg"
+            />
+          ) : (
+            <div className="w-full h-32 bg-gray-300 flex items-center justify-center text-sm text-gray-500">
+              No Image Available
+            </div>
+          )}
+          
+          <div className="text-center mt-2">
             <h4 className="font-medium">{booking.tourName || "Tour"}</h4>
             {booking.location && (
               <div className="flex items-center justify-center text-sm text-muted-foreground mt-1">
@@ -324,6 +355,7 @@ function TourBookingCard({ booking, getStatusColor, formatDate }) {
           </div>
         </div>
 
+        {/* Booking Details Section */}
         <div className="p-4 sm:w-2/3">
           <div className="flex justify-between items-start mb-3">
             <div>
@@ -352,5 +384,5 @@ function TourBookingCard({ booking, getStatusColor, formatDate }) {
         </div>
       </div>
     </Card>
-  )
+  );
 }

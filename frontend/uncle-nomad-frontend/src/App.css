@@ -52,3 +52,28 @@ section.fade-in {
   background-color: rgba(251, 191, 36, 0.1); /* Light yellow background */
   transition: border 0.3s ease, background-color 0.3s ease;
 }
+
+/* Add this to your global CSS file */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.perspective-card {
+  transform-style: preserve-3d;
+  transition: transform 0.5s;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.perspective-card:hover {
+  transform: translateY(-5px) rotateX(5deg);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+}
+
+.clip-half {
+  clip-path: inset(0 50% 0 0);
+}
