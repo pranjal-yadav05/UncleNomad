@@ -754,7 +754,7 @@ const RoomBookingPage = () => {
 
                     <div className="pt-4">
                       <Button
-                        variant="custom"
+                        variant="nomad"
                         onClick={handleNextStep}
                         className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                         disabled={!bookingForm.guestName || !bookingForm.email || !bookingForm.phone || !isOtpVerified}
@@ -888,7 +888,7 @@ const RoomBookingPage = () => {
                       </Button>
                       <Button
                         onClick={handleDisclaimer}
-                        variant="custom"
+                        variant="nomad"
                         className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                         disabled={isLoading || !isOtpVerified}
                       >

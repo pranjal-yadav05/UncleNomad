@@ -11,6 +11,7 @@ const buttonVariants = cva(
         outline: "border border-input hover:bg-accent hover:text-accent-foreground hover:bg-brand-purple hover:text-white",
         custom: "bg-brand-purple text-white hover:bg-brand-purple/90", // Your custom variant
         destructive: "bg-red-600 text-white hover:bg-red-700",
+        nomad: 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white transition-all duration-300 ease-in-out hover:from-indigo-600 hover:to-purple-500 hover:shadow-lg hover:scale-102',
       },
       size: {
         default: "h-10 py-2 px-4",

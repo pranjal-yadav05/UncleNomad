@@ -12,7 +12,7 @@ import Footer from "../components/Footer"
 import DisclaimerDialog from "../modals/DisclaimerDialog"
 import FailedTransactionModal from "../modals/FailedTransactionModal"
 import CheckingPaymentModal from "../modals/CheckingPaymentModal"
-import BookingConfirmationDialog from "../modals/BookingConfirmationDialog"
+import TourBookingConfirmationDialog from '../modals/TourBookingConfirmationDialog'
 import TourPaymentForm from "../components/TourPaymentForm"
 import AnimatedSection from "../components/AnimatedSection"
 
@@ -436,6 +436,7 @@ const TourBookingPage = () => {
       setConfirmedBooking({
         ...updatedBooking,
         tourName: selectedTour.title,
+        tourDate: selectedTour.startDate
       })
 
       setChecking(false)
@@ -677,8 +678,8 @@ const TourBookingPage = () => {
                     <div className="pt-4">
                       <Button
                         onClick={handleNextStep}
-                        variant="custom"
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                        variant='nomad'
+                        className="w-full"
                         disabled={
                           !bookingDetails.guestName || !bookingDetails.email || !bookingDetails.phone || !isOtpVerified
                         }
@@ -777,8 +778,8 @@ const TourBookingPage = () => {
                       </Button>
                       <Button
                         onClick={handleDisclaimer}
-                        variant="custom"
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                        variant="nomad"
+                        className="w-full"
                         disabled={isLoading || !isOtpVerified}
                       >
                         {isLoading ? (
@@ -955,14 +956,14 @@ const TourBookingPage = () => {
       />
 
       {isBookingConfirmed && (
-        <BookingConfirmationDialog
+        <TourBookingConfirmationDialog
           isOpen={isBookingConfirmed}
           onClose={() => {
             setIsBookingConfirmed(false)
             navigate("/", { replace: true }) // Replace current history entry with home page
             window.history.pushState(null, null, "/") // Ensure back button doesn't work
           }}
-          booking={confirmedBooking}
+          tourBooking={confirmedBooking}
           tourName={selectedTour.title}
         />
       )}

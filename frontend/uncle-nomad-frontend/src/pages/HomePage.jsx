@@ -39,21 +39,35 @@ export default function HomePage() {
   useEffect(() => {
     if (location.state?.section) {
       const scrollToSection = () => {
+        if (location.state.section === "footer") {
+          console.log('fooooter')
+          // Scroll to the very bottom of the page
+          window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" });
+          return;
+        }
+  
         const section = document.getElementById(location.state.section);
         if (section) {
-          const offset = 120; // Adjust based on header height
+          const offset = 120; // Default offset for header
           const elementPosition = section.getBoundingClientRect().top + window.scrollY;
-          const offsetPosition = elementPosition - offset;
+          let offsetPosition = elementPosition - offset;
+  
+          // Ensure we don't scroll past the bottom of the page
+          const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+          if (offsetPosition > maxScroll) {
+            offsetPosition = maxScroll;
+          }
+  
           window.scrollTo({ top: offsetPosition, behavior: "smooth" });
         }
       };
   
-      // Try immediately
+      // Try scrolling immediately
       scrollToSection();
   
-      // If not found, observe until it's rendered
+      // Observe for late rendering
       const observer = new MutationObserver(() => {
-        if (document.getElementById(location.state.section)) {
+        if (document.getElementById(location.state.section) || location.state.section === "footer") {
           scrollToSection();
           observer.disconnect();
         }
@@ -61,10 +75,11 @@ export default function HomePage() {
   
       observer.observe(document.body, { childList: true, subtree: true });
   
-      // Cleanup
       return () => observer.disconnect();
     }
   }, [location]);
+  
+  
   
 
   // Your existing useEffect and functions
@@ -145,8 +160,9 @@ export default function HomePage() {
         </AnimatedSection>
             
       </main>
-
-      <Footer />
+      <div id='footer'>
+        <Footer />
+      </div>
     </div>
   )
 }

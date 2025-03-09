@@ -7,7 +7,7 @@ const Footer = () => {
   const [isQueryModalOpen, setIsQueryModalOpen] = useState(false);
 
   return (
-    <footer className="relative bg-cover bg-center bg-no-repeat text-gray-300" style={{ backgroundImage: "url('/footer.jpeg')" }}>
+    <footer id='footer' className="relative bg-cover bg-center bg-no-repeat text-gray-300" style={{ backgroundImage: "url('/footer.jpeg')" }}>
       {/* Dark Overlay */}
       <div className="absolute inset-0 bg-black/60"></div>
 

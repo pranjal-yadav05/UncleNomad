@@ -339,7 +339,7 @@ const RoomDetailsPage = () => {
 
                     <Button
                       onClick={handleBookNow}
-                      variant="custom"
+                      variant="nomad"
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-lg text-lg font-medium transition-colors duration-300"
                     >
                       {returnToSelection ? "Return to Selection" : "Book Now"}

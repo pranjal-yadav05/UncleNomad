@@ -99,6 +99,7 @@ export default function AvailableRooms({ availableRooms, handleBookNowClick }) {
 
                   {/* Call to Action Button */}
                   <Button
+                    variant='nomad'
                     onClick={(event) => {
                       event.stopPropagation(); // Prevent the Card's onClick from firing
                       handleBookNowClick(room);

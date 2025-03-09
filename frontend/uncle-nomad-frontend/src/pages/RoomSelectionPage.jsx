@@ -200,7 +200,7 @@ const RoomSelectionPage = () => {
 
               <Button
                 onClick={proceedToBooking}
-                variant="custom"
+                variant="nomad"
                 className="bg-blue-600 hover:bg-blue-700 text-white"
                 disabled={Object.keys(bookingForm.selectedRooms).length === 0}
               >
@@ -339,7 +339,7 @@ const RoomSelectionPage = () => {
         <div className="mt-12 text-center">
           <Button
             onClick={proceedToBooking}
-            variant="custom"
+            variant="nomad"
             className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg"
             disabled={Object.keys(bookingForm.selectedRooms).length === 0}
           >

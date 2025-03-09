@@ -116,6 +116,7 @@ const TourCard = ({ tour, onClick, handleTourClick }) => {
         {/* Book Now Button */}
         <Button
           onClick={handleButtonClick}
+          variant='nomad'
           className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white hover:from-purple-600 hover:to-indigo-700 py-3 rounded-lg shadow-lg mt-auto border-0"
           style={{ fontFamily: "Poppins" }}
         >
