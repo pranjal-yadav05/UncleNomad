@@ -128,7 +128,7 @@ const Header = () => {
               className="text-black hover:bg-gradient-to-r hover:from-blue-500 hover:via-purple-500 hover:to-pink-500 hover:bg-clip-text hover:text-transparent"
               onClick={(e) => {
                 e.preventDefault()
-                navigate("/", { state: { section: "tours" } })
+                navigate("/tours")
               }}
             >
               Tours
@@ -228,7 +228,7 @@ const Header = () => {
                 className="w-full max-w-max inline-flex my-2 items-center gap-3 text-black hover:text-brand-purple transition-colors py-2 px-4 justify-start text-black active:bg-gradient-to-r active:from-blue-500 active:via-purple-500 active:to-pink-500 active:bg-clip-text active:text-transparent"
                 onClick={(e) => {
                   e.preventDefault()
-                  navigate("/", { state: { section: "tours" } })
+                  navigate("/tours")
                   setIsMenuOpen(false)
                 }}
               >

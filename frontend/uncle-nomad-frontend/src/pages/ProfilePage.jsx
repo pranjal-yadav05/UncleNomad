@@ -190,13 +190,13 @@ export default function ProfilePage() {
                   <TabsList className="grid w-full grid-cols-2 mb-4 border rounded-lg overflow-hidden">
                     <TabsTrigger 
                       value="rooms" 
-                      className="py-2 px-4 text-gray-600 font-medium transition-all data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+                      className="text-gray-600 font-medium transition-all data-[state=active]:bg-blue-600 data-[state=active]:text-white"
                     >
                       Room Bookings
                     </TabsTrigger>
                     <TabsTrigger 
                       value="tours" 
-                      className="py-2 px-4 text-gray-600 font-medium transition-all data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+                      className="text-gray-600 font-medium transition-all data-[state=active]:bg-blue-600 data-[state=active]:text-white"
                     >
                       Tour Bookings
                     </TabsTrigger>

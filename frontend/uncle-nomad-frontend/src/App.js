@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import TravelPage from './pages/TravelPage';
+import ToursPage from './pages/ToursPage';
 import AdminAuth from './components/AdminAuth';
 import AdminPanel from './components/AdminPanel';
 import ManageBookings from './pages/ManageBookings';
@@ -19,12 +19,13 @@ import AvailabilityPage from './pages/AvailabilityPage';
 import ProfilePage from './pages/ProfilePage';
 import RoomBookingPage from './pages/RoomBookingPage';
 import TourBookingPage from './pages/TourBookingPage';
+import HomePage from './pages/HomePage';
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<TravelPage />} />
+        <Route path="/" element={<HomePage />} />
         <Route path='/tour/:id' element={<TourDetailsPage/>}/>
         <Route path='/rooms/:id' element={<RoomDetailsPage/>}/>
         <Route path="/admin-auth" element={<AdminAuth />} />
@@ -34,6 +35,7 @@ function App() {
         <Route path='/profile' element={<ProfilePage/>} />
         <Route path='/booking' element={<RoomBookingPage/>}/>
         <Route path="/tour-booking" element={<TourBookingPage />} />
+        <Route path='/tours' element={<ToursPage/>}/>
 
 
         {/*Admin Route */}

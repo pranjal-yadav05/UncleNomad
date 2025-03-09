@@ -159,7 +159,7 @@ const TourSection = ({ tours, setIsBookingModalOpen, isBookingModalOpen }) => {
                   </div>
                   <h3 className="text-2xl font-bold text-white mb-2">Explore More</h3>
                   <p className="text-indigo-200 mb-6">Discover our complete collection of unique experiences</p>
-                  <Button className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700">
+                  <Button onClick={()=>navigate('/tours')}  className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700">
                     View All Tours
                   </Button>
                 </div>

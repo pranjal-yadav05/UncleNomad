@@ -13,7 +13,7 @@ import AnimatedSection from "../components/AnimatedSection" // Import enhanced c
 import GoogleReviews from "../components/GoogleReviews"
 import { useLocation, useNavigate } from "react-router-dom"
 
-export default function TravelPage() {
+export default function HomePage() {
   // Your existing state and functions
   const navigate = useNavigate()
   const API_URL = process.env.REACT_APP_API_URL;

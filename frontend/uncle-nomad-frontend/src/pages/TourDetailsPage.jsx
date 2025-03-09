@@ -280,7 +280,7 @@ const TourDetailsPage = () => {
                       <span>Starting from</span>
                       <span className="text-xl text-blue-600 font-bold">₹{getPricingInfo()}</span>
                     </div>
-                    <p className="text-sm text-gray-500 mb-6">per person (based on double occupancy)</p>
+                    <p className="text-sm text-gray-500 mb-6">per person </p>
 
                     <Button
                       onClick={handleBookNow}

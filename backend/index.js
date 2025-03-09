@@ -18,6 +18,8 @@ import uploadRoutes from './routes/uploadRoutes.js';
 import galleryRoutes from './routes/galleryRoutes.js';
 import emailVerifyRoutes from './routes/emailVerifyRoutes.js'
 import tokenValidationRoutes from './routes/tokenValidationRoutes.js'
+import subscribeRoutes from './routes/subscribeRoutes.js'
+
 dotenv.config();
 
 
@@ -83,7 +85,7 @@ app.use('/api/query',queryRoutes)
 app.use('/api/upload', uploadRoutes);
 app.use('/api/token',tokenValidationRoutes)
 app.use('/api/media',mediaRoutes)
-
+app.use('/api/subscribe',subscribeRoutes)
 // Error handling middleware
 
 app.use((req, res, next) => {
