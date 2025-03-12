@@ -7,12 +7,11 @@ import { useNavigate } from "react-router-dom"
 import TourCard from "../components/TourCard"
 import { Badge } from "../components/ui/badge"
 
-const TourSection = ({ tours, stats, setStats, setIsBookingModalOpen, isBookingModalOpen }) => {
+const TourSection = ({ tours, stats, setStats, setIsBookingModalOpen, isBookingModalOpen, isLoading}) => {
   const [showLeftButton, setShowLeftButton] = useState(false)
   const [showRightButton, setShowRightButton] = useState(true)
   const [viewMode, setViewMode] = useState("carousel")
   
-  // const [activeCategory, setActiveCategory] = useState("all")
   const scrollRef = useRef(null)
   const navigate = useNavigate()
 
@@ -25,10 +24,15 @@ const TourSection = ({ tours, stats, setStats, setIsBookingModalOpen, isBookingM
   }, [])
 
   useEffect(() => {
+    // Ensure scroll starts at the beginning (left)
+    if (scrollRef.current) {
+      scrollRef.current.scrollLeft = 0
+    }
+    
     updateScrollButtons()
     window.addEventListener("resize", updateScrollButtons)
     return () => window.removeEventListener("resize", updateScrollButtons)
-  }, [updateScrollButtons])
+  }, [updateScrollButtons, tours]) // Add tours dependency to reset scroll when tours change
 
   const scroll = (direction) => {
     if (scrollRef.current) {
@@ -60,6 +64,25 @@ const TourSection = ({ tours, stats, setStats, setIsBookingModalOpen, isBookingM
       return `${rounded}K+`;  // 1200 -> 1K+
     }
   };
+
+  // Loading placeholders
+  const LoadingPlaceholders = () => {
+    return Array(5).fill(0).map((_, index) => (
+      <div 
+        key={`loading-${index}`} 
+        className="w-[320px] flex-shrink-0 rounded-lg overflow-hidden h-[480px] animate-pulse"
+      >
+        <div className="h-[220px] bg-slate-700/40 rounded-t-lg"></div>
+        <div className="p-4 space-y-4 bg-slate-800/40">
+          <div className="h-5 bg-slate-700/60 rounded w-3/4"></div>
+          <div className="h-4 bg-slate-700/60 rounded w-1/2"></div>
+          <div className="h-4 bg-slate-700/60 rounded w-5/6"></div>
+          <div className="h-10 bg-slate-700/60 rounded"></div>
+          <div className="h-8 bg-slate-700/60 rounded w-1/3"></div>
+        </div>
+      </div>
+    ));
+  };
   
   return (
     <div id="tours" className="relative py-24 overflow-hidden">
@@ -80,7 +103,6 @@ const TourSection = ({ tours, stats, setStats, setIsBookingModalOpen, isBookingM
               Discover handpicked destinations and unforgettable adventures tailored to your travel style
             </p>
           </div>
-
 
           <div className="flex items-center mt-5 space-x-3">
             <Button
@@ -111,114 +133,155 @@ const TourSection = ({ tours, stats, setStats, setIsBookingModalOpen, isBookingM
           </div>
         </div>
 
-        {/* Category filters */}
-        {/* <div className="flex overflow-x-auto scrollbar-hide pb-4 mb-8">
-          <div className="flex space-x-2">
-            {categories.map((category) => (
-              <Badge
-                key={category}
-                variant={activeCategory === category ? "default" : "outline"}
-                className={`px-4 py-2 text-sm capitalize cursor-pointer transition-all ${
-                  activeCategory === category
-                    ? "bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700"
-                    : "hover:bg-slate-800"
-                }`}
-                onClick={() => setActiveCategory(category)}
-              >
-                {category}
-              </Badge>
-            ))}
-          </div>
-        </div> */}
-
         {/* Carousel View */}
         {viewMode === "carousel" && (
           <div className="relative">
-            {showLeftButton && (
-              <Button
-                className="absolute -left-2 top-1/2 -translate-y-1/2 z-10 bg-white/10 backdrop-blur-md shadow-lg p-2 rounded-full hidden md:flex hover:bg-white/20 transition-colors duration-300 border-0"
-                onClick={() => scroll("left")}
-                aria-label="Scroll left"
-                variant="ghost"
-              >
-                <ChevronLeft className="w-6 h-6 text-white" />
-              </Button>
-            )}
-
-            <div
-              ref={scrollRef}
-              className="flex space-x-6 overflow-x-auto scroll-smooth scrollbar-hide pb-8 pt-4 pl-4 pr-4 md:pr-12 min-w-0"
-              style={{
-                scrollSnapType: "x mandatory",
-                scrollPaddingLeft: "1rem",
-              }}
-              onScroll={updateScrollButtons}
-            >
-              {tours.map((tour) => (
-                <div
-                  key={tour._id}
-                  className="w-[320px] flex-shrink-0 rounded-lg overflow-hidden transform transition-all duration-300 hover:translate-y-[-8px]"
-                  style={{ scrollSnapAlign: "start" }}
-                >
-                  <TourCard tour={tour} handleTourClick={handleTourClick} onClick={() => handleTourClick(tour)} />
-                </div>
-              ))}
-
-              {/* View more card */}
-              <div className="w-[320px] flex-shrink-0 rounded-2xl overflow-hidden h-[480px] flex items-center justify-center bg-gradient-to-br from-indigo-900/40 to-purple-900/40 backdrop-blur-sm border border-indigo-500/20">
-                <div className="text-center p-8">
-                  <div className="w-16 h-16 rounded-full bg-indigo-500/20 flex items-center justify-center mx-auto mb-4">
-                    <ChevronRight className="w-8 h-8 text-indigo-300" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-white mb-2">Explore More</h3>
-                  <p className="text-indigo-200 mb-6">Discover our complete collection of unique experiences</p>
-                  <Button onClick={()=>navigate('/tours')}  className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700">
-                    View All Tours
+            {/* Updated button positioning */}
+            <div className="flex items-center">
+              {/* Left navigation button - positioned outside the carousel */}
+              <div className="hidden sm:block mr-4">
+                {showLeftButton && (
+                  <Button
+                    className="bg-white/10 backdrop-blur-md shadow-lg p-2 rounded-full hover:bg-white/20 transition-colors duration-300 border-0"
+                    onClick={() => scroll("left")}
+                    aria-label="Scroll left"
+                    variant="ghost"
+                  >
+                    <ChevronLeft className="w-6 h-6 text-white" />
                   </Button>
+                )}
+              </div>
+
+              {/* Carousel container with padding to prevent overlap */}
+              <div className="flex-1 overflow-hidden">
+                <div
+                  ref={scrollRef}
+                  className="flex space-x-6 overflow-x-auto scroll-smooth scrollbar-hide pb-8 pt-4 min-w-0 snap-x snap-mandatory"
+                  onScroll={updateScrollButtons}
+                >
+                  {isLoading ? (
+                    <LoadingPlaceholders />
+                  ) : (
+                    <>
+                      {tours.map((tour) => (
+                        <div
+                          key={tour._id}
+                          className="w-[320px] flex-shrink-0 rounded-lg overflow-hidden transform transition-all duration-300 hover:translate-y-[-8px] snap-start"
+                        >
+                          <TourCard tour={tour} handleTourClick={handleTourClick} onClick={() => handleTourClick(tour)} />
+                        </div>
+                      ))}
+
+                      {/* View more card */}
+                      <div className="w-[320px] flex-shrink-0 rounded-2xl overflow-hidden h-[480px] flex items-center justify-center bg-gradient-to-br from-indigo-900/40 to-purple-900/40 backdrop-blur-sm border border-indigo-500/20 snap-start">
+                        <div className="text-center p-8">
+                          <div className="w-16 h-16 rounded-full bg-indigo-500/20 flex items-center justify-center mx-auto mb-4">
+                            <ChevronRight className="w-8 h-8 text-indigo-300" />
+                          </div>
+                          <h3 className="text-2xl font-bold text-white mb-2">Explore More</h3>
+                          <p className="text-indigo-200 mb-6">Discover our complete collection of unique experiences</p>
+                          <Button onClick={()=>navigate('/tours')} className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700">
+                            View All Tours
+                          </Button>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
+              </div>
+
+              {/* Right navigation button - positioned outside the carousel */}
+              <div className="hidden sm:block ml-4">
+                {showRightButton && (
+                  <Button
+                    className="bg-white/10 backdrop-blur-md shadow-lg p-2 rounded-full hover:bg-white/20 transition-colors duration-300 border-0"
+                    onClick={() => scroll("right")}
+                    aria-label="Scroll right"
+                    variant="ghost"
+                  >
+                    <ChevronRight className="w-6 h-6 text-white" />
+                  </Button>
+                )}
               </div>
             </div>
 
-            {showRightButton && (
+            {/* Mobile scroll indicators */}
+            <div className="flex justify-center mt-4 space-x-2 sm:hidden">
               <Button
-                className="absolute -right-2 top-1/2 -translate-y-1/2 z-10 bg-white/10 backdrop-blur-md shadow-lg p-2 rounded-full hidden md:flex hover:bg-white/20 transition-colors duration-300 border-0"
+                className="bg-white/10 backdrop-blur-md shadow-lg p-2 rounded-full hover:bg-white/20 transition-colors duration-300 border-0 h-10 w-10"
+                onClick={() => scroll("left")}
+                aria-label="Scroll left"
+                variant="ghost"
+                disabled={!showLeftButton}
+              >
+                <ChevronLeft className="w-6 h-6 text-white" />
+              </Button>
+              <Button
+                className="bg-white/10 backdrop-blur-md shadow-lg p-2 rounded-full hover:bg-white/20 transition-colors duration-300 border-0 h-10 w-10"
                 onClick={() => scroll("right")}
                 aria-label="Scroll right"
                 variant="ghost"
+                disabled={!showRightButton}
               >
                 <ChevronRight className="w-6 h-6 text-white" />
               </Button>
-            )}
+            </div>
           </div>
         )}
 
         {/* Grid View */}
         {viewMode === "grid" && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {tours.map((tour) => (
-              <div key={tour._id} className="transform transition-all duration-300 hover:translate-y-[-8px]">
-                <TourCard tour={tour} handleTourClick={handleTourClick} onClick={() => handleTourClick(tour)} />
-              </div>
-            ))}
+            {isLoading ? (
+              Array(8).fill(0).map((_, index) => (
+                <div 
+                  key={`loading-grid-${index}`} 
+                  className="animate-pulse"
+                >
+                  <div className="h-[220px] bg-slate-700/40 rounded-t-lg"></div>
+                  <div className="p-4 space-y-4 bg-slate-800/40 rounded-b-lg">
+                    <div className="h-5 bg-slate-700/60 rounded w-3/4"></div>
+                    <div className="h-4 bg-slate-700/60 rounded w-1/2"></div>
+                    <div className="h-4 bg-slate-700/60 rounded w-5/6"></div>
+                    <div className="h-10 bg-slate-700/60 rounded"></div>
+                    <div className="h-8 bg-slate-700/60 rounded w-1/3"></div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              tours.map((tour) => (
+                <div key={tour._id} className="transform transition-all duration-300 hover:translate-y-[-8px]">
+                  <TourCard tour={tour} handleTourClick={handleTourClick} onClick={() => handleTourClick(tour)} />
+                </div>
+              ))
+            )}
           </div>
         )}
 
         {/* Stats section */}
         <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
           <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
-            <div className="text-4xl font-bold text-white mb-2">{formatNumber(stats.destinations)}</div>
+            <div className="text-4xl font-bold text-white mb-2">{isLoading ? (
+              <div className="h-10 bg-slate-700/40 rounded w-16 mx-auto animate-pulse"></div>
+            ) : formatNumber(stats.destinations)}</div>
             <div className="text-indigo-200">Destinations</div>
           </div>
           <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
-            <div className="text-4xl font-bold text-white mb-2">{formatNumber(stats.tours)}</div>
+            <div className="text-4xl font-bold text-white mb-2">{isLoading ? (
+              <div className="h-10 bg-slate-700/40 rounded w-16 mx-auto animate-pulse"></div>
+            ) : formatNumber(stats.tours)}</div>
             <div className="text-indigo-200">Tours</div>
           </div>
           <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
-            <div className="text-4xl font-bold text-white mb-2">{formatNumber(stats.travellers)}</div>
+            <div className="text-4xl font-bold text-white mb-2">{isLoading ? (
+              <div className="h-10 bg-slate-700/40 rounded w-16 mx-auto animate-pulse"></div>
+            ) : formatNumber(stats.travellers)}</div>
             <div className="text-indigo-200">Happy Travellers</div>
           </div>
           <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
-            <div className="text-4xl font-bold text-white mb-2">{stats.ratings}</div>
+            <div className="text-4xl font-bold text-white mb-2">{isLoading ? (
+              <div className="h-10 bg-slate-700/40 rounded w-16 mx-auto animate-pulse"></div>
+            ) : stats.ratings}</div>
             <div className="text-indigo-200">Average Rating</div>
           </div>
         </div>
@@ -229,4 +292,3 @@ const TourSection = ({ tours, stats, setStats, setIsBookingModalOpen, isBookingM
 }
 
 export default TourSection
-
