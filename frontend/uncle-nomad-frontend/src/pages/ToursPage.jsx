@@ -467,8 +467,7 @@ export default function ToursPage() {
                           src={tour.images[0] || "/placeholder.svg?height=400&width=600"}
                           alt={tour.title}
                           fill
-                          className="object-cover"
-                          sizes="(max-width: 768px) 100vw, 33vw"
+                          className="object-cover object-center w-full h-full"
                         />
                       </div>
                       <div className="p-6 flex-1 flex flex-col">
