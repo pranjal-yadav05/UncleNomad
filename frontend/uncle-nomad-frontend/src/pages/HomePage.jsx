@@ -19,6 +19,9 @@ export default function HomePage() {
   const API_URL = process.env.REACT_APP_API_URL;
   const [tours, setTours] = useState([])
   const [rooms, setRooms] = useState([])
+  const [stats, setStats] = useState({
+    destinations:'loading...'
+  })
  
   const [isLoading, setIsLoading] = useState({
     property: true,
@@ -40,7 +43,6 @@ export default function HomePage() {
     if (location.state?.section) {
       const scrollToSection = () => {
         if (location.state.section === "footer") {
-          console.log('fooooter')
           // Scroll to the very bottom of the page
           window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" });
           return;
@@ -48,7 +50,7 @@ export default function HomePage() {
   
         const section = document.getElementById(location.state.section);
         if (section) {
-          const offset = 120; // Default offset for header
+          const offset = 80; // Default offset for header
           const elementPosition = section.getBoundingClientRect().top + window.scrollY;
           let offsetPosition = elementPosition - offset;
   
@@ -79,8 +81,16 @@ export default function HomePage() {
     }
   }, [location]);
   
-  
-  
+  useEffect(()=>{
+    fetchStats()
+  },[])
+
+  // const categories = ["all", "adventure", "cultural", "beach", "mountain", "city"]
+  const fetchStats = async () => {
+    const res = await fetch(`${process.env.REACT_APP_API_URL}/api/tours/stats`,{ headers:{'x-api-key':process.env.REACT_APP_API_KEY}})
+    const data = await res.json()
+    setStats(data)
+  }
 
   // Your existing useEffect and functions
   useEffect(() => {
@@ -118,11 +128,6 @@ export default function HomePage() {
         <HeroSection
         />
         
-        {/* Use different animation styles for each section */}
-        <AnimatedSection animation="fade" duration={1200}>
-          <AboutSection />
-        </AnimatedSection>
-
         <AnimatedSection animation="slide-up" duration={1000}>
         <div
           className="relative"
@@ -135,15 +140,18 @@ export default function HomePage() {
           <div className="absolute inset-0 bg-black opacity-50"></div>
           <div id='tours'>
           <TourSection
+            setStats={setStats}
+            stats={stats}
             setIsBookingModalOpen={setIsBookingModalOpen} 
             isBookingModalOpen={isBookingModalOpen} 
             tours={tours}
           />
           </div>
           
-          <CounterSection/>
+          <CounterSection stats={stats}/>
           </div>
         </AnimatedSection>
+        
 
         <AnimatedSection animation="slide-up" duration={1200}>
           <div className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500">
@@ -157,6 +165,12 @@ export default function HomePage() {
             </div>
             <GoogleReviews/>
           </div>
+        </AnimatedSection>
+
+        
+        {/* Use different animation styles for each section */}
+        <AnimatedSection animation="fade" duration={1200}>
+          <AboutSection />
         </AnimatedSection>
             
       </main>

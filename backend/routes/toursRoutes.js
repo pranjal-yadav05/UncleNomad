@@ -15,7 +15,11 @@ import {
   deleteTourImage,
   getAllTourBookings,
   deleteTourBooking,
-  getUserTourBooking
+  getUserTourBooking,
+  getStats,
+  postStats,
+  updateStats,
+  deleteStats
 } from '../controllers/tourController.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { auth } from 'googleapis/build/src/apis/abusiveexperiencereport/index.js';
@@ -46,6 +50,11 @@ const validateItinerary = (req, res, next) => {
   }
   next();
 };
+
+router.get('/stats', getStats)
+router.post('/stats', authenticateToken, postStats)
+router.delete('/stats/:id', authenticateToken, deleteStats);
+router.put('/stats/:id', authenticateToken, updateStats);
 
 // Booking routes
 router.get('/bookings', authenticateToken, getAllTourBookings); 

@@ -1,6 +1,6 @@
 import AnimatedCounter from "./AnimatedCounter";
 
-const CounterSection = () => {
+const CounterSection = ({stats}) => {
   return (
     <div className="relative flex flex-col items-center justify-center min-h-screen p-8">
       <div className="relative flex flex-col md:flex-row w-full max-w-5xl z-10 gap-6">
@@ -21,7 +21,7 @@ const CounterSection = () => {
             <span className="text-lg font-semibold text-gray-700">
               Tours Completed:
             </span>
-            <AnimatedCounter targetNumber={500} duration={3} />
+            <AnimatedCounter targetNumber={stats.tours} duration={3} />
           </div>
         </div>
       </div>

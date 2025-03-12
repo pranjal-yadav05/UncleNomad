@@ -35,7 +35,7 @@ export default function ToursPage() {
   
   const navigate = useNavigate()
 
-  const categories = ["all", "adventure", "cultural", "relaxation", "beach"];
+  const categories = ["all", "Adventure", "Cultural", "Relaxation"];
 
   useEffect(() => {
     const loadTours = async () => {
@@ -67,7 +67,7 @@ export default function ToursPage() {
     
     // Filter by category
     if (activeCategory !== "all") {
-      result = result.filter(tour => tour.category === activeCategory);
+      result = result.filter(tour => tour.category.toLowerCase() === activeCategory.toLowerCase());
     }
     
     // Filter by search query
@@ -439,6 +439,9 @@ export default function ToursPage() {
                             <Users className="w-3 h-3 mr-1 flex-shrink-0" />
                             {getAvailableSlots(tour)} slots left
                           </div>
+                          <div className="flex items-center bg-white/10 rounded-full px-3 py-1 text-sm text-white/90">
+                            {tour.category}
+                          </div>
                         </div>
                         
                         <div className="mt-auto flex justify-between items-center">
@@ -459,7 +462,7 @@ export default function ToursPage() {
                       className="bg-white/5 backdrop-blur-md rounded-xl overflow-hidden border border-white/10 flex flex-col md:flex-row hover:bg-white/10 transition-colors cursor-pointer"
                       onClick={() => handleTourClick(tour)}
                     >
-                      <div className="md:w-1/3 h-60 md:h-auto relative">
+                      <div className="md:w-1/3 h-48 relative">
                         <img
                           src={tour.images[0] || "/placeholder.svg?height=400&width=600"}
                           alt={tour.title}
@@ -467,11 +470,6 @@ export default function ToursPage() {
                           className="object-cover"
                           sizes="(max-width: 768px) 100vw, 33vw"
                         />
-                        <div className="absolute top-3 right-3">
-                          <Badge className="bg-indigo-600">
-                            {tour.category}
-                          </Badge>
-                        </div>
                       </div>
                       <div className="p-6 flex-1 flex flex-col">
                         <div className="flex justify-between items-start mb-2">
@@ -494,6 +492,9 @@ export default function ToursPage() {
                           <div className="flex items-center bg-white/10 rounded-full px-3 py-1 text-sm text-white/90">
                             <Users className="w-4 h-4 mr-1 flex-shrink-0" />
                             {getAvailableSlots(tour)} slots left
+                          </div>
+                          <div className="flex items-center bg-white/10 rounded-full px-3 py-1 text-sm text-white/90">
+                            {tour.category}
                           </div>
                           <div className="flex items-center bg-white/10 rounded-full px-3 py-1 text-sm text-white/90">
                             {formatDate(tour.startDate)} - {formatDate(tour.endDate)}

@@ -7,15 +7,14 @@ import { useNavigate } from "react-router-dom"
 import TourCard from "../components/TourCard"
 import { Badge } from "../components/ui/badge"
 
-const TourSection = ({ tours, setIsBookingModalOpen, isBookingModalOpen }) => {
+const TourSection = ({ tours, stats, setStats, setIsBookingModalOpen, isBookingModalOpen }) => {
   const [showLeftButton, setShowLeftButton] = useState(false)
   const [showRightButton, setShowRightButton] = useState(true)
   const [viewMode, setViewMode] = useState("carousel")
+  
   // const [activeCategory, setActiveCategory] = useState("all")
   const scrollRef = useRef(null)
   const navigate = useNavigate()
-
-  // const categories = ["all", "adventure", "cultural", "beach", "mountain", "city"]
 
   const updateScrollButtons = useCallback(() => {
     if (scrollRef.current) {
@@ -48,6 +47,20 @@ const TourSection = ({ tours, setIsBookingModalOpen, isBookingModalOpen }) => {
     })
   }
 
+  const formatNumber = (number) => {
+    if (number < 1000) {
+      // For numbers below 1000, round to the nearest 10 or 50 depending on the range
+      if (number < 100) {
+        return `${Math.floor(number / 10) * 10}+`;  // Round to nearest 10 (e.g., 20 -> 20+)
+      }
+      return `${Math.floor(number / 50) * 50}+`;  // Round to nearest 50 (e.g., 520 -> 500+)
+    } else {
+      // For numbers 1000 and above, round to the nearest thousand and add 'K+'
+      const rounded = Math.floor(number / 1000);
+      return `${rounded}K+`;  // 1200 -> 1K+
+    }
+  };
+  
   return (
     <div id="tours" className="relative py-24 overflow-hidden">
       {/* Background elements */}
@@ -193,22 +206,23 @@ const TourSection = ({ tours, setIsBookingModalOpen, isBookingModalOpen }) => {
         {/* Stats section */}
         <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
           <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
-            <div className="text-4xl font-bold text-white mb-2">50+</div>
+            <div className="text-4xl font-bold text-white mb-2">{formatNumber(stats.destinations)}</div>
             <div className="text-indigo-200">Destinations</div>
           </div>
           <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
-            <div className="text-4xl font-bold text-white mb-2">200+</div>
+            <div className="text-4xl font-bold text-white mb-2">{formatNumber(stats.tours)}</div>
             <div className="text-indigo-200">Tours</div>
           </div>
           <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
-            <div className="text-4xl font-bold text-white mb-2">10k+</div>
-            <div className="text-indigo-200">Happy Travelers</div>
+            <div className="text-4xl font-bold text-white mb-2">{formatNumber(stats.travellers)}</div>
+            <div className="text-indigo-200">Happy Travellers</div>
           </div>
           <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
-            <div className="text-4xl font-bold text-white mb-2">4.9</div>
+            <div className="text-4xl font-bold text-white mb-2">{stats.ratings}</div>
             <div className="text-indigo-200">Average Rating</div>
           </div>
         </div>
+
       </div>
     </div>
   )

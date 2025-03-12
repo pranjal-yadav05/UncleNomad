@@ -141,7 +141,7 @@ const Header = () => {
                 navigate("/", { state: { section: "availability" } })
               }}
             >
-              Stays
+              Home Stay
             </a>
             <a
               href="#gallery"
@@ -245,7 +245,7 @@ const Header = () => {
                 }}
               >
                 <Bed className="h-6 w-6" />
-                <span>Stays</span>
+                <span>Home Stay</span>
               </a>
               <a
                 href="#gallery"

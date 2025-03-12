@@ -35,6 +35,8 @@ const AdminPanel = () => {
     { path: "queries", label: "Queries" },
     { path: "media", label: "Media" },
     { path: "gallery", label: "Gallery" },
+    { path: "Stats", label: "Stats"},
+    { path: "reviews", label: "Reviews"},
     { path: "credentials", label: "Update Credentials" },
   ]
 

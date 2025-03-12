@@ -7,6 +7,7 @@ import { v2 as cloudinaryV2 } from 'cloudinary';
 import mongoose from 'mongoose';
 import crypto from "crypto"
 import Razorpay from "razorpay"
+import Stats from '../models/Stats.js';
 
 // Configure Cloudinary
 cloudinaryV2.config({
@@ -86,12 +87,13 @@ export const getTours = async (req, res) => {
 
 export const createTour = async (req, res) => {
   try {
-    const { title, description, price, duration, groupSize, location, itinerary, startDate, endDate } = req.body;
+    const { title, description, category, price, duration, groupSize, location, itinerary, startDate, endDate } = req.body;
     
     // Create tour first with empty images array
     const newTour = new Tour({
       title, 
       description, 
+      category,
       price, 
       duration, 
       groupSize, 
@@ -174,6 +176,7 @@ export const updateTour = async (req, res) => {
     const updateData = {
       title: req.body.title || existingTour.title,
       description: req.body.description || existingTour.description,
+      category: req.body.category || existingTour.category,
       price: req.body.price || existingTour.price,
       duration: req.body.duration || existingTour.duration,
       groupSize: req.body.groupSize || existingTour.groupSize,
@@ -749,3 +752,99 @@ export const getUserTourBooking = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch bookings" });
   }
 };
+
+export const getStats = async (req, res) => {
+  try {
+    // Retrieve the stats document from the database (you can adjust the query if needed, e.g., find by a specific ID)
+    const stats = await Stats.findOne();  // Optionally, add filters if you want specific results
+    
+    if (!stats) {
+      return res.status(404).json({ message: 'Stats not found' });
+    }
+
+    // Return the stats data
+    res.status(200).json(stats);
+  } catch (error) {
+    console.error('Error retrieving stats:', error);
+    res.status(500).json({ message: 'Error retrieving stats' });
+  }
+};
+
+
+export const postStats = async (req, res) => {
+  try {
+    const { destinations, tours, travellers, ratings } = req.body;
+
+    // Check if stats already exist in the database (you can use a unique identifier or just check if there's any stats document)
+    const existingStats = await Stats.findOne();  // Optionally, add a filter if you need to look for specific conditions
+
+    if (existingStats) {
+      // Update the existing stats document
+      existingStats.destinations = destinations;
+      existingStats.tours = tours;
+      existingStats.travellers = travellers;
+      existingStats.ratings = ratings;
+
+      // Save the updated stats to the database
+      await existingStats.save();
+      res.status(200).json({ message: 'Stats updated successfully' });
+    } else {
+      // Create a new stats document if no existing stats found
+      const stats = new Stats({
+        destinations,
+        tours,
+        travellers,
+        ratings,
+      });
+
+      // Save the new stats to the database
+      await stats.save();
+      res.status(201).json({ message: 'Stats saved successfully' });
+    }
+  } catch (error) {
+    console.error('Error saving or updating stats:', error);
+    res.status(500).json({ message: 'Error saving or updating stats' });
+  }
+};
+
+// Delete a specific stat
+export const deleteStats = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const stat = await Stats.findByIdAndDelete(id);
+
+    if (!stat) {
+      return res.status(404).json({ message: 'Stat not found' });
+    }
+
+    res.status(200).json({ message: 'Stat deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting stat:', error);
+    res.status(500).json({ message: 'Error deleting stat' });
+  }
+};
+
+// Update an existing stat
+export const updateStats = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { destinations, tours, travellers, ratings } = req.body;
+
+    const stat = await Stats.findByIdAndUpdate(
+      id,
+      { destinations, tours, travellers, ratings },
+      { new: true } // Returns the updated stat
+    );
+
+    if (!stat) {
+      return res.status(404).json({ message: 'Stat not found' });
+    }
+
+    res.status(200).json({ message: 'Stat updated successfully', stat });
+  } catch (error) {
+    console.error('Error updating stat:', error);
+    res.status(500).json({ message: 'Error updating stat' });
+  }
+};
+

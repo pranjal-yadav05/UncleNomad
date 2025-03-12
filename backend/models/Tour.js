@@ -14,6 +14,7 @@ const tourSchema = new mongoose.Schema(
     id: { type: Number, required: true, unique: true },
     title: { type: String, required: true },
     description: { type: String, required: true },
+    category: { type: String, default: "Adventure", required: true},
     price: { type: String, required: true },
     duration: { type: String, required: true },
     groupSize: { type: Number, required: true, min: 1 },

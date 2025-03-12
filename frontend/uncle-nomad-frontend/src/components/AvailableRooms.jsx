@@ -15,7 +15,7 @@ export default function AvailableRooms({ availableRooms, handleBookNowClick }) {
   return (
     <section className="container mx-auto px-6 py-16 relative">
       <h2 className="text-4xl font-extrabold mb-10 text-center text-white" style={{'fontFamily': 'Poppins'}}>
-        Rooms We Offer
+        Our Home Stay in Manali
       </h2>
 
       {/* Horizontal Scrollable Room Cards */}

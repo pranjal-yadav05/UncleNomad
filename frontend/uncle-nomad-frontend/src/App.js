@@ -20,6 +20,8 @@ import ProfilePage from './pages/ProfilePage';
 import RoomBookingPage from './pages/RoomBookingPage';
 import TourBookingPage from './pages/TourBookingPage';
 import HomePage from './pages/HomePage';
+import ManageStats from './pages/ManageStats';
+import ManageReviews from './pages/ManageReviews';
 
 function App() {
   return (
@@ -46,9 +48,11 @@ function App() {
           <Route path="rooms" element={<ManageRooms />} />
           <Route path="packages" element={<ManagePackages />} />
           <Route path="queries" element={<ManageQueries />} />
-            <Route path="credentials" element={<AdminCredentialsUpdate />} />
-            <Route path="media" element={<ManageMedia />} />
-          </Route>
+          <Route path="credentials" element={<AdminCredentialsUpdate />} />
+          <Route path='reviews' element={<ManageReviews/>}/>
+          <Route path='stats' element={<ManageStats/>} />
+          <Route path="media" element={<ManageMedia />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   );

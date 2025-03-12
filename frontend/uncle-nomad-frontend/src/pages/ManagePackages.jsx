@@ -21,6 +21,7 @@ export default function ManagePackages() {
     id: "",
     title: "",
     description: "",
+    category: "Adventure",
     price: "",
     duration: "",
     groupSize: "",
@@ -80,6 +81,7 @@ export default function ManagePackages() {
       formData.append("id", newPackage.id);
       formData.append("title", newPackage.title);
       formData.append("description", newPackage.description);
+      formData.append("category", newPackage.category);
       formData.append("price", newPackage.price);
       formData.append("duration", newPackage.duration);
       formData.append("groupSize", newPackage.groupSize);
@@ -133,6 +135,7 @@ export default function ManagePackages() {
       id: "",
       title: "",
       description: "",
+      category: "",
       price: "",
       duration: "",
       groupSize: "",
@@ -244,6 +247,7 @@ export default function ManagePackages() {
                         id: pkg.id,
                         title: pkg.title,
                         description: pkg.description,
+                        category: pkg.category,
                         price: pkg.price.toString(),
                         duration: pkg.duration,
                         groupSize: pkg.groupSize,
