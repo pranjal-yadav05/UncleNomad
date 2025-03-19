@@ -7,6 +7,7 @@ import { v2 as cloudinaryV2 } from 'cloudinary';
 import mongoose from 'mongoose';
 import crypto from "crypto"
 import Razorpay from "razorpay"
+import Review from '../models/UserReview.js'
 import Stats from '../models/Stats.js';
 
 // Configure Cloudinary
@@ -77,13 +78,41 @@ const uploadToCloudinary = async (file, tourId, index) => {
 // Get all tours
 export const getTours = async (req, res) => {
   try {
-    const tours = await Tour.find();
-    res.json(tours);
+    // Fetch all tours
+    const tours = await Tour.find().lean();
+
+    // Get top 4 reviews for each tour
+    const tourIds = tours.map(tour => tour._id);
+    const reviewsByTour = await Review.aggregate([
+      { $match: { bookingType: "tour", itemId: { $in: tourIds } } },
+      { $sort: { createdAt: -1 } }, // Sort reviews by newest first
+      { 
+        $group: { 
+          _id: "$itemId", 
+          reviews: { $push: { userName: "$userName", rating: "$rating", comment: "$comment", createdAt: "$createdAt" } } 
+        } 
+      }
+    ]);
+
+    // Convert aggregation results into a map for quick lookup
+    const reviewMap = {};
+    reviewsByTour.forEach(entry => {
+      reviewMap[entry._id.toString()] = entry.reviews.slice(0, 4); // Take top 4 reviews
+    });
+
+    // Attach top 4 reviews to each tour
+    const toursWithReviews = tours.map(tour => ({
+      ...tour,
+      reviews: reviewMap[tour._id.toString()] || [] // Default to empty array if no reviews
+    }));
+
+    res.json(toursWithReviews);
   } catch (error) {
-    console.error('Error fetching tours:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Error fetching tours:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
+
 
 export const createTour = async (req, res) => {
   try {
@@ -143,7 +172,13 @@ export const getTourById = async (req, res) => {
     if (!tour) {
       return res.status(404).json({ message: 'Tour not found' });
     }
-    res.json(tour);
+    const reviews = await Review.find({ bookingType: "tour", itemId: tourId })
+      .sort({ createdAt: -1 }) // Newest reviews first
+      .limit(4)
+      .select("userName rating comment createdAt") // Only include necessary fields
+      .lean();
+
+    res.json({ ...tour, reviews });
   } catch (error) {
     console.error('Error fetching tour:', error);
     res.status(500).json({ message: 'Server error' });
@@ -717,38 +752,67 @@ export const getUserTourBooking = async (req, res) => {
       paymentStatus: "PAID"
     })
     .populate({
-      path: 'tour',
-      select: 'title location images startDate endDate duration price itinerary'
+      path: "tour",
+      select: "title location images startDate endDate duration price itinerary"
     })
-    .sort({ bookingDate: -1 });
+    .sort({ bookingDate: -1 })
+    .lean(); // Use lean() to remove Mongoose metadata
 
     if (!bookings.length) {
       return res.status(404).json({ message: "No bookings found for this user" });
     }
 
-    // Format the response to include relevant tour data
-    const formattedBookings = bookings.map(booking => {
-      const bookingObj = booking.toObject();
-      
-      // Add tour-specific data to the booking object
-      if (bookingObj.tour) {
-        bookingObj.tourName = bookingObj.tour.title;
-        bookingObj.location = bookingObj.tour.location;
-        bookingObj.tourImage = bookingObj.tour.images && bookingObj.tour.images.length > 0 
-          ? bookingObj.tour.images[0] 
-          : null;
-        bookingObj.tourDate = bookingObj.tour.startDate;
-        bookingObj.tourEndDate = bookingObj.tour.endDate;
-        bookingObj.participants = bookingObj.groupSize;
-        bookingObj.totalAmount = bookingObj.totalPrice;
-      }
-      
-      return bookingObj;
+    // Fetch any reviews the user has submitted for these bookings
+    const bookingIds = bookings.map(booking => booking._id);
+
+    const reviews = await Review.find({
+      bookingId: { $in: bookingIds },
+      bookingType: "tour"
+    }).lean();
+
+    // Create a map of booking IDs to reviews
+    const reviewMap = {};
+    reviews.forEach(review => {
+      reviewMap[review.bookingId.toString()] = review;
     });
 
-    res.json(formattedBookings);
+    // Format the response properly
+    const formattedBookings = bookings.map(booking => {
+      const review = reviewMap[booking._id.toString()] || null;
+
+      return {
+        _id: booking._id, 
+        status: booking.status,
+        bookingDate: booking.bookingDate,
+        guestName: booking.guestName,
+        email: booking.email,
+        phone: booking.phone,
+        specialRequests: booking.specialRequests,
+        participants: booking.groupSize,
+        totalAmount: booking.totalPrice,
+        paymentReference: booking.paymentReference,
+        
+        // Tour details
+        tourId: booking.tour?._id || null,
+        tourName: booking.tour?.title || "Unknown Tour",
+        location: booking.tour?.location || "Unknown Location",
+        tourImage: booking.tour?.images?.[0] || null, 
+        tourDate: booking.tour?.startDate || null,
+        tourEndDate: booking.tour?.endDate || null,
+        duration: booking.tour?.duration || null,
+        pricePerPerson: booking.tour?.price || null,
+        itinerary: booking.tour?.itinerary || [],
+
+        // Review details
+        userRating: review ? review.rating : 0,
+        userReview: review ? review.comment : "",
+        reviewId: review ? review._id : null
+      };
+    });
+
+    res.status(200).json(formattedBookings);
   } catch (error) {
-    console.error("Error fetching bookings:", error);
+    console.error("Error fetching user tour bookings:", error);
     res.status(500).json({ message: "Failed to fetch bookings" });
   }
 };

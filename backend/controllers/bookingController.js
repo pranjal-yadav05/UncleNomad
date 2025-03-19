@@ -1,6 +1,7 @@
 import Booking from '../models/Booking.js';
 import Room from '../models/Room.js';
 import express from 'express';
+import Review from '../models/UserReview.js'
 
 const router = express.Router();
 
@@ -368,7 +369,7 @@ export const getUserBooking = async (req, res) => {
         }
 
         // Fetch user bookings
-        const bookings = await Booking.find({ email: new RegExp(`^${req.user.email}$`, "i") })
+        const bookings = await Booking.find({ email: new RegExp(`^${req.user.email}$`, "i"), status: "CONFIRMED" })
             .sort({ checkIn: -1 })
             .lean(); // Use lean() for better performance
 
@@ -378,7 +379,8 @@ export const getUserBooking = async (req, res) => {
 
         // Extract unique room IDs from bookings
         const roomIds = [...new Set(bookings.flatMap(booking => booking.rooms.map(room => room.roomId)))];
-
+        const bookingIds = bookings.map(booking => booking._id);
+        
         // Fetch room details with images
         const rooms = await Room.find({ _id: { $in: roomIds } }, "_id type imageUrls").lean();
         const roomMap = rooms.reduce((acc, room) => {
@@ -386,14 +388,31 @@ export const getUserBooking = async (req, res) => {
             return acc;
         }, {});
 
+        const reviews = await Review.find({
+            bookingId: { $in: bookingIds },
+            bookingType: "room"
+        }).lean();
+
+        // Create a map of booking IDs to reviews
+        const reviewMap = {};
+        reviews.forEach(review => {
+            reviewMap[review.bookingId.toString()] = review;
+        });
+
         // Attach images to each booked room
-        const enrichedBookings = bookings.map(booking => ({
-            ...booking,
-            rooms: booking.rooms.map(room => ({
-                ...room,
-                images: roomMap[room.roomId.toString()] || []
-            }))
-        }));
+        const enrichedBookings = bookings.map(booking => {
+            const review = reviewMap[booking._id.toString()] || null;
+            return {
+                ...booking,
+                rooms: booking.rooms.map(room => ({
+                    ...room,
+                    images: roomMap[room.roomId.toString()] || []
+                })),
+                userRating: review ? review.rating : 0,
+                userReview: review ? review.comment : "",
+                reviewId: review ? review._id : null
+            };
+        });
 
         res.json(enrichedBookings);
     } catch (error) {

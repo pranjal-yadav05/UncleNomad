@@ -1,7 +1,7 @@
 import Room from '../models/Room.js';
 import { v2 as cloudinaryV2 } from 'cloudinary';
 import streamifier from 'streamifier';
-
+import Review from '../models/UserReview.js'
 // Configure Cloudinary
 cloudinaryV2.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -13,8 +13,33 @@ cloudinaryV2.config({
 // Fetch all rooms
 export const getRooms = async (req, res) => {
   try {
-    const rooms = await Room.find();
-    res.json(rooms);
+    const rooms = await Room.find().lean();
+
+    const roomIds = rooms.map(room => room._id);
+    const reviewsByRoom = await Review.aggregate([
+      { $match: { bookingType: "room", itemId: { $in: roomIds } } },
+      { $sort: { createdAt: -1 } }, // Sort reviews by newest first
+      { 
+        $group: { 
+          _id: "$itemId", 
+          reviews: { $push: { userName: "$userName", rating: "$rating", comment: "$comment", createdAt: "$createdAt" } } 
+        } 
+      }
+    ]);
+
+    // Convert aggregation results into a map for quick lookup
+    const reviewMap = {};
+    reviewsByRoom.forEach(entry => {
+      reviewMap[entry._id.toString()] = entry.reviews.slice(0, 4); // Take top 4 reviews
+    });
+
+    // Attach top 4 reviews to each tour
+    const roomsWithReviews = rooms.map(room => ({
+      ...room,
+      reviews: reviewMap[room._id.toString()] || [] // Default to empty array if no reviews
+    }));
+    
+    res.json(roomsWithReviews);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

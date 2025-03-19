@@ -86,7 +86,7 @@ router.post("/verify-otp", async (req, res) => {
 
     // Generate authentication token
     const token = jwt.sign(
-      { id: user._id, email: user.email, isVerified: user.isEmailVerified },
+      { id: user._id, email: user.email, name:user.name, isVerified: user.isEmailVerified },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );

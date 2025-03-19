@@ -42,6 +42,7 @@ const RoomDetailsPage = () => {
           }
 
           const data = await response.json()
+          console.log('dataa',data)
           setRoom({
             ...data,
             imageUrl: data.imageUrl || "/placeholder.svg", // ✅ Ensure main image exists
@@ -301,6 +302,7 @@ const RoomDetailsPage = () => {
                 <ImageGallery
                   images={
                     room.imageUrls?.map((src, index) => ({
+                      key: index,
                       src,
                       alt: `${room.type} - view ${index + 1}`,
                     })) || [{ src: room.imageUrl || "/placeholder-room.jpg", alt: `${room.type} - view 1` }]
@@ -447,28 +449,28 @@ const RoomDetailsPage = () => {
                     {[1, 2, 3, 4, 5].map((star) => (
                       <Star
                         key={star}
-                        className={`w-5 h-5 ${star <= Math.round(room.rating) ? "text-yellow-400 fill-current" : "text-gray-300"}`}
+                        className={`w-5 h-5 ${star <= Math.round(room?.ratings?.overall || 0) ? "text-yellow-400 fill-current" : "text-gray-300"}`}
                       />
                     ))}
                   </div>
-                  <span className="ml-2 text-gray-700 font-medium">{room.rating} out of 5</span>
+                  <span className="ml-2 text-gray-700 font-medium">{room?.ratings?.overall || "No Ratings"} out of 5</span>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <ReviewCard
-                  name="Sarah Johnson"
-                  date="Stayed in January 2025"
-                  rating={5}
-                  review="This room exceeded all my expectations! The bed was incredibly comfortable, the room was spacious and clean, and the amenities were perfect. I particularly loved the view from the window and the fact that the bathroom was so well-appointed."
-                />
-
-                <ReviewCard
-                  name="Michael Chen"
-                  date="Stayed in December 2024"
-                  rating={4}
-                  review="Great room overall. Very comfortable and well-maintained. The only minor issue was that I could hear some noise from the hallway occasionally, but it wasn't a major problem. The staff was very responsive to all requests."
-                />
+                {room.reviews.length > 0 ? (
+                  room.reviews.map((review, index) => (
+                    <ReviewCard
+                      key={index}
+                      name={review.userName}
+                      date={`Stayed in ${new Date(review.createdAt).toLocaleString('en-US', { month: 'long', year: 'numeric' })}`}
+                      rating={review.rating}
+                      review={review.comment}
+                    />
+                  ))
+                ) : (
+                  <p className="text-gray-600">No reviews yet. Be the first to review this tour!</p>
+                )}
               </div>
             </div>
           )}

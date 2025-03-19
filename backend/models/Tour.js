@@ -26,6 +26,16 @@ const tourSchema = new mongoose.Schema(
     location: { type: String, required: true },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
+    averageRating: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 5
+    },
+    reviewCount: {
+      type: Number,
+      default: 0
+    },
     itinerary: [itinerarySchema]
   }
 );

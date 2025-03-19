@@ -46,13 +46,18 @@ const Footer = () => {
               <li>
                 <a href="https://m.facebook.com/unclenomad.in/" className="text-gray-300 hover:text-white transition-colors duration-200">
                   <i className="fab fa-facebook-f m-2"></i>
-                  Facebook
+                  unclenomad.in
                 </a>
               </li>
               <li>
                 <a href="https://instagram.com/unclenomad.in" className="text-gray-300 hover:text-white transition-colors duration-200">
                   <i className="fab fa-instagram m-2"></i>
-                  Instagram
+                  unclenomad.in
+                </a>
+              </li>
+              <li>
+                <a href="https://instagram.com/unclenomad.in" className="text-gray-300 hover:text-white transition-colors duration-200">
+                <i className="fa-solid fa-suitcase m-2"></i>                  Tripadvisor
                 </a>
               </li>
             </ul>
@@ -68,13 +73,17 @@ const Footer = () => {
               </li>
               <li>
                 <h4 className="text-white font-medium mb-1">Phone</h4>
-                <p className="text-gray-300">+91 (123) 456-7890</p>
+                <p className="text-gray-300">
+                  Saurabh <a href="tel:+919760777730" className="text-blue-400 hover:underline">+91-9760777730</a>
+                </p>
+                <p className="text-gray-300">
+                  Krunal <a href="tel:+917984691219" className="text-blue-400 hover:underline">+91-7984691219</a>
+                </p>
               </li>
               <li>
                 <h4 className="text-white font-medium mb-1">Address</h4>
                 <p className="text-gray-300">
-                  123 Mountain View Road,<br />
-                  Manali, Himachal Pradesh
+                Uncle Nomad, Behind Clubhouse, <br/> Shnag Road, Old Manali,<br/> Manali . 137151
                 </p>
               </li>
             </ul>

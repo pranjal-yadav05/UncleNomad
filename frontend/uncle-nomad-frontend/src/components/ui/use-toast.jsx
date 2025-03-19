@@ -27,30 +27,34 @@ export const toast = {
 }
 
 export const useToast = () => {
-  const [toasts, setToasts] = useState([])
+  const [toasts, setToasts] = useState([]);
 
   useState(() => {
-    const unsubscribe = toast.subscribe(setToasts)
-    return () => unsubscribe()
-  }, [])
+    const unsubscribe = toast.subscribe(setToasts);
+    return () => unsubscribe();
+  }, []);
 
-  const showToast = (toast) => {
-    const id = Date.now()
-    toast.id = id
-    toast.variant = toast.variant || 'default'
-    toast.duration = toast.duration || 3000
-    
-    toast.addToast(toast)
+  const showToast = (newToast) => {
+    const id = Date.now();
+    const toastData = {
+      id,
+      title: newToast.title,
+      description: newToast.description,
+      variant: newToast.variant || "default",
+      duration: newToast.duration || 3000,
+    };
 
-    if (toast.duration > 0) {
+    toast.addToast(toastData); // ✅ Use `toastData`, not `toast`
+
+    if (toastData.duration > 0) {
       setTimeout(() => {
-        toast.removeToast(id)
-      }, toast.duration)
+        toast.removeToast(id);
+      }, toastData.duration);
     }
-  }
+  };
 
-  return { toasts, showToast }
-}
+  return { toasts, showToast };
+};
 
 export const ToastContainer = () => {
   const { toasts } = useToast()

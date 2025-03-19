@@ -454,45 +454,32 @@ const TourDetailsPage = () => {
                     {[1, 2, 3, 4, 5].map((star) => (
                       <Star
                         key={star}
-                        className={`w-5 h-5 ${star <= Math.round(ratings.overall) ? "text-yellow-400 fill-current" : "text-gray-300"}`}
+                        className={`w-5 h-5 ${star <= Math.round(tour?.ratings?.overall || 0) ? "text-yellow-400 fill-current" : "text-gray-300"}`}
                       />
                     ))}
                   </div>
-                  <span className="ml-2 text-gray-700 font-medium">{ratings.overall} out of 5</span>
+                  <span className="ml-2 text-gray-700 font-medium">{tour?.ratings?.overall || "No Ratings"} out of 5</span>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <ReviewCard
-                  name="Sarah Johnson"
-                  date="Traveled in January 2025"
-                  rating={5}
-                  review="This tour exceeded all my expectations! The guides were knowledgeable and friendly, and the itinerary was perfectly balanced between activities and free time. I particularly enjoyed the local experiences and authentic cuisine."
-                />
-
-                <ReviewCard
-                  name="Michael Chen"
-                  date="Traveled in December 2024"
-                  rating={4}
-                  review="Great experience overall. The accommodations were comfortable and the tour guide was incredibly knowledgeable. I would have liked a bit more free time to explore on my own, but otherwise it was a fantastic trip."
-                />
-
-                <ReviewCard
-                  name="David Müller"
-                  date="Traveled in November 2024"
-                  rating={5}
-                  review="One of the best tours I've ever taken! The scenery was breathtaking and our guide went above and beyond to make sure everyone had a great experience. The small group size made it feel very personal and we made friends we'll keep in touch with."
-                />
-
-                <ReviewCard
-                  name="Emily Rodriguez"
-                  date="Traveled in October 2024"
-                  rating={4}
-                  review="This tour was well organized and hit all the major highlights of the region. The accommodations were nice and the food was excellent. The only downside was that some days felt a bit rushed, but overall it was a wonderful experience."
-                />
+                {tour.reviews.length > 0 ? (
+                  tour.reviews.map((review, index) => (
+                    <ReviewCard
+                      key={index}
+                      name={review.userName}
+                      date={`Traveled in ${new Date(review.createdAt).toLocaleString('en-US', { month: 'long', year: 'numeric' })}`}
+                      rating={review.rating}
+                      review={review.comment}
+                    />
+                  ))
+                ) : (
+                  <p className="text-gray-600">No reviews yet. Be the first to review this tour!</p>
+                )}
               </div>
             </div>
           )}
+
         </div>
 
         {/* CTA Section */}

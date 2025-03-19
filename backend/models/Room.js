@@ -13,9 +13,15 @@ const roomSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
-  rating: {
+  averageRating: {
     type: Number,
-    required: false
+    default: 0,
+    min: 0,
+    max: 5
+  },
+  reviewCount: {
+    type: Number,
+    default: 0
   },
   totalRooms: {
     type: Number,

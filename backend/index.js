@@ -20,6 +20,7 @@ import emailVerifyRoutes from './routes/emailVerifyRoutes.js'
 import tokenValidationRoutes from './routes/tokenValidationRoutes.js'
 import subscribeRoutes from './routes/subscribeRoutes.js'
 import reviewsRoutes from './routes/reviewRoutes.js'
+import userReviewRoutes from './routes/userReviewRoutes.js'
 
 dotenv.config();
 
@@ -80,6 +81,7 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/guides', guidesRoutes);
 app.use('/api/tours', toursRoutes);
 app.use('/api/reviews', reviewsRoutes);
+app.use('/api/userreviews', userReviewRoutes);
 app.use('/api/gallery', galleryRoutes);
 app.use('/api/admin-auth', adminAuthRoutes);
 app.use('/api/payments', paymentRoutes);
