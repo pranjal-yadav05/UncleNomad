@@ -84,7 +84,7 @@ export const getTours = async (req, res) => {
     // Get top 4 reviews for each tour
     const tourIds = tours.map(tour => tour._id);
     const reviewsByTour = await Review.aggregate([
-      { $match: { bookingType: "tour", itemId: { $in: tourIds } } },
+      { $match: { bookingType: "tour", itemId: { $in: tourIds }, status: "approved" } },
       { $sort: { createdAt: -1 } }, // Sort reviews by newest first
       { 
         $group: { 
@@ -172,7 +172,7 @@ export const getTourById = async (req, res) => {
     if (!tour) {
       return res.status(404).json({ message: 'Tour not found' });
     }
-    const reviews = await Review.find({ bookingType: "tour", itemId: tourId })
+    const reviews = await Review.find({ bookingType: "tour", itemId: tour })
       .sort({ createdAt: -1 }) // Newest reviews first
       .limit(4)
       .select("userName rating comment createdAt") // Only include necessary fields

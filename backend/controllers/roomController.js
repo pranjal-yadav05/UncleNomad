@@ -17,7 +17,7 @@ export const getRooms = async (req, res) => {
 
     const roomIds = rooms.map(room => room._id);
     const reviewsByRoom = await Review.aggregate([
-      { $match: { bookingType: "room", itemId: { $in: roomIds } } },
+      { $match: { bookingType: "room", itemId: { $in: roomIds }, status:'approved' } },
       { $sort: { createdAt: -1 } }, // Sort reviews by newest first
       { 
         $group: { 

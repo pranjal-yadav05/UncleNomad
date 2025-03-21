@@ -31,12 +31,34 @@ router.post("/send-otp", async (req, res) => {
       { upsert: true, new: true }
     );
 
-    // Send email
+    // Uncle Nomad Logo URL (Replace with actual image link if hosted)
+    const logoUrl = "https://res.cloudinary.com/dzr2pobts/image/upload/v1742561753/logo2_lgqlkm.png"; 
+
+    // Email HTML Template
+    const emailHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+        <div style="text-align: center; padding-bottom: 20px;">
+          <img src="${logoUrl}" alt="Uncle Nomad Logo" style="max-width: 150px;"/>
+          <h2 style="color: #333;">Uncle Nomad - OTP Verification</h2>
+        </div>
+        <div style="background: #f9f9f9; padding: 20px; border-radius: 5px; text-align: center;">
+          <p style="font-size: 18px; color: #333;">Your One-Time Password (OTP) is:</p>
+          <p style="font-size: 24px; font-weight: bold; color: #d35400; margin: 10px 0;">${otp}</p>
+          <p style="font-size: 14px; color: #666;">This OTP is valid for <strong>5 minutes</strong>. Do not share it with anyone.</p>
+        </div>
+        <div style="text-align: center; margin-top: 20px; color: #888;">
+          <p>If you didn't request this OTP, please ignore this email.</p>
+          <p>For any support, contact <a href="mailto:support@unclenomad.com">support@unclenomad.com</a></p>
+        </div>
+      </div>
+    `;
+
+    // Send email with HTML
     await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+      from: `"Uncle Nomad" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: "Your OTP Code",
-      text: `Your OTP is: ${otp}. It is valid for 5 minutes.`,
+      subject: "Uncle Nomad - Your OTP Code",
+      html: emailHtml, // Send HTML instead of plain text
     });
 
     res.json({ message: "OTP sent successfully" });
@@ -45,6 +67,7 @@ router.post("/send-otp", async (req, res) => {
     res.status(500).json({ message: "Failed to send OTP" });
   }
 });
+
 
 router.post("/verify-otp", async (req, res) => {
   const { email, otp, name, phone } = req.body;

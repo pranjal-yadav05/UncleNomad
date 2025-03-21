@@ -21,7 +21,7 @@ router.post('/verify', async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '24h' });
+    const token = jwt.sign({ username, isAdmin: true}, JWT_SECRET, { expiresIn: '24h' });
     return res.json({ token });
   } catch (error) {
     console.error('Error during authentication:', error);

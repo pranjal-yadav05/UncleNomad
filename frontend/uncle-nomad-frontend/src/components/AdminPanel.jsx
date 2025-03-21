@@ -1,5 +1,6 @@
 "use client";
 
+import {jwtDecode} from "jwt-decode"; 
 import { useEffect, useState } from "react";
 import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
@@ -24,8 +25,23 @@ const AdminPanel = () => {
 
   useEffect(() => {
     const authToken = localStorage.getItem("token");
+
     if (!authToken) {
       navigate("/admin-auth");
+      return;
+    }
+
+    try {
+      const decoded = jwtDecode(authToken); // Decode JWT
+      const currentTime = Date.now() / 1000; // Convert to seconds
+
+      if (decoded.exp < currentTime) {
+        console.warn("Token expired, logging out...");
+        handleLogout(); // Remove token and navigate
+      }
+    } catch (error) {
+      console.error("Invalid token, logging out...");
+      handleLogout();
     }
 
     if (location.pathname === "/admin") {

@@ -579,27 +579,6 @@ export default function ToursPage() {
           )}
         </div>
         
-        {/* Stats section */}
-        <div className="container mx-auto px-4 py-12">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-            <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
-              <div className="text-4xl font-bold text-white mb-2">10+</div>
-              <div className="text-indigo-200">Destinations</div>
-            </div>
-            <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
-              <div className="text-4xl font-bold text-white mb-2">20+</div>
-              <div className="text-indigo-200">Tours</div>
-            </div>
-            <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
-              <div className="text-4xl font-bold text-white mb-2">500+</div>
-              <div className="text-indigo-200">Happy Travelers</div>
-            </div>
-            <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
-              <div className="text-4xl font-bold text-white mb-2">4.9</div>
-              <div className="text-indigo-200">Average Rating</div>
-            </div>
-          </div>
-        </div>
         
         {/* Newsletter section */}
         <div className="container mx-auto px-4 py-16">
