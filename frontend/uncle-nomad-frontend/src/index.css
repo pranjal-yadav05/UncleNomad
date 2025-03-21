@@ -2,6 +2,47 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'SeaGardens';
+  src: url('../public/fonts/SeaGardens3D-Italic.otf') format('opentype');
+  font-weight: normal;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'SeaGardens';
+  src: url('../public/fonts/SeaGardens-Regular.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'SeaGardens3DFilledItalic';
+  src: url('../public/fonts/SeaGardens3DFilled-Italic.otf') format('opentype');
+  font-weight: bold;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'SeaGardens3dItalic';
+  src: url('../public/fonts/SeaGardens3D-Italic.otf') format('opentype');
+  font-weight: normal;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'SeaGardensRegular';
+  src: url('../public/fonts/SeaGardens-Regular.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'SeaGardens3DRegular';
+  src: url('../public/fonts/SeaGardens3D-Regular.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
 
 body {
   margin: 0;

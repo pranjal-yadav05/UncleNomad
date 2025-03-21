@@ -1,31 +1,37 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom"
-import { Button } from "./ui/button"
-import { Menu, X, LogOut, ChevronDown } from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../components/ui/dropdown-menu"
+import { useEffect, useState } from "react";
+import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { Button } from "./ui/button";
+import { Menu, X, LogOut, ChevronDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../components/ui/dropdown-menu";
 
 const AdminPanel = () => {
-  const navigate = useNavigate()
-  const location = useLocation()
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [open, setOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleLogout = () => {
-    localStorage.removeItem("token")
-    navigate("/admin-auth")
-  }
+    localStorage.removeItem("token");
+    navigate("/admin-auth");
+  };
 
   useEffect(() => {
-    const authToken = localStorage.getItem("token")
+    const authToken = localStorage.getItem("token");
     if (!authToken) {
-      navigate("/admin-auth")
+      navigate("/admin-auth");
     }
 
     if (location.pathname === "/admin") {
-      navigate("/admin/bookings")
+      navigate("/admin/bookings");
     }
-  }, [navigate, location])
+  }, [navigate, location]);
 
   const navItems = [
     { path: "bookings", label: "Bookings" },
@@ -35,10 +41,10 @@ const AdminPanel = () => {
     { path: "queries", label: "Queries" },
     { path: "media", label: "Media" },
     { path: "gallery", label: "Gallery" },
-    { path: "Stats", label: "Stats"},
-    { path: "reviews", label: "Reviews"},
+    { path: "Stats", label: "Stats" },
+    { path: "reviews", label: "Reviews" },
     { path: "credentials", label: "Update Credentials" },
-  ]
+  ];
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -49,7 +55,9 @@ const AdminPanel = () => {
               <h1 className="text-2xl font-bold text-gray-900">Admin Panel</h1>
             </div>
             <div className="-mr-2 -my-2 md:hidden">
-              <Button variant="ghost" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+              <Button
+                variant="ghost"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
                 {isMobileMenuOpen ? (
                   <X className="h-6 w-6" aria-hidden="true" />
                 ) : (
@@ -58,10 +66,11 @@ const AdminPanel = () => {
               </Button>
             </div>
             <nav className="hidden md:flex space-x-10">
-              <DropdownMenu>
+              <DropdownMenu open={open} onOpenChange={setOpen}>
                 <DropdownMenuTrigger asChild>
-                  {/* Here, we directly use Button inside the DropdownMenuTrigger */}
-                  <Button variant="ghost" className="text-base font-medium text-gray-500 hover:text-gray-900">
+                  <Button
+                    variant="ghost"
+                    className="text-base font-medium text-gray-500 hover:text-gray-900">
                     Manage <ChevronDown className="ml-2 h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -70,10 +79,16 @@ const AdminPanel = () => {
                     <DropdownMenuItem key={item.path}>
                       <NavLink
                         to={item.path}
+                        onClick={() => {
+                          setOpen(false); // Close dropdown before navigation
+                        }}
                         className={({ isActive }) =>
-                          `w-full px-4 py-2 text-sm ${isActive ? "bg-gray-100 text-gray-900" : "text-gray-700"} hover:bg-gray-50`
-                        }
-                      >
+                          `w-full px-4 py-2 text-sm ${
+                            isActive
+                              ? "bg-gray-100 text-gray-900"
+                              : "text-gray-700"
+                          } hover:bg-gray-50`
+                        }>
                         {item.label}
                       </NavLink>
                     </DropdownMenuItem>
@@ -85,8 +100,7 @@ const AdminPanel = () => {
               <Button
                 variant="destructive"
                 onClick={handleLogout}
-                className="ml-8 whitespace-nowrap inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-base font-medium text-white"
-              >
+                className="ml-8 whitespace-nowrap inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-base font-medium text-white">
                 <LogOut className="mr-2 h-4 w-4" /> Log Out
               </Button>
             </div>
@@ -107,13 +121,15 @@ const AdminPanel = () => {
                       : "border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
                   }`
                 }
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
+                onClick={() => setIsMobileMenuOpen(false)}>
                 {item.label}
               </NavLink>
             ))}
             <div className="mt-4 px-3">
-              <Button variant="destructive" onClick={handleLogout} className="w-full justify-center">
+              <Button
+                variant="destructive"
+                onClick={handleLogout}
+                className="w-full justify-center">
                 <LogOut className="mr-2 h-4 w-4" /> Log Out
               </Button>
             </div>
@@ -127,7 +143,7 @@ const AdminPanel = () => {
         </div>
       </main>
     </div>
-  )
-}
+  );
+};
 
-export default AdminPanel
+export default AdminPanel;

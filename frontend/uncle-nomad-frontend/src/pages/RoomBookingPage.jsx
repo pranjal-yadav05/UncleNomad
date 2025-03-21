@@ -288,7 +288,6 @@ const RoomBookingPage = () => {
   }
 
   const handleLogout = () => {
-    console.log("Logging out...")
 
     // Remove authentication data
     localStorage.removeItem("authToken")

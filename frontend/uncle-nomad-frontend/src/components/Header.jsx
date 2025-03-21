@@ -212,11 +212,11 @@ const Header = () => {
           <nav className="flex flex-col space-y-4 py-2 items-center bg-transparent shadow-lg rounded-lg p-4">
             <div className="flex flex-col">
               <a
-                href="#about"
+                href="#hero"
                 className="w-full max-w-max inline-flex my-2 items-center gap-3 text-black hover:text-brand-purple transition-colors py-2 px-4 justify-start text-black active:bg-gradient-to-r active:from-blue-500 active:via-purple-500 active:to-pink-500 active:bg-clip-text active:text-transparent"
                 onClick={(e) => {
                   e.preventDefault()
-                  navigate("/", { state: { section: "about" } })
+                  navigate("/", { state: { section: "hero" } })
                   setIsMenuOpen(false)
                 }}
               >

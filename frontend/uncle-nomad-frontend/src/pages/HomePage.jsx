@@ -24,10 +24,8 @@ export default function HomePage() {
   });
 
   const [isLoading, setIsLoading] = useState({
-    property: true,
+    rooms: true,
     tours: true,
-    guides: true,
-    booking: false,
   });
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
 
@@ -112,7 +110,6 @@ export default function HomePage() {
       .then((res) => res.json())
       .then((data) => {
         setTours(data);
-
         setIsLoading((prev) => ({ ...prev, tours: false }));
       })
       .catch((error) => console.error("Error fetching tours:", error));
@@ -123,8 +120,7 @@ export default function HomePage() {
       .then((res) => res.json())
       .then((data) => {
         setRooms(data);
-        console.log("data", data);
-        setIsLoading((prev) => ({ ...prev, property: false, rooms: false }));
+        setIsLoading((prev) => ({ ...prev, rooms: false }));
       })
       .catch((error) => console.error("Error fetching rooms:", error));
   }, []);
@@ -157,6 +153,7 @@ export default function HomePage() {
                 setIsBookingModalOpen={setIsBookingModalOpen}
                 isBookingModalOpen={isBookingModalOpen}
                 tours={tours}
+                isLoading={isLoading.tours}
               />
             </div>
 
@@ -171,7 +168,7 @@ export default function HomePage() {
               <AvailableRooms
                 availableRooms={rooms}
                 handleBookNowClick={handleBookNowClick}
-                isLoading={isLoading}
+                isLoading={isLoading.rooms}
               />
             </div>
             <GoogleReviews />

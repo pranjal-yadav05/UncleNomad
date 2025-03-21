@@ -144,9 +144,7 @@ const PackageFormModal = ({
   };
 
   const handleCategoryChange = (e) => {
-    console.log("Category before update:", newPackage.category);
     setNewPackage({ ...newPackage, category: e.target.value });
-    console.log("Category after update:", e.target.value);
   };  
 
   return (

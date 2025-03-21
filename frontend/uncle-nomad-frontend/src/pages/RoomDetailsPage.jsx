@@ -42,7 +42,6 @@ const RoomDetailsPage = () => {
           }
 
           const data = await response.json()
-          console.log('dataa',data)
           setRoom({
             ...data,
             imageUrl: data.imageUrl || "/placeholder.svg", // ✅ Ensure main image exists

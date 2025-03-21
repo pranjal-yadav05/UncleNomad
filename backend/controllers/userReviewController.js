@@ -10,7 +10,6 @@ export const submitRoomReview = async (req, res) => {
   const { bookingId, roomId, rating, review: comment } = req.body;
 
   if (!bookingId || !roomId || !rating) {
-    console.log('missing')
     return res.status(400).json({ message: "Missing required fields" });
   }
   const userId = req.user.id;

@@ -194,13 +194,6 @@ export default function ProfilePage() {
         : `${process.env.REACT_APP_API_URL}/api/userreviews/tour`;
 
     try {
-      console.log("Submitting review:", JSON.stringify({
-        bookingId: ratingData.bookingId,
-        roomId: ratingData.roomId,
-        rating: ratingData.rating,
-        review: ratingData.review,
-      }));
-
       const response = await fetch(endpoint, {
         method: "POST",
         headers: {
