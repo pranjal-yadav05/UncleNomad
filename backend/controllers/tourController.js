@@ -76,7 +76,7 @@ const uploadToCloudinary = async (file, tourId, index) => {
 };
 
 // Get all tours
-export const getTours = async (req, res) => {
+export const getAdminTours = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1; // Default to page 1
     const limit = parseInt(req.query.limit) || 10; // Default limit to 10 per page
@@ -119,6 +119,43 @@ export const getTours = async (req, res) => {
       currentPage: page,
       totalTours,
     });
+  } catch (error) {
+    console.error("Error fetching tours:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const getTours = async (req, res) => {
+  try {
+    // Fetch all tours
+    const tours = await Tour.find().lean();
+
+    // Get top 4 reviews for each tour
+    const tourIds = tours.map(tour => tour._id);
+    const reviewsByTour = await Review.aggregate([
+      { $match: { bookingType: "tour", itemId: { $in: tourIds }, status: "approved" } },
+      { $sort: { createdAt: -1 } }, // Sort reviews by newest first
+      { 
+        $group: { 
+          _id: "$itemId", 
+          reviews: { $push: { userName: "$userName", rating: "$rating", comment: "$comment", createdAt: "$createdAt" } } 
+        } 
+      }
+    ]);
+
+    // Convert aggregation results into a map for quick lookup
+    const reviewMap = {};
+    reviewsByTour.forEach(entry => {
+      reviewMap[entry._id.toString()] = entry.reviews.slice(0, 4); // Take top 4 reviews
+    });
+
+    // Attach top 4 reviews to each tour
+    const toursWithReviews = tours.map(tour => ({
+      ...tour,
+      reviews: reviewMap[tour._id.toString()] || [] // Default to empty array if no reviews
+    }));
+
+    res.json(toursWithReviews);
   } catch (error) {
     console.error("Error fetching tours:", error);
     res.status(500).json({ message: "Server error" });

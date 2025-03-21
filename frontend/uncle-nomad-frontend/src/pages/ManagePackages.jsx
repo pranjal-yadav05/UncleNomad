@@ -60,7 +60,7 @@ export default function ManagePackages() {
     try {
       setIsLoading(true);
       const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/api/tours?page=${page}&limit=10`,
+        `${process.env.REACT_APP_API_URL}/api/admin/tours?page=${page}&limit=10`,
         {
           headers: {
             "x-api-key": process.env.REACT_APP_API_KEY,

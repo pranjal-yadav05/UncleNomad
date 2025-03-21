@@ -110,6 +110,7 @@ export default function HomePage() {
       .then((res) => res.json())
       .then((data) => {
         setTours(data);
+        
         setIsLoading((prev) => ({ ...prev, tours: false }));
       })
       .catch((error) => console.error("Error fetching tours:", error));

@@ -19,7 +19,8 @@ import {
   getStats,
   postStats,
   updateStats,
-  deleteStats
+  deleteStats,
+  getAdminTours
 } from '../controllers/tourController.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { auth } from 'googleapis/build/src/apis/abusiveexperiencereport/index.js';
@@ -69,6 +70,7 @@ router.delete('/booking/:id', authenticateToken, deleteTourBooking);
 
 // CRUD routes
 router.get('/', getTours);
+router.get('/admin/tours',getAdminTours)
 router.post('/', authenticateToken, upload.array('images', 5), validateItinerary, validateTourData, createTour);
 router.get('/:id', getTourById);
 router.put('/:id', authenticateToken, upload.array('images', 5), validateItinerary, validateTourData, updateTour);

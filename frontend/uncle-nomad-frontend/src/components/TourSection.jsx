@@ -164,6 +164,7 @@ const TourSection = ({ tours, stats, setStats, setIsBookingModalOpen, isBookingM
                   ) : (
                     <>
                       {tours.map((tour) => (
+                        
                         <div
                           key={tour._id}
                           className="w-[320px] flex-shrink-0 rounded-lg overflow-hidden transform transition-all duration-300 hover:translate-y-[-8px] snap-start"
