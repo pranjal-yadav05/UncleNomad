@@ -148,16 +148,32 @@ export const checkAvailabiltiy = async (req, res) => {
 // CRUD Operations
 export const getBookings = async (req, res) => {
     try {
+        // Extract page and limit from query params (default to page 1, 10 items per page)
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        // Fetch total count of bookings
+        const totalBookings = await Booking.countDocuments();
+
+        // Fetch paginated bookings
         const bookings = await Booking.find()
             .populate({
                 path: 'rooms.roomId',
                 select: 'name type price capacity'
             })
+            .skip(skip) // Skip previous pages
+            .limit(limit) // Limit to current page size
             .lean()
             .exec();
 
-        res.json(bookings);
-    } catch ( error) {
+        res.json({
+            bookings,
+            totalPages: Math.ceil(totalBookings / limit), // Calculate total pages
+            currentPage: page,
+            totalBookings
+        });
+    } catch (error) {
         console.error('Error in GET /bookings:', error);
         res.status(500).json({ 
             message: 'Failed to fetch bookings',
@@ -165,6 +181,7 @@ export const getBookings = async (req, res) => {
         });
     }
 };
+
 
 export const getBooking = async (req, res) => {
     try {

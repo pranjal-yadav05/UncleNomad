@@ -78,8 +78,15 @@ const uploadToCloudinary = async (file, tourId, index) => {
 // Get all tours
 export const getTours = async (req, res) => {
   try {
-    // Fetch all tours
-    const tours = await Tour.find().lean();
+    const page = parseInt(req.query.page) || 1; // Default to page 1
+    const limit = parseInt(req.query.limit) || 10; // Default limit to 10 per page
+    const skip = (page - 1) * limit;
+
+    // Get total count of tours
+    const totalTours = await Tour.countDocuments();
+
+    // Fetch paginated tours
+    const tours = await Tour.find().skip(skip).limit(limit).lean();
 
     // Get top 4 reviews for each tour
     const tourIds = tours.map(tour => tour._id);
@@ -106,13 +113,17 @@ export const getTours = async (req, res) => {
       reviews: reviewMap[tour._id.toString()] || [] // Default to empty array if no reviews
     }));
 
-    res.json(toursWithReviews);
+    res.status(200).json({
+      tours: toursWithReviews,
+      totalPages: Math.ceil(totalTours / limit),
+      currentPage: page,
+      totalTours,
+    });
   } catch (error) {
     console.error("Error fetching tours:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
-
 
 export const createTour = async (req, res) => {
   try {
@@ -282,16 +293,37 @@ export const deleteTour = async (req, res) => {
 };
 
 
-
 export const getAllTourBookings = async (req, res) => {
   try {
-    const bookings = await TourBooking.find();
-    res.json(bookings);
+    const page = parseInt(req.query.page) || 1; // Default to page 1
+    const limit = parseInt(req.query.limit) || 10; // Default limit to 10 per page
+    const skip = (page - 1) * limit;
+
+    // Get total count of bookings
+    const totalBookings = await TourBooking.countDocuments();
+
+    // Fetch paginated bookings
+    const bookings = await TourBooking.find()
+      .populate({
+        path: "tour",
+        select: "title location price startDate endDate duration",
+      })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    res.json({
+      bookings,
+      totalPages: Math.ceil(totalBookings / limit),
+      currentPage: page,
+      totalBookings,
+    });
   } catch (error) {
-    console.error('Error fetching tour bookings:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Error fetching tour bookings:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
+
 
 
 export const deleteTourBooking = async (req, res) => {

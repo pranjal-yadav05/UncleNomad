@@ -21,7 +21,8 @@ export default function TourBookingFormModal({
   // Calculate the total price when tourId or groupSize changes
   useEffect(() => {
     if (newBooking.tourId && newBooking.groupSize) {
-      const selectedTour = tours.find(tour => tour._id === newBooking.tourId);
+      const selectedTour = tours.find(tour => tour._id == newBooking.tourId._id);
+      console.log('turr',selectedTour)
       if (selectedTour) {
         const calculatedPrice = selectedTour.price * newBooking.groupSize;
         setTotalPrice(calculatedPrice);

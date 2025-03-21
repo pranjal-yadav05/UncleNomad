@@ -31,6 +31,8 @@ export default function ManageReviews() {
   const API_URL = process.env.REACT_APP_API_URL;
   const [reviews, setReviews] = useState([]);
   const [userReviews, setUserReviews] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [newReview, setNewReview] = useState({
     author_name: "",
     profile_photo_url: "",
@@ -50,9 +52,12 @@ export default function ManageReviews() {
 
   useEffect(() => {
     fetchReviews();
-    fetchUserReviews();
     setIsModalOpen(false);
   }, []);
+
+  useEffect(() => {
+    fetchUserReviews(currentPage);
+  }, [currentPage]);
 
   const fetchReviews = async () => {
     try {
@@ -71,22 +76,31 @@ export default function ManageReviews() {
     }
   };
 
-  const fetchUserReviews = async () => {
+  const fetchUserReviews = async (page = 1) => {
     try {
       setIsLoading(true);
       const token = localStorage.getItem("token");
-      const response = await fetch(`${API_URL}/api/userreviews`, {
-        headers: {
-          "x-api-key": process.env.REACT_APP_API_KEY,
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (!response.ok) throw new Error("Failed to fetch user reviews");
+      const response = await fetch(
+        `${API_URL}/api/userreviews?page=${page}&limit=10`,
+        {
+          headers: {
+            "x-api-key": process.env.REACT_APP_API_KEY,
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
-      setUserReviews(data);
+
+      setUserReviews(data.reviews);
+      setTotalPages(data.totalPages);
+      setCurrentPage(data.currentPage);
     } catch (error) {
       console.error("Error fetching user reviews:", error);
-      setError("Failed to load user reviews. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -531,6 +545,30 @@ export default function ManageReviews() {
                 )}
               </TableBody>
             </Table>
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex justify-center mt-4 space-x-2">
+                <Button
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(prev - 1, 1))
+                  }
+                  disabled={currentPage === 1}>
+                  Previous
+                </Button>
+
+                <span className="px-4 py-2 border rounded">
+                  Page {currentPage} of {totalPages}
+                </span>
+
+                <Button
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                  }
+                  disabled={currentPage === totalPages}>
+                  Next
+                </Button>
+              </div>
+            )}
           </Card>
         </TabsContent>
       </Tabs>

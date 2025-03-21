@@ -11,21 +11,19 @@ export default function TourBookingDetailsModal({ isOpen, onClose, booking, tour
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-full max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold">
-            Tour Booking Details
-          </DialogTitle>
+          <DialogTitle className="text-xl font-bold">Tour Booking Details</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
           {/* Tour Info */}
           <div className="bg-blue-50 p-4 rounded-lg">
             <h3 className="font-semibold text-lg text-blue-800 mb-2">Tour Information</h3>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2 min-w-0">
               <div>
                 <span className="text-sm font-medium text-gray-500">Name:</span>
-                <p>{tour ? tour.title : 'Unknown Tour'}</p>
+                <p className="break-words">{tour ? tour.title : 'Unknown Tour'}</p>
               </div>
               <div>
                 <span className="text-sm font-medium text-gray-500">Price:</span>
@@ -37,7 +35,7 @@ export default function TourBookingDetailsModal({ isOpen, onClose, booking, tour
               </div>
               <div>
                 <span className="text-sm font-medium text-gray-500">Location:</span>
-                <p>{tour ? tour.location : 'N/A'}</p>
+                <p className="break-words">{tour ? tour.location : 'N/A'}</p>
               </div>
             </div>
           </div>
@@ -45,14 +43,14 @@ export default function TourBookingDetailsModal({ isOpen, onClose, booking, tour
           {/* Guest Info */}
           <div className="bg-gray-50 p-4 rounded-lg">
             <h3 className="font-semibold text-lg mb-2">Guest Information</h3>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2 min-w-0">
               <div>
                 <span className="text-sm font-medium text-gray-500">Name:</span>
-                <p>{booking.guestName}</p>
+                <p className="break-words">{booking.guestName}</p>
               </div>
               <div>
                 <span className="text-sm font-medium text-gray-500">Email:</span>
-                <p>{booking.email}</p>
+                <p className="break-words overflow-hidden">{booking.email}</p>
               </div>
               <div>
                 <span className="text-sm font-medium text-gray-500">Phone:</span>
@@ -68,10 +66,10 @@ export default function TourBookingDetailsModal({ isOpen, onClose, booking, tour
           {/* Booking Details */}
           <div className="bg-gray-50 p-4 rounded-lg">
             <h3 className="font-semibold text-lg mb-2">Booking Details</h3>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2 min-w-0">
               <div>
                 <span className="text-sm font-medium text-gray-500">Booking ID:</span>
-                <p className="font-mono text-sm">{booking._id}</p>
+                <p className="font-mono text-sm break-words overflow-hidden">{booking._id}</p>
               </div>
               <div>
                 <span className="text-sm font-medium text-gray-500">Booking Date:</span>
@@ -104,13 +102,13 @@ export default function TourBookingDetailsModal({ isOpen, onClose, booking, tour
               {booking.paymentReference && (
                 <div className="col-span-2">
                   <span className="text-sm font-medium text-gray-500">Payment Reference:</span>
-                  <p className="font-mono text-sm">{booking.paymentReference}</p>
+                  <p className="font-mono text-sm break-words overflow-hidden">{booking.paymentReference}</p>
                 </div>
               )}
               {booking.specialRequests && (
                 <div className="col-span-2">
                   <span className="text-sm font-medium text-gray-500">Special Requests:</span>
-                  <p>{booking.specialRequests}</p>
+                  <p className="break-words">{booking.specialRequests}</p>
                 </div>
               )}
             </div>
@@ -119,7 +117,7 @@ export default function TourBookingDetailsModal({ isOpen, onClose, booking, tour
           {/* Payment Information */}
           <div className="bg-green-50 p-4 rounded-lg">
             <h3 className="font-semibold text-lg text-green-800 mb-2">Payment Information</h3>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2 min-w-0">
               <div>
                 <span className="text-sm font-medium text-gray-500">Tour Price:</span>
                 <p>₹{tour ? tour.price : 'N/A'} per person</p>

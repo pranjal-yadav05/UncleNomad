@@ -1,164 +1,201 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from 'react';
-import { Button } from '../components/ui/button';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table';
-import TourBookingFormModal from '../modals/TourBookingFormModal';
-import TourBookingDetailsModal from '../modals/TourBookingDetailsModal';
+import { useEffect, useState } from "react";
+import { Button } from "../components/ui/button";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "../components/ui/table";
+import TourBookingFormModal from "../modals/TourBookingFormModal";
+import TourBookingDetailsModal from "../modals/TourBookingDetailsModal";
 
 export default function ManageTourBookings() {
   const API_URL = process.env.REACT_APP_API_URL;
   const [bookings, setBookings] = useState([]);
   const [tours, setTours] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
   const [newBooking, setNewBooking] = useState({
-    tourId: '',
+    tourId: "",
     groupSize: 1,
-    bookingDate: new Date().toISOString().split('T')[0], // Format as YYYY-MM-DD
-    guestName: '',
-    email: '',
-    phone: '',
-    specialRequests: '',
+    bookingDate: new Date().toISOString().split("T")[0], // Format as YYYY-MM-DD
+    guestName: "",
+    email: "",
+    phone: "",
+    specialRequests: "",
     totalAmount: 0,
-    status: 'PENDING',
-    paymentStatus: 'PENDING'
+    status: "PENDING",
+    paymentStatus: "PENDING",
   });
 
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [currentBookingId, setCurrentBookingId] = useState(null);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [modalError, setModalError] = useState(''); 
+  const [modalError, setModalError] = useState("");
   const [loading, setLoading] = useState(false);
   const [formLoading, setFormLoading] = useState(false); // Separate loading for form modal
 
-
-
   useEffect(() => {
-    fetchBookings();
+    fetchBookings(currentPage);
     fetchTours();
-  }, []);
+  }, [currentPage]);
 
   const fetchTours = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/tours`, {headers:{"x-api-key": process.env.REACT_APP_API_KEY}});
-      if (!response.ok) throw new Error('Failed to fetch tours');
+      const response = await fetch(`${API_URL}/api/tours`, {
+        headers: { "x-api-key": process.env.REACT_APP_API_KEY },
+      });
+      if (!response.ok) throw new Error("Failed to fetch tours");
       const data = await response.json();
       setTours(data);
     } catch (error) {
-      console.error('Error fetching tours:', error);
-      setError('Failed to fetch tours. Please try again later.');
+      console.error("Error fetching tours:", error);
+      setError("Failed to fetch tours. Please try again later.");
     }
   };
 
-  const fetchBookings = async () => {
+  const fetchBookings = async (page = 1) => {
     setLoading(true);
-    setError('');
+    setError("");
     try {
-      // Using the getAllTourBookings endpoint from tours model
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${API_URL}/api/tours/bookings`,{headers:{"x-api-key": process.env.REACT_APP_API_KEY, "Authorization": `Bearer ${token}` }});
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${API_URL}/api/tours/bookings?page=${page}&limit=10`,
+        {
+          headers: {
+            "x-api-key": process.env.REACT_APP_API_KEY,
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
+
       const data = await response.json();
-      
-      if (!Array.isArray(data)) {
-        throw new Error('Invalid data format received from server');
+
+      if (!Array.isArray(data.bookings)) {
+        throw new Error("Invalid data format received from server");
       }
-      
-      setBookings(data);
+      console.log('bookings',data.bookings)
+      setBookings(data.bookings);
+      setTotalPages(data.totalPages);
+      setCurrentPage(data.currentPage);
     } catch (error) {
-      console.error('Error fetching tour bookings:', error);
-      setError('Failed to fetch tour bookings. Please try again later.');
+      console.error("Error fetching tour bookings:", error);
+      setError("Failed to fetch tour bookings. Please try again later.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUpdateBooking = async (bookingId, tourId, status, paymentReference) => {
+  const handleUpdateBooking = async (
+    bookingId,
+    tourId,
+    status,
+    paymentReference
+  ) => {
     setLoading(true);
-    setError('');
+    setError("");
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${API_URL}/api/tours/${tourId}/book/${bookingId}/confirm`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          "x-api-key": process.env.REACT_APP_API_KEY,
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({ 
-          status, 
-          paymentReference: status === 'CONFIRMED' ? `ADMIN_CONFIRMED_${Date.now()}` : null
-        }),
-      });
-  
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${API_URL}/api/tours/${tourId}/book/${bookingId}/confirm`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": process.env.REACT_APP_API_KEY,
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            status,
+            paymentReference:
+              status === "CONFIRMED" ? `ADMIN_CONFIRMED_${Date.now()}` : null,
+          }),
+        }
+      );
+
       if (!response.ok) {
-        throw new Error('Failed to update booking');
+        throw new Error("Failed to update booking");
       }
-  
+
       setIsModalOpen(false);
       await fetchBookings();
     } catch (error) {
-      console.error('Error updating tour booking:', error);
-      setError('Failed to update booking. Please try again.');
+      console.error("Error updating tour booking:", error);
+      setError("Failed to update booking. Please try again.");
       setModalError(error.message);
     } finally {
       setLoading(false); // Stop global loading
     }
   };
-  
 
   const handleDeleteBooking = async (id) => {
-    const confirmDelete = window.confirm("Are you sure you want to delete this booking? This action cannot be undone.");
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this booking? This action cannot be undone."
+    );
     if (!confirmDelete) return;
-    setError('');
+    setError("");
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem("token");
       const response = await fetch(`${API_URL}/api/tours/booking/${id}`, {
-        method: 'DELETE',
-        headers: {"x-api-key": process.env.REACT_APP_API_KEY, "Authorization": `Bearer ${token}`}
+        method: "DELETE",
+        headers: {
+          "x-api-key": process.env.REACT_APP_API_KEY,
+          Authorization: `Bearer ${token}`,
+        },
       });
-      
+
       if (!response.ok) {
-        throw new Error('Failed to delete booking');
+        throw new Error("Failed to delete booking");
       }
-      
+
       await fetchBookings();
     } catch (error) {
-      console.error('Error deleting tour booking:', error);
+      console.error("Error deleting tour booking:", error);
       setModalError(error.message);
-      setError('Failed to delete booking. Please try again.');
+      setError("Failed to delete booking. Please try again.");
     }
   };
 
   const handleVerifyBooking = async (tourId, groupSize, bookingDate) => {
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${API_URL}/api/tours/${tourId}/verify-booking`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          "x-api-key": process.env.REACT_APP_API_KEY,
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          tourId,
-          groupSize,
-          bookingDate,
-        }),
-      });
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${API_URL}/api/tours/${tourId}/verify-booking`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": process.env.REACT_APP_API_KEY,
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            tourId,
+            groupSize,
+            bookingDate,
+          }),
+        }
+      );
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to verify booking');
+        throw new Error(data.message || "Failed to verify booking");
       }
 
       return data;
     } catch (error) {
-      console.error('Booking verification error:', error);
+      console.error("Booking verification error:", error);
       setModalError(error.message);
       setError(error.message);
       return null;
@@ -168,20 +205,20 @@ export default function ManageTourBookings() {
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
     setFormLoading(true);
-    
+
     // Date validation
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     // Tour selection validation
     if (!newBooking.tourId) {
-      setError('Please select a tour');
+      setError("Please select a tour");
       return;
     }
 
     // Group size validation
     if (!newBooking.groupSize || newBooking.groupSize <= 0) {
-      setError('Invalid group size. Please provide a positive number.');
+      setError("Invalid group size. Please provide a positive number.");
       return;
     }
 
@@ -197,37 +234,45 @@ export default function ManageTourBookings() {
     // Use the verified total price
     const totalAmount = verificationResult.totalPrice;
     const formattedBookingDate = new Date(newBooking.bookingDate).toISOString();
-    
+
     try {
-        if (editMode && currentBookingId) {
-          // Update existing booking
-          const token = localStorage.getItem('token')
-          const response = await fetch(`${API_URL}/api/tours/${newBooking.tourId}/book/${currentBookingId}/confirm`, {
-            method: 'PUT',
+      if (editMode && currentBookingId) {
+        // Update existing booking
+        const token = localStorage.getItem("token");
+        const response = await fetch(
+          `${API_URL}/api/tours/${newBooking.tourId}/book/${currentBookingId}/confirm`,
+          {
+            method: "PUT",
             headers: {
-              'Content-Type': 'application/json',
+              "Content-Type": "application/json",
               "x-api-key": process.env.REACT_APP_API_KEY,
-              "Authorization": `Bearer ${token}`
+              Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({
               status: newBooking.status,
-              paymentReference: newBooking.status === 'CONFIRMED' ? `ADMIN_UPDATED_${Date.now()}` : null
+              paymentReference:
+                newBooking.status === "CONFIRMED"
+                  ? `ADMIN_UPDATED_${Date.now()}`
+                  : null,
             }),
-          });
-    
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to update booking');
           }
-        } else {
-          // Create new booking
-          const token = localStorage.getItem('token')
-          const response = await fetch(`${API_URL}/api/tours/${newBooking.tourId}/book`, {
-            method: 'POST',
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "Failed to update booking");
+        }
+      } else {
+        // Create new booking
+        const token = localStorage.getItem("token");
+        const response = await fetch(
+          `${API_URL}/api/tours/${newBooking.tourId}/book`,
+          {
+            method: "POST",
             headers: {
-              'Content-Type': 'application/json',
+              "Content-Type": "application/json",
               "x-api-key": process.env.REACT_APP_API_KEY,
-              "Authorization": `Bearer ${token}`
+              Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({
               tourId: newBooking.tourId,
@@ -237,48 +282,48 @@ export default function ManageTourBookings() {
               email: newBooking.email,
               phone: newBooking.phone,
               specialRequests: newBooking.specialRequests,
-              totalAmount: totalAmount
+              totalAmount: totalAmount,
             }),
-          });
-    
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to create booking');
           }
-    
-          const data = await response.json();
-    
-          // If admin wants to confirm booking immediately
-          if (newBooking.status === 'CONFIRMED') {
-            await handleUpdateBooking(
-              data.booking.id || data.booking._id,
-              newBooking.tourId,
-              'CONFIRMED',
-              `ADMIN_CONFIRMED_${Date.now()}`
-            );
-          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "Failed to create booking");
         }
-    
-      
+
+        const data = await response.json();
+
+        // If admin wants to confirm booking immediately
+        if (newBooking.status === "CONFIRMED") {
+          await handleUpdateBooking(
+            data.booking.id || data.booking._id,
+            newBooking.tourId,
+            "CONFIRMED",
+            `ADMIN_CONFIRMED_${Date.now()}`
+          );
+        }
+      }
+
       fetchBookings();
       setNewBooking({
-        tourId: '',
+        tourId: "",
         groupSize: 1,
-        bookingDate: new Date().toISOString().split('T')[0],
-        guestName: '',
-        email: '',
-        phone: '',
-        specialRequests: '',
+        bookingDate: new Date().toISOString().split("T")[0],
+        guestName: "",
+        email: "",
+        phone: "",
+        specialRequests: "",
         totalAmount: 0,
-        status: 'PENDING',
-        paymentStatus: 'PENDING'
+        status: "PENDING",
+        paymentStatus: "PENDING",
       });
-      
+
       setEditMode(false);
       setIsModalOpen(false);
       setCurrentBookingId(null);
     } catch (error) {
-      console.error('Booking creation/update error:', error);
+      console.error("Booking creation/update error:", error);
       setModalError(error.message);
       setError(error.message);
     } finally {
@@ -288,18 +333,26 @@ export default function ManageTourBookings() {
 
   const handleViewBookingDetails = async (bookingId) => {
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${API_URL}/api/tours/booking/${bookingId}`,{headers:{"x-api-key": process.env.REACT_APP_API_KEY, "Authorization": `Bearer ${token}`}});
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${API_URL}/api/tours/booking/${bookingId}`,
+        {
+          headers: {
+            "x-api-key": process.env.REACT_APP_API_KEY,
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       if (!response.ok) {
-        throw new Error('Failed to fetch booking details');
+        throw new Error("Failed to fetch booking details");
       }
       const data = await response.json();
       setSelectedBooking(data);
       setIsDetailsModalOpen(true);
     } catch (error) {
-      console.error('Error fetching booking details:', error);
-      
-      setError('Failed to fetch booking details. Please try again.');
+      console.error("Error fetching booking details:", error);
+
+      setError("Failed to fetch booking details. Please try again.");
     }
   };
 
@@ -319,11 +372,13 @@ export default function ManageTourBookings() {
       </div>
     );
   }
-  
+
   return (
     <div className="p-4">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800">Manage Tour Bookings</h2>
-      
+      <h2 className="text-2xl font-bold mb-6 text-gray-800">
+        Manage Tour Bookings
+      </h2>
+
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded mb-4">
           {error}
@@ -331,7 +386,7 @@ export default function ManageTourBookings() {
       )}
 
       <div className="mb-8">
-        <Button variant='custom' onClick={() => setIsModalOpen(true)}>
+        <Button variant="custom" onClick={() => setIsModalOpen(true)}>
           Add New Tour Booking
         </Button>
       </div>
@@ -342,16 +397,16 @@ export default function ManageTourBookings() {
           setIsModalOpen(false);
           setEditMode(false);
           setNewBooking({
-            tourId: '',
+            tourId: "",
             groupSize: 1,
-            bookingDate: new Date().toISOString().split('T')[0],
-            guestName: '',
-            email: '',
-            phone: '',
-            specialRequests: '',
+            bookingDate: new Date().toISOString().split("T")[0],
+            guestName: "",
+            email: "",
+            phone: "",
+            specialRequests: "",
             totalAmount: 0,
-            status: 'PENDING',
-            paymentStatus: 'PENDING'
+            status: "PENDING",
+            paymentStatus: "PENDING",
           });
         }}
         newBooking={newBooking}
@@ -385,23 +440,28 @@ export default function ManageTourBookings() {
             </TableHeader>
             <TableBody>
               {bookings.map((booking) => {
-                const tourName = tours.find(tour => tour._id === booking.tour)?.title || 'Unknown Tour';
+                const tourName =
+                  tours.find((tour) => tour._id === booking.tour._id)?.title ||
+                  "Unknown Tour";
                 return (
                   <TableRow key={booking._id} className="hover:bg-gray-50">
                     <TableCell>{booking.guestName}</TableCell>
                     <TableCell>{tourName}</TableCell>
                     <TableCell>{formatDate(booking.bookingDate)}</TableCell>
                     <TableCell>{booking.groupSize}</TableCell>
-                    <TableCell className="capitalize">{booking.status}</TableCell>
-                    <TableCell className="capitalize">{booking.paymentStatus}</TableCell>
+                    <TableCell className="capitalize">
+                      {booking.status}
+                    </TableCell>
+                    <TableCell className="capitalize">
+                      {booking.paymentStatus}
+                    </TableCell>
                     <TableCell>₹{booking.totalPrice}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
-                        <Button 
+                        <Button
                           onClick={() => handleViewBookingDetails(booking._id)}
-                          variant="default"
-                          size="sm"
-                        >
+                          variant="outline"
+                          size="sm">
                           View
                         </Button>
                         <Button
@@ -409,22 +469,23 @@ export default function ManageTourBookings() {
                             setEditMode(true);
                             setCurrentBookingId(booking._id);
                             setNewBooking({
-                              tourId: booking.tour,
+                              tourId: booking.tour._id,
                               groupSize: booking.groupSize,
-                              bookingDate: new Date(booking.bookingDate).toISOString().split('T')[0],
+                              bookingDate: new Date(booking.bookingDate)
+                                .toISOString()
+                                .split("T")[0],
                               guestName: booking.guestName,
                               email: booking.email,
                               phone: booking.phone,
-                              specialRequests: booking.specialRequests || '',
+                              specialRequests: booking.specialRequests || "",
                               totalAmount: booking.totalPrice,
                               status: booking.status,
-                              paymentStatus: booking.paymentStatus
+                              paymentStatus: booking.paymentStatus,
                             });
                             setIsModalOpen(true);
                           }}
                           variant="outline"
-                          size="sm"
-                        >
+                          size="sm">
                           Edit
                         </Button>
                         <Button
@@ -432,8 +493,7 @@ export default function ManageTourBookings() {
                           size="sm"
                           className="bg-red"
                           variant="destructive"
-                          disabled={loading}
-                        >
+                          disabled={loading}>
                           {loading ? "Processing..." : "Delete"}
                         </Button>
                       </div>
@@ -443,15 +503,41 @@ export default function ManageTourBookings() {
               })}
             </TableBody>
           </Table>
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex justify-center mt-4 space-x-2">
+              <Button
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}>
+                Previous
+              </Button>
+
+              <span className="px-4 py-2 border rounded">
+                Page {currentPage} of {totalPages}
+              </span>
+
+              <Button
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                }
+                disabled={currentPage === totalPages}>
+                Next
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
       {/* Tour Booking Details Modal */}
-      <TourBookingDetailsModal 
-        isOpen={isDetailsModalOpen} 
-        onClose={() => setIsDetailsModalOpen(false)} 
+      <TourBookingDetailsModal
+        isOpen={isDetailsModalOpen}
+        onClose={() => setIsDetailsModalOpen(false)}
         booking={selectedBooking}
-        tour={selectedBooking ? tours.find(tour => tour._id === selectedBooking.tour) : null}
+        tour={
+          selectedBooking
+            ? tours.find((tour) => tour._id === selectedBooking.tour)
+            : null
+        }
       />
     </div>
   );

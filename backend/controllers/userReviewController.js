@@ -280,32 +280,32 @@ export const getAllUserReviews = async (req, res) => {
       return res.status(403).json({ message: "Unauthorized. Admin access required." });
     }
 
-    // Get all reviews without populating itemId initially
-    const reviews = await Review.find().sort({ createdAt: -1 });
+    const page = parseInt(req.query.page) || 1; // Default to page 1
+    const limit = parseInt(req.query.limit) || 10; // Default limit to 10 per page
+    const skip = (page - 1) * limit;
 
-    // Populate itemId manually by checking if it's a Tour or Room
-    const populatedReviews = await Promise.all(reviews.map(async (review) => {
-      let itemName = "Unknown"; // Default value if neither found
-      if (review.itemId) {
-        // Try to find the item in Tour model
-        const tour = await Tour.findById(review.itemId).select("title");
-        if (tour) itemName = tour.title;
-        else {
-          // If not found in Tour, try Room model
-          const room = await Room.findById(review.itemId).select("type");
-          if (room) itemName = room.type;
-        }
-      }
+    // Get total count of reviews
+    const totalReviews = await Review.countDocuments();
 
-      return { ...review._doc, itemName }; // Attach itemName to review object
-    }));
+    // Fetch paginated reviews
+    const reviews = await Review.find()
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
 
-    return res.status(200).json(populatedReviews);
+    res.status(200).json({
+      reviews,
+      totalPages: Math.ceil(totalReviews / limit),
+      currentPage: page,
+      totalReviews,
+    });
   } catch (error) {
-    console.error("Error fetching all user reviews:", error);
-    return res.status(500).json({ message: "Server error", error: error.message });
+    console.error("Error fetching user reviews:", error);
+    res.status(500).json({ message: "Failed to fetch user reviews" });
   }
 };
+
 
 // Admin: Update review status (approve/reject)
 export const updateReviewStatus = async (req, res) => {

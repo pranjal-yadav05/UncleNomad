@@ -39,13 +39,32 @@ export const submitQuery = async (req, res) => {
 // Get all queries (for admin panel)
 export const getQueries = async (req, res) => {
   try {
-    const queries = await Query.find().sort({ createdAt: -1 });
-    res.status(200).json(queries);
+    const page = parseInt(req.query.page) || 1; // Default to page 1
+    const limit = parseInt(req.query.limit) || 10; // Default limit to 10 per page
+    const skip = (page - 1) * limit;
+
+    // Get total count of queries
+    const totalQueries = await Query.countDocuments();
+
+    // Fetch paginated queries
+    const queries = await Query.find()
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    res.status(200).json({
+      queries,
+      totalPages: Math.ceil(totalQueries / limit),
+      currentPage: page,
+      totalQueries,
+    });
   } catch (error) {
-    console.error('Error fetching queries:', error);
-    res.status(500).json({ message: 'Failed to fetch queries' });
+    console.error("Error fetching queries:", error);
+    res.status(500).json({ message: "Failed to fetch queries" });
   }
 };
+
 
 // Update query status (for admin panel)
 export const updateQueryStatus = async (req, res) => {
