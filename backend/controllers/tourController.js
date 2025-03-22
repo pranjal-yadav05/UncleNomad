@@ -1410,7 +1410,19 @@ export const exportToursToExcel = async (req, res) => {
       // Format dates
       const startDate = tour.startDate ? new Date(tour.startDate) : null;
       const endDate = tour.endDate ? new Date(tour.endDate) : null;
-      const createdAtDate = new Date(tour.createdAt);
+
+      // Handle createdAt date more safely
+      let createdAtFormatted = "N/A";
+      try {
+        if (tour.createdAt) {
+          const createdAtDate = new Date(tour.createdAt);
+          if (!isNaN(createdAtDate.getTime())) {
+            createdAtFormatted = createdAtDate.toLocaleDateString();
+          }
+        }
+      } catch (e) {
+        console.error("Error formatting createdAt date:", e);
+      }
 
       // Add row
       worksheet.addRow({
@@ -1424,7 +1436,7 @@ export const exportToursToExcel = async (req, res) => {
         location: tour.location,
         startDate: startDate ? startDate.toLocaleDateString() : "N/A",
         endDate: endDate ? endDate.toLocaleDateString() : "N/A",
-        createdAt: createdAtDate.toLocaleDateString(),
+        createdAt: createdAtFormatted,
       });
     });
 

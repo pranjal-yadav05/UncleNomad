@@ -92,7 +92,9 @@ export default function ManagePackages() {
       }
 
       const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/api/admin/tours?${params.toString()}`,
+        `${
+          process.env.REACT_APP_API_URL
+        }/api/tours/admin/tours?${params.toString()}`,
         {
           headers: {
             "x-api-key": process.env.REACT_APP_API_KEY,
@@ -111,6 +113,7 @@ export default function ManagePackages() {
       setCurrentPage(data.currentPage);
     } catch (error) {
       console.error("Error fetching tour packages:", error);
+      setError("Failed to fetch tour packages");
     } finally {
       setIsLoading(false);
     }
@@ -157,7 +160,7 @@ export default function ManagePackages() {
   const handleExportData = async () => {
     try {
       setExportLoading(true);
-      const token = localStorage.getItem("token");
+      setError(""); // Clear any previous errors
 
       // Build query parameters for filtered/sorted data
       const params = new URLSearchParams({
@@ -174,6 +177,7 @@ export default function ManagePackages() {
         params.append("search", searchTerm.trim());
       }
 
+      const token = localStorage.getItem("token");
       const response = await fetch(
         `${API_URL}/api/tours/admin/tours/export?${params.toString()}`,
         {
@@ -191,7 +195,10 @@ export default function ManagePackages() {
       }
 
       if (!response.ok) {
-        throw new Error("Failed to export tour packages");
+        const errorData = await response
+          .json()
+          .catch(() => ({ message: "Export failed" }));
+        throw new Error(errorData.message || "Failed to export tour packages");
       }
 
       // Get the blob from the response
@@ -224,7 +231,7 @@ export default function ManagePackages() {
       setExportLoading(false);
     } catch (error) {
       console.error("Error exporting tour packages:", error);
-      setError("Failed to export tour packages. Please try again.");
+      setError(`Failed to export tour packages: ${error.message}`);
       setExportLoading(false);
     }
   };
