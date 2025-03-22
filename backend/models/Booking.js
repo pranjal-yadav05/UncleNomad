@@ -1,69 +1,89 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
-const bookingSchema = new mongoose.Schema({
-    rooms: [{
+const bookingSchema = new mongoose.Schema(
+  {
+    rooms: [
+      {
         roomId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Room',
-            required: true
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Room",
+          required: true,
         },
+        roomName: String,
         roomType: String,
-        quantity: Number,
+        quantity: {
+          type: Number,
+          required: true,
+          min: 1,
+        },
         price: Number,
-        numberOfNights: Number
-    }],
+        capacity: Number,
+        numberOfNights: Number,
+        subtotal: Number,
+      },
+    ],
     checkIn: {
-        type: Date,
-        required: true
+      type: Date,
+      required: true,
     },
     checkOut: {
-        type: Date,
-        required: true
+      type: Date,
+      required: true,
     },
     totalPrice: {
-        type: Number,
-        required: true
+      type: Number,
+      required: true,
     },
     guestName: {
-        type: String,
-        required: true
+      type: String,
+      required: true,
     },
     email: {
-        type: String,
-        required: true
+      type: String,
+      required: true,
     },
     phone: {
-        type: String,
-        required: true
+      type: String,
+      required: true,
     },
     numberOfGuests: {
-        type: Number,
-        required: true
+      type: Number,
+      required: true,
     },
     specialRequests: String,
     paymentStatus: {
-        type: String,
-        enum: ['PENDING', 'PAID', 'FAILED'],
-        default: 'PENDING'
+      type: String,
+      enum: ["PENDING", "PAID", "FAILED"],
+      default: "PENDING",
     },
     status: {
-        type: String,
-        enum: ['PENDING', 'CONFIRMED', 'CANCELLED'],
-        default: 'PENDING'
+      type: String,
+      enum: ["PENDING", "CONFIRMED", "CANCELLED"],
+      default: "PENDING",
     },
     paytmOrderId: {
-        type: String,
-        unique: true
+      type: String,
+      unique: true,
     },
     paymentReference: String,
     paymentDate: Date,
     paymentAmount: Number,
     paymentError: String,
-    paymentErrorCode: String
-}, {
-    timestamps: true
-});
+    paymentErrorCode: String,
+    numberOfChildren: {
+      type: Number,
+      default: 0,
+    },
+    mealIncluded: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
 
-const Booking = mongoose.model('Booking', bookingSchema);
+const Booking = mongoose.model("Booking", bookingSchema);
 
 export default Booking;

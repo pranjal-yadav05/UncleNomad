@@ -25,6 +25,7 @@ import RoomBookingCard from "../components/RoomBookingCard";
 import Header from "../components/Header";
 import { Star } from "lucide-react";
 import RatingDialog from "../modals/RatingDialog";
+import { formatDate, formatDateWithOptions } from "../utils/dateUtils";
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -285,14 +286,8 @@ export default function ProfilePage() {
     return booking.userRating && booking.userRating > 0;
   };
 
-  // Format date to be more readable
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
+  const formatBookingDate = (dateString) => {
+    return formatDateWithOptions(dateString, { includeDayName: true });
   };
 
   if (!user) {
@@ -391,7 +386,7 @@ export default function ProfilePage() {
                             key={booking._id}
                             booking={booking}
                             getStatusColor={getStatusColor}
-                            formatDate={formatDate}
+                            formatDate={formatBookingDate}
                             openRatingDialog={openRatingDialog}
                             hasReviewForRoom={hasReviewForRoom}
                           />
@@ -429,7 +424,7 @@ export default function ProfilePage() {
                             key={index}
                             booking={booking}
                             getStatusColor={getStatusColor}
-                            formatDate={formatDate}
+                            formatDate={formatBookingDate}
                             openRatingDialog={openRatingDialog}
                             hasReviewForTour={hasReviewForTour}
                           />

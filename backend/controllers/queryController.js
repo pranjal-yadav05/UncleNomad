@@ -11,6 +11,23 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// Add a helper function to format dates in dd/mm/yyyy format
+const formatDateDDMMYYYY = (dateString) => {
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "Invalid Date";
+
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const year = date.getFullYear();
+
+    return `${day}/${month}/${year}`;
+  } catch (error) {
+    console.error("Error formatting date:", error);
+    return "Invalid Date";
+  }
+};
+
 // Submit a new query
 export const submitQuery = async (req, res) => {
   try {
@@ -214,7 +231,7 @@ export const exportQueriesToExcel = async (req, res) => {
         email: query.email,
         query: query.query,
         status: query.status,
-        createdAt: createdAtDate.toLocaleString(),
+        createdAt: formatDateDDMMYYYY(query.createdAt),
       });
     });
 

@@ -1,41 +1,60 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "../components/ui/dialog";
 import { Button } from "../components/ui/button";
+import { formatDate } from "../utils/dateUtils";
 
-export default function TourBookingDetailsModal({ isOpen, onClose, booking, tour }) {
+export default function TourBookingDetailsModal({
+  isOpen,
+  onClose,
+  booking,
+  tour,
+}) {
   if (!booking) return null;
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString();
-  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-full max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold">Tour Booking Details</DialogTitle>
+          <DialogTitle className="text-xl font-bold">
+            Tour Booking Details
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
           {/* Tour Info */}
           <div className="bg-blue-50 p-4 rounded-lg">
-            <h3 className="font-semibold text-lg text-blue-800 mb-2">Tour Information</h3>
+            <h3 className="font-semibold text-lg text-blue-800 mb-2">
+              Tour Information
+            </h3>
             <div className="grid grid-cols-2 gap-2 min-w-0">
               <div>
                 <span className="text-sm font-medium text-gray-500">Name:</span>
-                <p className="break-words">{tour ? tour.title : 'Unknown Tour'}</p>
+                <p className="break-words">
+                  {tour ? tour.title : "Unknown Tour"}
+                </p>
               </div>
               <div>
-                <span className="text-sm font-medium text-gray-500">Price:</span>
-                <p>₹{tour ? tour.price : 'N/A'} per person</p>
+                <span className="text-sm font-medium text-gray-500">
+                  Price:
+                </span>
+                <p>₹{tour ? tour.price : "N/A"} per person</p>
               </div>
               <div>
-                <span className="text-sm font-medium text-gray-500">Duration:</span>
-                <p>{tour ? `${tour.duration} days` : 'N/A'}</p>
+                <span className="text-sm font-medium text-gray-500">
+                  Duration:
+                </span>
+                <p>{tour ? `${tour.duration} days` : "N/A"}</p>
               </div>
               <div>
-                <span className="text-sm font-medium text-gray-500">Location:</span>
-                <p className="break-words">{tour ? tour.location : 'N/A'}</p>
+                <span className="text-sm font-medium text-gray-500">
+                  Location:
+                </span>
+                <p className="break-words">{tour ? tour.location : "N/A"}</p>
               </div>
             </div>
           </div>
@@ -49,15 +68,21 @@ export default function TourBookingDetailsModal({ isOpen, onClose, booking, tour
                 <p className="break-words">{booking.guestName}</p>
               </div>
               <div>
-                <span className="text-sm font-medium text-gray-500">Email:</span>
+                <span className="text-sm font-medium text-gray-500">
+                  Email:
+                </span>
                 <p className="break-words overflow-hidden">{booking.email}</p>
               </div>
               <div>
-                <span className="text-sm font-medium text-gray-500">Phone:</span>
+                <span className="text-sm font-medium text-gray-500">
+                  Phone:
+                </span>
                 <p>{booking.phone}</p>
               </div>
               <div>
-                <span className="text-sm font-medium text-gray-500">Group Size:</span>
+                <span className="text-sm font-medium text-gray-500">
+                  Group Size:
+                </span>
                 <p>{booking.groupSize} people</p>
               </div>
             </div>
@@ -68,46 +93,68 @@ export default function TourBookingDetailsModal({ isOpen, onClose, booking, tour
             <h3 className="font-semibold text-lg mb-2">Booking Details</h3>
             <div className="grid grid-cols-2 gap-2 min-w-0">
               <div>
-                <span className="text-sm font-medium text-gray-500">Booking ID:</span>
-                <p className="font-mono text-sm break-words overflow-hidden">{booking._id}</p>
+                <span className="text-sm font-medium text-gray-500">
+                  Booking ID:
+                </span>
+                <p className="font-mono text-sm break-words overflow-hidden">
+                  {booking._id}
+                </p>
               </div>
               <div>
-                <span className="text-sm font-medium text-gray-500">Booking Date:</span>
+                <span className="text-sm font-medium text-gray-500">
+                  Booking Date:
+                </span>
                 <p>{formatDate(booking.bookingDate)}</p>
               </div>
               <div>
-                <span className="text-sm font-medium text-gray-500">Status:</span>
+                <span className="text-sm font-medium text-gray-500">
+                  Status:
+                </span>
                 <p className="capitalize">
-                  <span className={`inline-block px-2 py-1 rounded text-xs ${
-                    booking.status === 'CONFIRMED' ? 'bg-green-100 text-green-800' :
-                    booking.status === 'CANCELLED' ? 'bg-red-100 text-red-800' :
-                    'bg-yellow-100 text-yellow-800'
-                  }`}>
+                  <span
+                    className={`inline-block px-2 py-1 rounded text-xs ${
+                      booking.status === "CONFIRMED"
+                        ? "bg-green-100 text-green-800"
+                        : booking.status === "CANCELLED"
+                        ? "bg-red-100 text-red-800"
+                        : "bg-yellow-100 text-yellow-800"
+                    }`}>
                     {booking.status.toLowerCase()}
                   </span>
                 </p>
               </div>
               <div>
-                <span className="text-sm font-medium text-gray-500">Payment Status:</span>
+                <span className="text-sm font-medium text-gray-500">
+                  Payment Status:
+                </span>
                 <p className="capitalize">
-                  <span className={`inline-block px-2 py-1 rounded text-xs ${
-                    booking.paymentStatus === 'PAID' ? 'bg-green-100 text-green-800' :
-                    booking.paymentStatus === 'FAILED' ? 'bg-red-100 text-red-800' :
-                    'bg-yellow-100 text-yellow-800'
-                  }`}>
+                  <span
+                    className={`inline-block px-2 py-1 rounded text-xs ${
+                      booking.paymentStatus === "PAID"
+                        ? "bg-green-100 text-green-800"
+                        : booking.paymentStatus === "FAILED"
+                        ? "bg-red-100 text-red-800"
+                        : "bg-yellow-100 text-yellow-800"
+                    }`}>
                     {booking.paymentStatus.toLowerCase()}
                   </span>
                 </p>
               </div>
               {booking.paymentReference && (
                 <div className="col-span-2">
-                  <span className="text-sm font-medium text-gray-500">Payment Reference:</span>
-                  <p className="font-mono text-sm break-words overflow-hidden">{booking.paymentReference}</p>
+                  <span className="text-sm font-medium text-gray-500">
+                    Payment Reference:
+                  </span>
+                  <p className="font-mono text-sm break-words overflow-hidden">
+                    {booking.paymentReference}
+                  </p>
                 </div>
               )}
               {booking.specialRequests && (
                 <div className="col-span-2">
-                  <span className="text-sm font-medium text-gray-500">Special Requests:</span>
+                  <span className="text-sm font-medium text-gray-500">
+                    Special Requests:
+                  </span>
                   <p className="break-words">{booking.specialRequests}</p>
                 </div>
               )}
@@ -116,23 +163,35 @@ export default function TourBookingDetailsModal({ isOpen, onClose, booking, tour
 
           {/* Payment Information */}
           <div className="bg-green-50 p-4 rounded-lg">
-            <h3 className="font-semibold text-lg text-green-800 mb-2">Payment Information</h3>
+            <h3 className="font-semibold text-lg text-green-800 mb-2">
+              Payment Information
+            </h3>
             <div className="grid grid-cols-2 gap-2 min-w-0">
               <div>
-                <span className="text-sm font-medium text-gray-500">Tour Price:</span>
-                <p>₹{tour ? tour.price : 'N/A'} per person</p>
+                <span className="text-sm font-medium text-gray-500">
+                  Tour Price:
+                </span>
+                <p>₹{tour ? tour.price : "N/A"} per person</p>
               </div>
               <div>
-                <span className="text-sm font-medium text-gray-500">Group Size:</span>
+                <span className="text-sm font-medium text-gray-500">
+                  Group Size:
+                </span>
                 <p>{booking.groupSize} people</p>
               </div>
               <div className="col-span-2">
-                <span className="text-sm font-medium text-gray-500">Total Amount:</span>
-                <p className="text-xl font-bold text-green-700">₹{booking.totalPrice}</p>
+                <span className="text-sm font-medium text-gray-500">
+                  Total Amount:
+                </span>
+                <p className="text-xl font-bold text-green-700">
+                  ₹{booking.totalPrice}
+                </p>
               </div>
               {booking.paymentDate && (
                 <div>
-                  <span className="text-sm font-medium text-gray-500">Payment Date:</span>
+                  <span className="text-sm font-medium text-gray-500">
+                    Payment Date:
+                  </span>
                   <p>{formatDate(booking.paymentDate)}</p>
                 </div>
               )}

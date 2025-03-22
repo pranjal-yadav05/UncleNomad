@@ -21,6 +21,7 @@ import {
   SelectContent,
   SelectItem,
 } from "../components/ui/select";
+import { formatDate } from "../utils/dateUtils";
 
 export default function ManageTourBookings() {
   const API_URL = process.env.REACT_APP_API_URL;
@@ -393,11 +394,6 @@ export default function ManageTourBookings() {
 
       setError("Failed to fetch booking details. Please try again.");
     }
-  };
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString();
   };
 
   // Function to handle exporting tour bookings to Excel
@@ -817,11 +813,9 @@ export default function ManageTourBookings() {
                             setEditMode(true);
                             setCurrentBookingId(booking._id);
                             setNewBooking({
-                              tourId: booking.tour._id,
+                              tourId: booking.tour._id || booking.tour,
                               groupSize: booking.groupSize,
-                              bookingDate: new Date(booking.bookingDate)
-                                .toISOString()
-                                .split("T")[0],
+                              bookingDate: booking.bookingDate,
                               guestName: booking.guestName,
                               email: booking.email,
                               phone: booking.phone,

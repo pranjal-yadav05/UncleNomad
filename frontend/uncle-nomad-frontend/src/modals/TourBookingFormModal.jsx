@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "../components/ui/select";
 import { useState, useEffect } from "react";
+import { formatDate } from "../utils/dateUtils";
 
 export default function TourBookingFormModal({
   isOpen,
@@ -50,11 +51,18 @@ export default function TourBookingFormModal({
     }
   }, [newBooking.tourId, newBooking.groupSize, toursArray]);
 
-  const formatDate = (date) => {
-    if (!date) return "";
-    const d = new Date(date);
-    return d.toISOString().split("T")[0];
-  };
+  // Add a useEffect to handle date conversion when editing
+  useEffect(() => {
+    if (editMode && isOpen) {
+      // Ensure the bookingDate is properly formatted for date inputs
+      if (typeof newBooking.bookingDate === "string") {
+        setNewBooking((prev) => ({
+          ...prev,
+          bookingDate: new Date(prev.bookingDate),
+        }));
+      }
+    }
+  }, [editMode, isOpen, newBooking.bookingDate]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -154,7 +162,13 @@ export default function TourBookingFormModal({
               <Input
                 id="bookingDate"
                 type="date"
-                value={formatDate(newBooking.bookingDate)}
+                value={
+                  newBooking.bookingDate instanceof Date
+                    ? newBooking.bookingDate.toISOString().split("T")[0]
+                    : typeof newBooking.bookingDate === "string"
+                    ? newBooking.bookingDate
+                    : ""
+                }
                 onChange={(e) =>
                   setNewBooking({
                     ...newBooking,

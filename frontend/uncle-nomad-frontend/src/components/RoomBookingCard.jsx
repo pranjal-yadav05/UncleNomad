@@ -2,12 +2,11 @@ import { MapPin, Star, CheckCircle } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
-
+import { formatDate } from "../utils/dateUtils";
 
 function RoomBookingCard({
   booking,
   getStatusColor,
-  formatDate,
   openRatingDialog,
   hasReviewForRoom,
 }) {
@@ -16,7 +15,7 @@ function RoomBookingCard({
       <div className="flex flex-col sm:flex-row">
         {/* Image Section */}
         <div className="sm:w-1/3 bg-muted p-4 flex flex-col justify-center items-center min-w-[150px]">
-          {booking.rooms.length > 0 && booking.rooms[0].images.length > 0 ? (
+          {booking.rooms.length > 0 && booking.rooms[0].images?.length > 0 ? (
             <img
               src={booking.rooms[0].images[0]}
               alt={booking.rooms[0].roomType}
@@ -72,7 +71,6 @@ function RoomBookingCard({
             </div>
           </div>
 
-          {/* Rating Section */}
           {/* Rating Section */}
           <div className="mt-4 pt-3 border-t border-gray-200">
             <h4 className="font-medium mb-3 flex items-center">

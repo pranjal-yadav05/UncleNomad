@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "../components/ui/select";
 import QueryReplyModal from "../modals/QueryReplyModal";
+import { formatDate } from "../utils/dateUtils";
 
 const ManageQueries = () => {
   const [queries, setQueries] = useState([]);
@@ -374,9 +375,7 @@ const ManageQueries = () => {
               <TableRow key={query._id}>
                 <TableCell>{query.email}</TableCell>
                 <TableCell>{query.query}</TableCell>
-                <TableCell>
-                  {new Date(query.createdAt).toLocaleDateString()}
-                </TableCell>
+                <TableCell>{formatDate(query.createdAt)}</TableCell>
                 <TableCell>
                   <span
                     className={`px-2 py-1 rounded ${

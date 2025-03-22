@@ -23,6 +23,8 @@ import {
   TableCell,
 } from "../components/ui/table";
 
+import { formatDate } from "../utils/dateUtils";
+
 export default function ManagePackages() {
   const API_URL = process.env.REACT_APP_API_URL;
   const [packages, setPackages] = useState([]);
@@ -537,10 +539,10 @@ export default function ManagePackages() {
                         groupSize: pkg.groupSize,
                         location: pkg.location,
                         startDate: pkg.startDate
-                          ? new Date(pkg.startDate).toISOString().split("T")[0]
+                          ? formatDate(new Date(pkg.startDate))
                           : "",
                         endDate: pkg.endDate
-                          ? new Date(pkg.endDate).toISOString().split("T")[0]
+                          ? formatDate(new Date(pkg.endDate))
                           : "",
                         priceOptions: pkg.priceOptions || {},
                         inclusions: pkg.inclusions || [],

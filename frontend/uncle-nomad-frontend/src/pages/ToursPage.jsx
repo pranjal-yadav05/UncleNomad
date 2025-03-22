@@ -26,6 +26,7 @@ import {
 
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import { formatDate, formatDateWithOptions } from "../utils/dateUtils";
 
 export default function ToursPage() {
   const API_URL = process.env.REACT_APP_API_URL;
@@ -191,16 +192,6 @@ export default function ToursPage() {
   const handleTourClick = (tour) => {
     navigate(`/tour/${tour._id}`, {
       state: { selectedTour: tour },
-    });
-  };
-
-  // Format date to display in a readable format
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
     });
   };
 

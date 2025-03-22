@@ -1,12 +1,12 @@
-import { MapPin, Star } from "lucide-react";
+import { MapPin, Star, CheckCircle } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
+import { formatDate } from "../utils/dateUtils";
 
 function TourBookingCard({
   booking,
   getStatusColor,
-  formatDate,
   openRatingDialog,
   hasReviewForTour,
 }) {
@@ -21,11 +21,11 @@ function TourBookingCard({
     <Card className="overflow-hidden w-full">
       <div className="flex flex-col sm:flex-row">
         {/* Image Section */}
-        <div className="sm:w-1/3 bg-muted p-4 flex flex-col justify-center items-center">
-          {booking.tourImage ? (
+        <div className="sm:w-1/3 bg-muted p-4 flex flex-col justify-center items-center min-w-[150px]">
+          {booking.tour?.images && booking.tour.images.length > 0 ? (
             <img
-              src={booking.tourImage}
-              alt={booking.tourName || "Tour"}
+              src={booking.tour.images[0]}
+              alt={booking.tour.title}
               className="w-full h-32 object-cover rounded-lg"
             />
           ) : (
@@ -35,11 +35,13 @@ function TourBookingCard({
           )}
 
           <div className="text-center mt-2">
-            <h4 className="font-medium">{booking.tourName || "Tour"}</h4>
-            {booking.location && (
+            <h4 className="font-medium">
+              {booking.tour?.title || "Tour Name Not Available"}
+            </h4>
+            {booking.tour?.location && (
               <div className="flex items-center justify-center text-sm text-muted-foreground mt-1">
                 <MapPin className="h-3 w-3 mr-1" />
-                <span>{booking.location}</span>
+                <span>{booking.tour.location}</span>
               </div>
             )}
           </div>
@@ -109,7 +111,7 @@ function TourBookingCard({
                     booking._id,
                     null,
                     "tour",
-                    booking.tourName || "Tour"
+                    booking.tour?.title || "Tour Name Not Available"
                   )
                 }>
                 <Star className="mr-1 h-4 w-4" />

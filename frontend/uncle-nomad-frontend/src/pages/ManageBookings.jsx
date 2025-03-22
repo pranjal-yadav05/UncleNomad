@@ -21,6 +21,7 @@ import {
   TableHead,
   TableCell,
 } from "../components/ui/table";
+import { formatDate } from "../utils/dateUtils";
 
 export default function ManageBookings() {
   const API_URL = process.env.REACT_APP_API_URL;
@@ -38,7 +39,8 @@ export default function ManageBookings() {
     checkIn: new Date(),
     checkOut: new Date(),
     totalPrice: 0,
-    status: "pending",
+    status: "PENDING",
+    paymentStatus: "PENDING",
   });
 
   const [fromDate, setFromDate] = useState("");
@@ -105,7 +107,8 @@ export default function ManageBookings() {
       checkIn: new Date(),
       checkOut: new Date(),
       totalPrice: 0,
-      status: "pending",
+      status: "PENDING",
+      paymentStatus: "PENDING",
     });
   };
 
@@ -270,18 +273,46 @@ export default function ManageBookings() {
       return;
     }
 
-    // Calculate total price
+    // Calculate number of nights
     const numberOfNights = Math.ceil(
       (new Date(newBooking.checkOut) - new Date(newBooking.checkIn)) /
         (1000 * 60 * 60 * 24)
     );
 
-    const totalPrice = newBooking.rooms.reduce((sum, room) => {
-      const roomPrice = rooms.find((r) => r._id === room.roomId)?.price || 0;
-      return sum + roomPrice * numberOfNights * room.quantity;
-    }, 0);
+    // Process room data with enhanced details
+    const processedRooms = newBooking.rooms.map((room) => {
+      // Find the room details from available rooms if needed
+      const roomDetails = rooms.find((r) => {
+        const roomId =
+          typeof room.roomId === "object" ? room.roomId._id : room.roomId;
+        return r._id === roomId;
+      });
 
-    setNewBooking((prev) => ({ ...prev, totalPrice }));
+      if (!roomDetails) {
+        // If room details are not found, return the existing room data
+        return room;
+      }
+
+      // Calculate subtotal for this room
+      const subtotal = roomDetails.price * room.quantity * numberOfNights;
+
+      // Return enhanced room data
+      return {
+        roomId: roomDetails._id,
+        roomName: roomDetails.name,
+        roomType: roomDetails.type,
+        quantity: room.quantity,
+        price: roomDetails.price,
+        capacity: roomDetails.capacity,
+        numberOfNights,
+        subtotal,
+      };
+    });
+
+    // Calculate total price
+    const totalPrice = processedRooms.reduce((sum, room) => {
+      return sum + (room.subtotal || 0);
+    }, 0);
 
     // Number of guests validation
     if (!newBooking.numberOfGuests || newBooking.numberOfGuests <= 0) {
@@ -290,6 +321,16 @@ export default function ManageBookings() {
       );
       return;
     }
+
+    // Create the booking data with all required fields
+    const bookingData = {
+      ...newBooking,
+      rooms: processedRooms,
+      totalPrice,
+      paymentStatus: newBooking.paymentStatus || "PENDING",
+    };
+
+    console.log("Submitting booking data:", bookingData);
 
     try {
       const url = editMode
@@ -304,7 +345,7 @@ export default function ManageBookings() {
           "x-api-key": process.env.REACT_APP_API_KEY,
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(newBooking),
+        body: JSON.stringify(bookingData),
       });
 
       if (!response.ok) {
@@ -326,7 +367,8 @@ export default function ManageBookings() {
         checkIn: new Date(),
         checkOut: new Date(),
         totalPrice: 0,
-        status: "pending",
+        status: "PENDING",
+        paymentStatus: "PENDING",
       });
 
       setEditMode(false);
@@ -598,9 +640,9 @@ export default function ManageBookings() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="confirmed">Confirmed</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
+                <SelectItem value="CONFIRMED">Confirmed</SelectItem>
+                <SelectItem value="PENDING">Pending</SelectItem>
+                <SelectItem value="CANCELLED">Cancelled</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -692,6 +734,11 @@ export default function ManageBookings() {
                 </TableHead>
                 <TableHead
                   className="cursor-pointer"
+                  onClick={() => handleSortChange("paymentStatus")}>
+                  Payment Status {getSortIndicator("paymentStatus")}
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer"
                   onClick={() => handleSortChange("totalPrice")}>
                   Total Price {getSortIndicator("totalPrice")}
                 </TableHead>
@@ -702,13 +749,12 @@ export default function ManageBookings() {
               {bookings.map((booking) => (
                 <TableRow key={booking._id} className="hover:bg-gray-50">
                   <TableCell>{booking.guestName}</TableCell>
-                  <TableCell>
-                    {new Date(booking.checkIn).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>
-                    {new Date(booking.checkOut).toLocaleDateString()}
-                  </TableCell>
+                  <TableCell>{formatDate(booking.checkIn)}</TableCell>
+                  <TableCell>{formatDate(booking.checkOut)}</TableCell>
                   <TableCell className="capitalize">{booking.status}</TableCell>
+                  <TableCell className="capitalize">
+                    {booking.paymentStatus || "pending"}
+                  </TableCell>
                   <TableCell>₹{booking.totalPrice}</TableCell>
                   <TableCell>
                     <div className="flex space-x-2">
@@ -720,10 +766,21 @@ export default function ManageBookings() {
                       </Button>
                       <Button
                         onClick={() => {
+                          console.log("Editing booking:", booking);
+
                           setNewBooking({
                             ...booking,
-                            checkIn: new Date(booking.checkIn),
-                            checkOut: new Date(booking.checkOut),
+                            rooms: booking.rooms.map((room) => ({
+                              roomId: room.roomId._id || room.roomId,
+                              quantity: room.quantity,
+                            })),
+                            // Ensure status values use uppercase format
+                            status: booking.status
+                              ? booking.status.toUpperCase()
+                              : "PENDING",
+                            paymentStatus: booking.paymentStatus
+                              ? booking.paymentStatus.toUpperCase()
+                              : "PENDING",
                           });
                           setEditMode(true);
                           setCurrentBookingId(booking._id);
@@ -789,7 +846,6 @@ export default function ManageBookings() {
           }
         }}
         booking={selectedBooking}
-        onUpdateStatus={handleUpdateBooking}
         onDelete={(id) => {
           if (window.confirm("Are you sure you want to delete this booking?")) {
             handleDeleteBooking(id);

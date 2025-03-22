@@ -26,6 +26,7 @@ import {
   TableRow,
   TableCell,
 } from "../components/ui/table";
+import { formatDate } from "../utils/dateUtils";
 
 export default function ManageReviews() {
   const API_URL = process.env.REACT_APP_API_URL;
@@ -485,9 +486,7 @@ export default function ManageReviews() {
                             review.status.slice(1)}
                         </span>
                       </TableCell>
-                      <TableCell>
-                        {new Date(review.createdAt).toLocaleDateString()}
-                      </TableCell>
+                      <TableCell>{formatDate(review.createdAt)}</TableCell>
                       <TableCell className="max-w-[300px] truncate">
                         {review.comment}
                       </TableCell>

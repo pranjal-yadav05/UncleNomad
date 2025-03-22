@@ -1136,6 +1136,23 @@ export const updateStats = async (req, res) => {
   }
 };
 
+// Add a helper function to format dates in dd/mm/yyyy format
+const formatDateDDMMYYYY = (dateString) => {
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "Invalid Date";
+
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const year = date.getFullYear();
+
+    return `${day}/${month}/${year}`;
+  } catch (error) {
+    console.error("Error formatting date:", error);
+    return "Invalid Date";
+  }
+};
+
 // Helper function to generate Excel workbook for tour bookings
 const generateTourBookingsExcel = (bookings) => {
   // Create a new Excel workbook and worksheet
@@ -1192,15 +1209,21 @@ const generateTourBookingsExcel = (bookings) => {
       guestName: booking.guestName,
       email: booking.email,
       phone: booking.phone,
-      bookingDate: bookingDate.toLocaleDateString(),
-      tourStartDate: tourStartDate ? tourStartDate.toLocaleDateString() : "N/A",
-      tourEndDate: tourEndDate ? tourEndDate.toLocaleDateString() : "N/A",
+      bookingDate: formatDateDDMMYYYY(booking.bookingDate),
+      tourStartDate:
+        booking.tour && booking.tour.startDate
+          ? formatDateDDMMYYYY(booking.tour.startDate)
+          : "N/A",
+      tourEndDate:
+        booking.tour && booking.tour.endDate
+          ? formatDateDDMMYYYY(booking.tour.endDate)
+          : "N/A",
       groupSize: booking.groupSize,
       totalAmount: booking.totalPrice,
       status: booking.status,
       paymentStatus: booking.paymentStatus,
       specialRequests: booking.specialRequests || "None",
-      createdAt: createdAtDate.toLocaleDateString(),
+      createdAt: formatDateDDMMYYYY(booking.createdAt),
     });
   });
 
@@ -1434,9 +1457,9 @@ export const exportToursToExcel = async (req, res) => {
         duration: tour.duration,
         groupSize: tour.groupSize,
         location: tour.location,
-        startDate: startDate ? startDate.toLocaleDateString() : "N/A",
-        endDate: endDate ? endDate.toLocaleDateString() : "N/A",
-        createdAt: createdAtFormatted,
+        startDate: tour.startDate ? formatDateDDMMYYYY(tour.startDate) : "N/A",
+        endDate: tour.endDate ? formatDateDDMMYYYY(tour.endDate) : "N/A",
+        createdAt: tour.createdAt ? formatDateDDMMYYYY(tour.createdAt) : "N/A",
       });
     });
 

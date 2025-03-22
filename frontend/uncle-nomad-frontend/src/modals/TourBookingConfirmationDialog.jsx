@@ -8,6 +8,7 @@ import {
 } from "../components/ui/dialog";
 import { Button } from "../components/ui/button";
 import { CheckCircle } from "lucide-react";
+import { formatDate } from "../utils/dateUtils";
 
 const TourBookingConfirmationDialog = ({
   tourBooking,
@@ -38,8 +39,7 @@ const TourBookingConfirmationDialog = ({
           <DialogFooter>
             <Button
               onClick={handleClose}
-              className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800"
-            >
+              className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800">
               Close
             </Button>
           </DialogFooter>
@@ -50,7 +50,7 @@ const TourBookingConfirmationDialog = ({
 
   // Format the date properly
   const formattedDate = tourBooking.tourDate
-    ? new Date(tourBooking.tourDate).toLocaleDateString()
+    ? formatDate(tourBooking.tourDate)
     : "Not specified";
 
   return (
@@ -61,8 +61,7 @@ const TourBookingConfirmationDialog = ({
         if (!newOpen) {
           onClose?.();
         }
-      }}
-    >
+      }}>
       <DialogContent className="bg-white p-6 rounded-lg shadow-xl max-w-lg w-full sm:w-[500px] mx-auto">
         <div className="flex flex-col items-center mb-4">
           <CheckCircle className="h-12 w-12 sm:h-16 sm:w-16 text-green-500 mb-2" />
@@ -93,8 +92,7 @@ const TourBookingConfirmationDialog = ({
         <DialogFooter className="mt-6">
           <Button
             onClick={handleClose}
-            className="w-full bg-brand-purple hover:bg-brand-purple/90 text-white"
-          >
+            className="w-full bg-brand-purple hover:bg-brand-purple/90 text-white">
             Close
           </Button>
         </DialogFooter>
