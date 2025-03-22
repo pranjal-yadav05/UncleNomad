@@ -142,7 +142,8 @@ export default function ManageTourBookings() {
     bookingId,
     tourId,
     status,
-    paymentReference
+    paymentReference,
+    paymentStatus
   ) => {
     setLoading(true);
     setError("");
@@ -159,8 +160,8 @@ export default function ManageTourBookings() {
           },
           body: JSON.stringify({
             status,
-            paymentReference:
-              status === "CONFIRMED" ? `ADMIN_CONFIRMED_${Date.now()}` : null,
+            paymentReference,
+            paymentStatus,
           }),
         }
       );
@@ -169,14 +170,15 @@ export default function ManageTourBookings() {
         throw new Error("Failed to update booking");
       }
 
-      setIsModalOpen(false);
-      await fetchBookings();
+      // Refresh bookings after update
+      await fetchBookings(currentPage);
+      return true;
     } catch (error) {
-      console.error("Error updating tour booking:", error);
-      setError("Failed to update booking. Please try again.");
-      setModalError(error.message);
+      console.error("Error updating booking:", error);
+      setError(error.message);
+      return null;
     } finally {
-      setLoading(false); // Stop global loading
+      setLoading(false);
     }
   };
 
@@ -245,6 +247,7 @@ export default function ManageTourBookings() {
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
     setFormLoading(true);
+    setModalError("");
 
     // Date validation
     const today = new Date();
@@ -252,13 +255,15 @@ export default function ManageTourBookings() {
 
     // Tour selection validation
     if (!newBooking.tourId) {
-      setError("Please select a tour");
+      setModalError("Please select a tour");
+      setFormLoading(false);
       return;
     }
 
     // Group size validation
     if (!newBooking.groupSize || newBooking.groupSize <= 0) {
-      setError("Invalid group size. Please provide a positive number.");
+      setModalError("Invalid group size. Please provide a positive number.");
+      setFormLoading(false);
       return;
     }
 
@@ -269,7 +274,10 @@ export default function ManageTourBookings() {
       newBooking.bookingDate
     );
 
-    if (!verificationResult) return;
+    if (!verificationResult) {
+      setFormLoading(false);
+      return;
+    }
 
     // Use the verified total price
     const totalAmount = verificationResult.totalPrice;
@@ -279,6 +287,13 @@ export default function ManageTourBookings() {
       if (editMode && currentBookingId) {
         // Update existing booking
         const token = localStorage.getItem("token");
+        console.log(
+          "Updating booking with status:",
+          newBooking.status,
+          "and payment status:",
+          newBooking.paymentStatus
+        );
+
         const response = await fetch(
           `${API_URL}/api/tours/${newBooking.tourId}/book/${currentBookingId}/confirm`,
           {
@@ -289,11 +304,13 @@ export default function ManageTourBookings() {
               Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({
-              status: newBooking.status,
+              status: newBooking.status || "PENDING",
+              paymentStatus: newBooking.paymentStatus || "PENDING",
               paymentReference:
-                newBooking.status === "CONFIRMED"
+                newBooking.paymentReference ||
+                (newBooking.status === "CONFIRMED"
                   ? `ADMIN_UPDATED_${Date.now()}`
-                  : null,
+                  : null),
             }),
           }
         );
@@ -302,9 +319,37 @@ export default function ManageTourBookings() {
           const errorData = await response.json();
           throw new Error(errorData.message || "Failed to update booking");
         }
+
+        const data = await response.json();
+        console.log("Booking updated:", data);
       } else {
         // Create new booking
         const token = localStorage.getItem("token");
+
+        // Set default values for new booking
+        const bookingData = {
+          tourId: newBooking.tourId,
+          groupSize: newBooking.groupSize,
+          bookingDate: formattedBookingDate,
+          guestName: newBooking.guestName,
+          email: newBooking.email,
+          phone: newBooking.phone,
+          specialRequests: newBooking.specialRequests,
+          totalAmount: totalAmount,
+          paymentStatus: newBooking.paymentStatus || "PENDING",
+        };
+
+        // Add paymentReference if status is CONFIRMED or paymentStatus is PAID/SUCCESS
+        if (
+          newBooking.status === "CONFIRMED" ||
+          newBooking.paymentStatus === "PAID" ||
+          newBooking.paymentStatus === "SUCCESS"
+        ) {
+          bookingData.paymentReference = `ADMIN_CREATED_${Date.now()}`;
+        }
+
+        console.log("Creating booking with data:", bookingData);
+
         const response = await fetch(
           `${API_URL}/api/tours/${newBooking.tourId}/book`,
           {
@@ -314,16 +359,7 @@ export default function ManageTourBookings() {
               "x-api-key": process.env.REACT_APP_API_KEY,
               Authorization: `Bearer ${token}`,
             },
-            body: JSON.stringify({
-              tourId: newBooking.tourId,
-              groupSize: newBooking.groupSize,
-              bookingDate: formattedBookingDate,
-              guestName: newBooking.guestName,
-              email: newBooking.email,
-              phone: newBooking.phone,
-              specialRequests: newBooking.specialRequests,
-              totalAmount: totalAmount,
-            }),
+            body: JSON.stringify(bookingData),
           }
         );
 
@@ -333,19 +369,22 @@ export default function ManageTourBookings() {
         }
 
         const data = await response.json();
+        console.log("Booking created:", data);
 
-        // If admin wants to confirm booking immediately
-        if (newBooking.status === "CONFIRMED") {
+        // If admin wants to confirm booking immediately after creation
+        if (newBooking.status === "CONFIRMED" && data.booking) {
           await handleUpdateBooking(
             data.booking.id || data.booking._id,
             newBooking.tourId,
             "CONFIRMED",
-            `ADMIN_CONFIRMED_${Date.now()}`
+            `ADMIN_CONFIRMED_${Date.now()}`,
+            newBooking.paymentStatus || "PENDING"
           );
         }
       }
 
-      fetchBookings();
+      // Refresh bookings and reset form
+      await fetchBookings();
       setNewBooking({
         tourId: "",
         groupSize: 1,
@@ -364,10 +403,9 @@ export default function ManageTourBookings() {
       setCurrentBookingId(null);
     } catch (error) {
       console.error("Booking creation/update error:", error);
-      setModalError(error.message);
-      setError(error.message);
+      setModalError(error.message || "Failed to save booking");
     } finally {
-      setFormLoading(false); // Stop global loading
+      setFormLoading(false);
     }
   };
 
@@ -391,7 +429,6 @@ export default function ManageTourBookings() {
       setIsDetailsModalOpen(true);
     } catch (error) {
       console.error("Error fetching booking details:", error);
-
       setError("Failed to fetch booking details. Please try again.");
     }
   };
@@ -789,33 +826,58 @@ export default function ManageTourBookings() {
 
                 return (
                   <TableRow key={booking._id} className="hover:bg-gray-50">
-                    <TableCell>{booking.guestName}</TableCell>
-                    <TableCell>{tourName}</TableCell>
-                    <TableCell>{formatDate(booking.bookingDate)}</TableCell>
-                    <TableCell>{booking.groupSize}</TableCell>
-                    <TableCell className="capitalize">
-                      {booking.status}
+                    <TableCell className="py-4">{booking.guestName}</TableCell>
+                    <TableCell className="py-4">{tourName}</TableCell>
+                    <TableCell className="py-4">
+                      {formatDate(booking.bookingDate)}
                     </TableCell>
-                    <TableCell className="capitalize">
-                      {booking.paymentStatus}
+                    <TableCell className="py-4">{booking.groupSize}</TableCell>
+                    <TableCell className="py-4">
+                      <span
+                        className={`inline-block px-2 py-1 rounded text-xs ${
+                          booking.status === "CONFIRMED"
+                            ? "bg-green-100 text-green-800"
+                            : booking.status === "CANCELLED"
+                            ? "bg-red-100 text-red-800"
+                            : "bg-yellow-100 text-yellow-800"
+                        }`}>
+                        {booking.status.toLowerCase()}
+                      </span>
                     </TableCell>
-                    <TableCell>₹{booking.totalPrice}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
+                    <TableCell className="py-4">
+                      <span
+                        className={`inline-block px-2 py-1 rounded text-xs ${
+                          booking.paymentStatus === "PAID" ||
+                          booking.paymentStatus === "SUCCESS"
+                            ? "bg-green-100 text-green-800"
+                            : booking.paymentStatus === "FAILED"
+                            ? "bg-red-100 text-red-800"
+                            : booking.paymentStatus === "INITIATED"
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-yellow-100 text-yellow-800"
+                        }`}>
+                        {booking.paymentStatus.toLowerCase()}
+                      </span>
+                    </TableCell>
+                    <TableCell className="py-4">
+                      ₹{booking.totalPrice}
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <div className="flex space-x-2">
                         <Button
                           onClick={() => handleViewBookingDetails(booking._id)}
                           variant="outline"
                           size="sm">
-                          View
+                          View Details
                         </Button>
                         <Button
                           onClick={() => {
-                            setEditMode(true);
-                            setCurrentBookingId(booking._id);
+                            console.log("Editing booking:", booking);
+                            // Populate form with existing data
                             setNewBooking({
                               tourId: booking.tour._id || booking.tour,
                               groupSize: booking.groupSize,
-                              bookingDate: booking.bookingDate,
+                              bookingDate: new Date(booking.bookingDate),
                               guestName: booking.guestName,
                               email: booking.email,
                               phone: booking.phone,
@@ -823,7 +885,10 @@ export default function ManageTourBookings() {
                               totalAmount: booking.totalPrice,
                               status: booking.status,
                               paymentStatus: booking.paymentStatus,
+                              paymentReference: booking.paymentReference || "",
                             });
+                            setEditMode(true);
+                            setCurrentBookingId(booking._id);
                             setIsModalOpen(true);
                           }}
                           variant="outline"
@@ -832,11 +897,9 @@ export default function ManageTourBookings() {
                         </Button>
                         <Button
                           onClick={() => handleDeleteBooking(booking._id)}
-                          size="sm"
-                          className="bg-red"
                           variant="destructive"
-                          disabled={loading}>
-                          {loading ? "Processing..." : "Delete"}
+                          size="sm">
+                          Delete
                         </Button>
                       </div>
                     </TableCell>
@@ -875,15 +938,12 @@ export default function ManageTourBookings() {
         isOpen={isDetailsModalOpen}
         onClose={() => setIsDetailsModalOpen(false)}
         booking={selectedBooking}
-        tour={
-          selectedBooking && Array.isArray(tours)
-            ? tours.find(
-                (tour) =>
-                  tour._id ===
-                  (selectedBooking.tour?._id || selectedBooking.tour)
-              ) || null
-            : null
-        }
+        onDelete={(id) => {
+          if (window.confirm("Are you sure you want to delete this booking?")) {
+            handleDeleteBooking(id);
+            setIsDetailsModalOpen(false);
+          }
+        }}
       />
     </div>
   );

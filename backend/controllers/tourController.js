@@ -756,6 +756,8 @@ export const createTourBooking = async (req, res) => {
     phone,
     specialRequests,
     totalAmount,
+    paymentStatus,
+    paymentReference,
   } = req.body;
 
   try {
@@ -802,7 +804,7 @@ export const createTourBooking = async (req, res) => {
       return res.status(400).json({ message: "Total amount mismatch" });
     }
 
-    // Create the booking with PENDING status
+    // Create the booking
     const booking = new TourBooking({
       tour: tourId,
       groupSize,
@@ -813,8 +815,14 @@ export const createTourBooking = async (req, res) => {
       specialRequests,
       totalPrice: calculatedTotal,
       status: "PENDING",
-      paymentStatus: "PENDING",
+      paymentStatus: paymentStatus || "PENDING",
+      paymentReference: paymentReference || null,
     });
+
+    // Set payment date if payment status is PAID or SUCCESS
+    if (paymentStatus === "PAID" || paymentStatus === "SUCCESS") {
+      booking.paymentDate = new Date();
+    }
 
     // Save the booking
     const savedBooking = await booking.save();
@@ -831,22 +839,25 @@ export const createTourBooking = async (req, res) => {
     res.status(500).json({ message: "Error creating tour booking" });
   }
 };
+
 export const confirmTourBooking = async (req, res) => {
   try {
     const { bookingId } = req.params;
-    const { paymentReference, status } = req.body;
+    const { paymentReference, status, paymentStatus } = req.body;
+
+    // Validate inputs
+    if (!bookingId) {
+      return res.status(400).json({ message: "Booking ID is required" });
+    }
+
     // Find the booking
     const booking = await TourBooking.findById(bookingId);
     if (!booking) {
       return res.status(404).json({ message: "Booking not found" });
     }
 
-    // Ensure booking is still pending before confirming
-    if (booking.status !== "PENDING") {
-      return res
-        .status(400)
-        .json({ message: "Booking is not in a pending state" });
-    }
+    // Allow updates if booking is in any state
+    // This is less restrictive than before but gives admins more control
 
     // Find the corresponding tour
     const tour = await Tour.findById(booking.tour);
@@ -859,30 +870,63 @@ export const confirmTourBooking = async (req, res) => {
       tour.bookedSlots = 0;
     }
 
-    // Check if there are enough available slots
-    if (tour.bookedSlots + booking.groupSize > tour.groupSize) {
-      return res
-        .status(400)
-        .json({ message: "Not enough available slots for this booking" });
+    // Only update bookedSlots if status is changing to CONFIRMED
+    if (status === "CONFIRMED" && booking.status !== "CONFIRMED") {
+      // Check if there are enough available slots
+      if (tour.bookedSlots + booking.groupSize > tour.groupSize) {
+        return res.status(400).json({
+          message: `Not enough available slots for this booking. Only ${
+            tour.groupSize - tour.bookedSlots
+          } slots available.`,
+        });
+      }
+
+      // Update bookedSlots in the tour
+      tour.bookedSlots += booking.groupSize;
+      await tour.save();
     }
 
-    // Update bookedSlots in the tour
-    tour.bookedSlots += booking.groupSize;
-    await tour.save();
+    // If changing from CONFIRMED to another status, free up slots
+    if (booking.status === "CONFIRMED" && status && status !== "CONFIRMED") {
+      tour.bookedSlots = Math.max(0, tour.bookedSlots - booking.groupSize);
+      await tour.save();
+    }
 
-    // Confirm the booking
-    booking.paymentReference = paymentReference;
-    booking.status = status || "CONFIRMED";
+    // Update booking fields
+    if (paymentReference) {
+      booking.paymentReference = paymentReference;
+    }
+
+    if (status) {
+      booking.status = status;
+    }
+
+    // Set payment status if provided
+    if (paymentStatus) {
+      booking.paymentStatus = paymentStatus;
+
+      // Set payment date when status is set to PAID or SUCCESS
+      if (
+        (paymentStatus === "PAID" || paymentStatus === "SUCCESS") &&
+        !booking.paymentDate
+      ) {
+        booking.paymentDate = new Date();
+      }
+    }
+
     await booking.save();
 
     res.json({
-      message: "Booking confirmed successfully",
+      message: "Booking updated successfully",
       booking,
       updatedTour: tour,
     });
   } catch (error) {
-    console.error("Error confirming booking:", error);
-    res.status(500).json({ message: "Failed to confirm booking" });
+    console.error("Error updating booking:", error);
+    res.status(500).json({
+      message: "Failed to update booking",
+      error: error.message,
+    });
   }
 };
 
@@ -890,16 +934,29 @@ export const getTourBookingById = async (req, res) => {
   try {
     const bookingId = req.params.id;
 
-    const booking = await TourBooking.findById(bookingId);
+    // Validate booking ID
+    if (!mongoose.Types.ObjectId.isValid(bookingId)) {
+      return res.status(400).json({ message: "Invalid booking ID format" });
+    }
+
+    // Find booking and populate tour details
+    const booking = await TourBooking.findById(bookingId).populate({
+      path: "tour",
+      select:
+        "title description duration price location groupSize images createdAt",
+    });
 
     if (!booking) {
-      return res.status(404).json({ error: "Booking not found" });
+      return res.status(404).json({ message: "Booking not found" });
     }
 
     res.json(booking);
   } catch (error) {
     console.error("Error retrieving booking details:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({
+      message: "Error retrieving booking details",
+      error: error.message,
+    });
   }
 };
 

@@ -211,9 +211,14 @@ export default function TourBookingFormModal({
                   <SelectItem value="PENDING">Pending</SelectItem>
                   <SelectItem value="INITIATED">Initiated</SelectItem>
                   <SelectItem value="PAID">Paid</SelectItem>
+                  <SelectItem value="SUCCESS">Success</SelectItem>
                   <SelectItem value="FAILED">Failed</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-xs text-gray-500 mt-1">
+                Note: Setting payment status to "Paid" or "Success" will mark
+                the booking as paid and record the payment date.
+              </p>
             </div>
 
             <div className="space-y-2 md:col-span-2">
