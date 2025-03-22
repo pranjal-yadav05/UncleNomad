@@ -109,11 +109,15 @@ export default function HomePage() {
     })
       .then((res) => res.json())
       .then((data) => {
-        setTours(data);
-        
+        // Check if data has a tours property (new API format) or if it's an array directly (old format)
+        const toursArray = data.tours || data;
+        setTours(Array.isArray(toursArray) ? toursArray : []);
         setIsLoading((prev) => ({ ...prev, tours: false }));
       })
-      .catch((error) => console.error("Error fetching tours:", error));
+      .catch((error) => {
+        console.error("Error fetching tours:", error);
+        setIsLoading((prev) => ({ ...prev, tours: false }));
+      });
 
     fetch(`${API_URL}/api/rooms`, {
       headers: { "x-api-key": process.env.REACT_APP_API_KEY },
@@ -123,7 +127,10 @@ export default function HomePage() {
         setRooms(data);
         setIsLoading((prev) => ({ ...prev, rooms: false }));
       })
-      .catch((error) => console.error("Error fetching rooms:", error));
+      .catch((error) => {
+        console.error("Error fetching rooms:", error);
+        setIsLoading((prev) => ({ ...prev, rooms: false }));
+      });
   }, []);
 
   const handleBookNowClick = (room) => {

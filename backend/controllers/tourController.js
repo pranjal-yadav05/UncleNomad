@@ -1,42 +1,43 @@
-import Tour from '../models/Tour.js';
-import TourBooking from '../models/TourBooking.js';
-import PaytmChecksum from 'paytmchecksum';
-import https from 'https';
-import streamifier from 'streamifier';
-import { v2 as cloudinaryV2 } from 'cloudinary';
-import mongoose from 'mongoose';
-import crypto from "crypto"
-import Razorpay from "razorpay"
-import Review from '../models/UserReview.js'
-import Stats from '../models/Stats.js';
+import Tour from "../models/Tour.js";
+import TourBooking from "../models/TourBooking.js";
+import PaytmChecksum from "paytmchecksum";
+import https from "https";
+import streamifier from "streamifier";
+import { v2 as cloudinaryV2 } from "cloudinary";
+import mongoose from "mongoose";
+import crypto from "crypto";
+import Razorpay from "razorpay";
+import Review from "../models/UserReview.js";
+import Stats from "../models/Stats.js";
+import ExcelJS from "exceljs";
 
 // Configure Cloudinary
 cloudinaryV2.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
-  secure: true
+  secure: true,
 });
 
 const deleteCloudinaryImage = async (imageUrl) => {
   if (!imageUrl) return null;
   try {
     const urlPathname = new URL(imageUrl).pathname;
-    const pathParts = urlPathname.split('/');
+    const pathParts = urlPathname.split("/");
     const filenameWithExt = pathParts[pathParts.length - 1];
-    const filename = filenameWithExt.split('.')[0];
-    let folderPath = '';
+    const filename = filenameWithExt.split(".")[0];
+    let folderPath = "";
     let foundUncleNomad = false;
     for (let i = 0; i < pathParts.length - 1; i++) {
-      if (foundUncleNomad || pathParts[i] === 'uncle-nomad') {
+      if (foundUncleNomad || pathParts[i] === "uncle-nomad") {
         foundUncleNomad = true;
-        folderPath += pathParts[i] + '/';
+        folderPath += pathParts[i] + "/";
       }
     }
     const publicId = folderPath + filename;
     return await cloudinaryV2.uploader.destroy(publicId, {
-      resource_type: 'image',
-      invalidate: true
+      resource_type: "image",
+      invalidate: true,
     });
   } catch (error) {
     console.error("Error deleting image from Cloudinary:", error);
@@ -82,35 +83,73 @@ export const getAdminTours = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10; // Default limit to 10 per page
     const skip = (page - 1) * limit;
 
-    // Get total count of tours
-    const totalTours = await Tour.countDocuments();
+    // Extract sort parameter from query params
+    const sortParam = req.query.sort || "-createdAt"; // Default to newest first
 
-    // Fetch paginated tours
-    const tours = await Tour.find().skip(skip).limit(limit).lean();
+    // Build filter object based on query parameters
+    const filter = {};
+
+    // Add category filter if provided and not 'all'
+    if (req.query.category && req.query.category !== "all") {
+      filter.category = req.query.category;
+    }
+
+    // Add search functionality (search by title, description, or location)
+    if (req.query.search) {
+      const searchRegex = new RegExp(req.query.search, "i");
+      filter.$or = [
+        { title: searchRegex },
+        { description: searchRegex },
+        { location: searchRegex },
+      ];
+    }
+
+    // Get total count of filtered tours
+    const totalTours = await Tour.countDocuments(filter);
+
+    // Fetch paginated tours with filters and sorting
+    const tours = await Tour.find(filter)
+      .sort(sortParam)
+      .skip(skip)
+      .limit(limit)
+      .lean();
 
     // Get top 4 reviews for each tour
-    const tourIds = tours.map(tour => tour._id);
+    const tourIds = tours.map((tour) => tour._id);
     const reviewsByTour = await Review.aggregate([
-      { $match: { bookingType: "tour", itemId: { $in: tourIds }, status: "approved" } },
+      {
+        $match: {
+          bookingType: "tour",
+          itemId: { $in: tourIds },
+          status: "approved",
+        },
+      },
       { $sort: { createdAt: -1 } }, // Sort reviews by newest first
-      { 
-        $group: { 
-          _id: "$itemId", 
-          reviews: { $push: { userName: "$userName", rating: "$rating", comment: "$comment", createdAt: "$createdAt" } } 
-        } 
-      }
+      {
+        $group: {
+          _id: "$itemId",
+          reviews: {
+            $push: {
+              userName: "$userName",
+              rating: "$rating",
+              comment: "$comment",
+              createdAt: "$createdAt",
+            },
+          },
+        },
+      },
     ]);
 
     // Convert aggregation results into a map for quick lookup
     const reviewMap = {};
-    reviewsByTour.forEach(entry => {
+    reviewsByTour.forEach((entry) => {
       reviewMap[entry._id.toString()] = entry.reviews.slice(0, 4); // Take top 4 reviews
     });
 
     // Attach top 4 reviews to each tour
-    const toursWithReviews = tours.map(tour => ({
+    const toursWithReviews = tours.map((tour) => ({
       ...tour,
-      reviews: reviewMap[tour._id.toString()] || [] // Default to empty array if no reviews
+      reviews: reviewMap[tour._id.toString()] || [], // Default to empty array if no reviews
     }));
 
     res.status(200).json({
@@ -127,35 +166,64 @@ export const getAdminTours = async (req, res) => {
 
 export const getTours = async (req, res) => {
   try {
-    // Fetch all tours
-    const tours = await Tour.find().lean();
+    const page = parseInt(req.query.page) || 1; // Default to page 1
+    const limit = parseInt(req.query.limit) || 10; // Default limit to 10 per page
+    const skip = (page - 1) * limit;
+
+    // Get total count of tours
+    const totalTours = await Tour.countDocuments();
+
+    // Fetch paginated tours
+    const tours = await Tour.find()
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
 
     // Get top 4 reviews for each tour
-    const tourIds = tours.map(tour => tour._id);
+    const tourIds = tours.map((tour) => tour._id);
     const reviewsByTour = await Review.aggregate([
-      { $match: { bookingType: "tour", itemId: { $in: tourIds }, status: "approved" } },
+      {
+        $match: {
+          bookingType: "tour",
+          itemId: { $in: tourIds },
+          status: "approved",
+        },
+      },
       { $sort: { createdAt: -1 } }, // Sort reviews by newest first
-      { 
-        $group: { 
-          _id: "$itemId", 
-          reviews: { $push: { userName: "$userName", rating: "$rating", comment: "$comment", createdAt: "$createdAt" } } 
-        } 
-      }
+      {
+        $group: {
+          _id: "$itemId",
+          reviews: {
+            $push: {
+              userName: "$userName",
+              rating: "$rating",
+              comment: "$comment",
+              createdAt: "$createdAt",
+            },
+          },
+        },
+      },
     ]);
 
     // Convert aggregation results into a map for quick lookup
     const reviewMap = {};
-    reviewsByTour.forEach(entry => {
+    reviewsByTour.forEach((entry) => {
       reviewMap[entry._id.toString()] = entry.reviews.slice(0, 4); // Take top 4 reviews
     });
 
     // Attach top 4 reviews to each tour
-    const toursWithReviews = tours.map(tour => ({
+    const toursWithReviews = tours.map((tour) => ({
       ...tour,
-      reviews: reviewMap[tour._id.toString()] || [] // Default to empty array if no reviews
+      reviews: reviewMap[tour._id.toString()] || [], // Default to empty array if no reviews
     }));
 
-    res.json(toursWithReviews);
+    res.status(200).json({
+      tours: toursWithReviews,
+      totalPages: Math.ceil(totalTours / limit),
+      currentPage: page,
+      totalTours,
+    });
   } catch (error) {
     console.error("Error fetching tours:", error);
     res.status(500).json({ message: "Server error" });
@@ -164,51 +232,61 @@ export const getTours = async (req, res) => {
 
 export const createTour = async (req, res) => {
   try {
-    const { title, description, category, price, duration, groupSize, location, itinerary, startDate, endDate } = req.body;
-    
+    const {
+      title,
+      description,
+      category,
+      price,
+      duration,
+      groupSize,
+      location,
+      itinerary,
+      startDate,
+      endDate,
+    } = req.body;
+
     // Create tour first with empty images array
     const newTour = new Tour({
-      title, 
-      description, 
+      title,
+      description,
       category,
-      price, 
-      duration, 
-      groupSize, 
-      location, 
-      itinerary: itinerary || [], 
-      startDate, 
-      endDate, 
-      images: []
+      price,
+      duration,
+      groupSize,
+      location,
+      itinerary: itinerary || [],
+      startDate,
+      endDate,
+      images: [],
     });
-    
+
     // Save tour to get a valid ID
     await newTour.save();
-    
+
     // Upload images if available
     if (req.files && req.files.length > 0) {
-      
       // Upload each image and collect URLs
-      const uploadPromises = req.files.map((file, index) => 
+      const uploadPromises = req.files.map((file, index) =>
         uploadToCloudinary(file, newTour._id, index)
       );
-      
+
       const uploadedUrls = await Promise.all(uploadPromises);
-      const validUrls = uploadedUrls.filter(url => url !== null);
-      
+      const validUrls = uploadedUrls.filter((url) => url !== null);
+
       // Update tour with image URLs - use findByIdAndUpdate for reliability
       const updatedTour = await Tour.findByIdAndUpdate(
         newTour._id,
         { $set: { images: validUrls } },
         { new: true }
       );
-      
+
       return res.status(201).json(updatedTour);
     }
-    
+
     // Return the created tour if no images
     res.status(201).json(newTour);
   } catch (error) {
-    console.error('Error creating tour:', error);
+    console.error("Error creating tour:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -218,7 +296,7 @@ export const getTourById = async (req, res) => {
   try {
     const tour = await Tour.findById(req.params.id);
     if (!tour) {
-      return res.status(404).json({ message: 'Tour not found' });
+      return res.status(404).json({ message: "Tour not found" });
     }
     const reviews = await Review.find({ bookingType: "tour", itemId: tour })
       .sort({ createdAt: -1 }) // Newest reviews first
@@ -228,8 +306,8 @@ export const getTourById = async (req, res) => {
 
     res.json({ ...tour, reviews });
   } catch (error) {
-    console.error('Error fetching tour:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Error fetching tour:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -274,10 +352,8 @@ export const updateTour = async (req, res) => {
       images: existingTour.images || [],
     };
 
-
     // Check if images were uploaded
     if (req.files && req.files.length > 0) {
-
       // Delete old images from Cloudinary
       const deletePromises = existingTour.images.map(async (url) => {
         try {
@@ -302,7 +378,9 @@ export const updateTour = async (req, res) => {
       console.log("⚠️ No new images uploaded, keeping existing ones");
     }
 
-    const updatedTour = await Tour.findByIdAndUpdate(id, updateData, { new: true });
+    const updatedTour = await Tour.findByIdAndUpdate(id, updateData, {
+      new: true,
+    });
 
     res.status(200).json(updatedTour);
   } catch (error) {
@@ -311,24 +389,24 @@ export const updateTour = async (req, res) => {
   }
 };
 
-
 // Delete a tour
 export const deleteTour = async (req, res) => {
   try {
     const tour = await Tour.findByIdAndDelete(req.params.id);
     if (!tour) {
-      return res.status(404).json({ message: 'Tour not found' });
+      return res.status(404).json({ message: "Tour not found" });
     }
     if (tour.images && tour.images.length > 0) {
-      const deletePromises = tour.images.map(url => deleteCloudinaryImage(url));
+      const deletePromises = tour.images.map((url) =>
+        deleteCloudinaryImage(url)
+      );
       await Promise.all(deletePromises);
     }
-    res.json({ message: 'Tour deleted successfully' });
+    res.json({ message: "Tour deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
-
 
 export const getAllTourBookings = async (req, res) => {
   try {
@@ -336,15 +414,37 @@ export const getAllTourBookings = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10; // Default limit to 10 per page
     const skip = (page - 1) * limit;
 
-    // Get total count of bookings
-    const totalBookings = await TourBooking.countDocuments();
+    // Extract sort parameter from query params
+    const sortParam = req.query.sort || "-createdAt"; // Default to sorting by createdAt in descending order
 
-    // Fetch paginated bookings
-    const bookings = await TourBooking.find()
+    // Build filter object based on query parameters
+    const filter = {};
+
+    // Add status filter if provided and not 'all'
+    if (req.query.status && req.query.status !== "all") {
+      filter.status = req.query.status;
+    }
+
+    // Add search functionality (search by guest name, email, or phone)
+    if (req.query.search) {
+      const searchRegex = new RegExp(req.query.search, "i");
+      filter.$or = [
+        { guestName: searchRegex },
+        { email: searchRegex },
+        { phone: searchRegex },
+      ];
+    }
+
+    // Get total count of filtered bookings
+    const totalBookings = await TourBooking.countDocuments(filter);
+
+    // Fetch paginated bookings with filters
+    const bookings = await TourBooking.find(filter)
       .populate({
         path: "tour",
         select: "title location price startDate endDate duration",
       })
+      .sort(sortParam) // Apply sorting
       .skip(skip)
       .limit(limit)
       .lean();
@@ -361,20 +461,18 @@ export const getAllTourBookings = async (req, res) => {
   }
 };
 
-
-
 export const deleteTourBooking = async (req, res) => {
   try {
     const { id } = req.params;
     const booking = await TourBooking.findById(id);
 
     if (!booking) {
-      return res.status(404).json({ message: 'Booking not found' });
+      return res.status(404).json({ message: "Booking not found" });
     }
 
     const tour = await Tour.findById(booking.tour);
     if (!tour) {
-      return res.status(404).json({ message: 'Associated tour not found' });
+      return res.status(404).json({ message: "Associated tour not found" });
     }
 
     // Deduct bookedSlots only if the booking was confirmed
@@ -385,14 +483,12 @@ export const deleteTourBooking = async (req, res) => {
 
     await TourBooking.findByIdAndDelete(id);
 
-    res.json({ message: 'Booking deleted successfully', updatedTour: tour });
+    res.json({ message: "Booking deleted successfully", updatedTour: tour });
   } catch (error) {
-    console.error('Error deleting tour booking:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Error deleting tour booking:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
-
-
 
 // Tour booking functions
 export const verifyTourBooking = async (req, res) => {
@@ -401,78 +497,96 @@ export const verifyTourBooking = async (req, res) => {
 
     // Validate required fields
     if (!tourId || !groupSize || !bookingDate) {
-      return res.status(400).json({ message: 'Missing required fields' });
+      return res.status(400).json({ message: "Missing required fields" });
     }
 
     // Find the tour
     const tour = await Tour.findById(tourId);
     if (!tour) {
-      return res.status(404).json({ message: 'Tour not found' });
+      return res.status(404).json({ message: "Tour not found" });
     }
 
     // Check availability for the booking date
     const overlappingBookings = await TourBooking.find({
       tour: tourId,
       bookingDate: new Date(bookingDate),
-      status: 'CONFIRMED'
+      status: "CONFIRMED",
     });
 
     // Calculate total booked group size
-    const totalBooked = overlappingBookings.reduce((sum, booking) => sum + booking.groupSize, 0);
+    const totalBooked = overlappingBookings.reduce(
+      (sum, booking) => sum + booking.groupSize,
+      0
+    );
 
     // Check if requested group size is available
-    if (groupSize > (tour.groupSize - totalBooked)) {
-      return res.status(400).json({ 
-        message: `Only ${tour.groupSize - totalBooked} spots available for this tour`
+    if (groupSize > tour.groupSize - totalBooked) {
+      return res.status(400).json({
+        message: `Only ${
+          tour.groupSize - totalBooked
+        } spots available for this tour`,
       });
     }
 
-    res.status(200).json({ 
-      message: 'Tour booking details are valid',
+    res.status(200).json({
+      message: "Tour booking details are valid",
       availableSlots: tour.groupSize - totalBooked,
-      totalPrice: tour.price * groupSize
+      totalPrice: tour.price * groupSize,
     });
   } catch (error) {
-    console.error('Error verifying tour booking:', error);
-    res.status(500).json({ message: 'Error verifying tour booking details' });
+    console.error("Error verifying tour booking:", error);
+    res.status(500).json({ message: "Error verifying tour booking details" });
   }
 };
 
 // Initiate tour payment
 export const initiatePayment = async (req, res) => {
   try {
-    const { tourId, bookingId, amount, email, phone, guestName, groupSize, specialRequests } = req.body
-    const totalAmount = amount
+    const {
+      tourId,
+      bookingId,
+      amount,
+      email,
+      phone,
+      guestName,
+      groupSize,
+      specialRequests,
+    } = req.body;
+    const totalAmount = amount;
 
     // Validate required fields
     if (!tourId || !bookingId || !amount) {
-      return res.status(400).json({ message: "Missing required fields" })
+      return res.status(400).json({ message: "Missing required fields" });
     }
 
     // Find the existing booking
-    const booking = await TourBooking.findById(bookingId)
+    const booking = await TourBooking.findById(bookingId);
 
     if (!booking) {
-      return res.status(404).json({ message: "Booking not found" })
+      return res.status(404).json({ message: "Booking not found" });
     }
 
     if (booking.status !== "PENDING" || booking.paymentStatus !== "PENDING") {
-      return res.status(400).json({ message: "Booking is not in PENDING state" })
+      return res
+        .status(400)
+        .json({ message: "Booking is not in PENDING state" });
     }
 
     // Validate that amount matches the booking's totalPrice
     if (Math.abs(booking.totalPrice - totalAmount) > 0.01) {
-      return res.status(400).json({ message: "Amount mismatch with booking total price" })
+      return res
+        .status(400)
+        .json({ message: "Amount mismatch with booking total price" });
     }
 
     // Validate Razorpay configuration
-    const config = validateRazorpayConfig()
+    const config = validateRazorpayConfig();
 
     // Initialize Razorpay instance
     const razorpay = new Razorpay({
       key_id: config.RAZORPAY_KEY_ID,
       key_secret: config.RAZORPAY_KEY_SECRET,
-    })
+    });
 
     // Create Razorpay order
     const orderOptions = {
@@ -486,15 +600,15 @@ export const initiatePayment = async (req, res) => {
         phone: phone,
         guestName: guestName,
       },
-    }
+    };
 
-    const order = await razorpay.orders.create(orderOptions)
+    const order = await razorpay.orders.create(orderOptions);
 
     // Update booking with payment initiation details
     await TourBooking.findByIdAndUpdate(booking._id, {
       paymentReference: order.id,
       paymentStatus: "INITIATED",
-    })
+    });
 
     res.json({
       status: "SUCCESS",
@@ -502,38 +616,47 @@ export const initiatePayment = async (req, res) => {
         orderId: order.id,
         amount: booking.totalPrice,
       },
-    })
+    });
   } catch (error) {
-    console.error("Error initiating payment:", error)
+    console.error("Error initiating payment:", error);
     res.status(500).json({
       status: "ERROR",
       message: error.message || "Failed to initiate payment",
-    })
+    });
   }
-}
+};
 
 export const verifyTourPayment = async (req, res) => {
   try {
-    const { orderId, bookingId, tourId, razorpay_payment_id, razorpay_order_id, razorpay_signature } = req.body
+    const {
+      orderId,
+      bookingId,
+      tourId,
+      razorpay_payment_id,
+      razorpay_order_id,
+      razorpay_signature,
+    } = req.body;
 
     // Find booking in database by payment reference
     const booking = await TourBooking.findOne({
       paymentReference: orderId,
       status: "PENDING",
       paymentStatus: "INITIATED",
-    })
+    });
 
     if (!booking) {
-      return res.status(400).json({ message: "Invalid booking reference or booking not found" })
+      return res
+        .status(400)
+        .json({ message: "Invalid booking reference or booking not found" });
     }
 
     // Verify signature
     const generatedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
       .update(razorpay_order_id + "|" + razorpay_payment_id)
-      .digest("hex")
+      .digest("hex");
 
-    const isSignatureValid = generatedSignature === razorpay_signature
+    const isSignatureValid = generatedSignature === razorpay_signature;
 
     if (!isSignatureValid) {
       // Update booking status as failed
@@ -541,17 +664,17 @@ export const verifyTourPayment = async (req, res) => {
         paymentStatus: "FAILED",
         status: "PAYMENT_FAILED",
         paymentError: "Payment signature verification failed",
-      })
+      });
 
       return res.status(400).json({
         status: "ERROR",
         message: "Payment verification failed: Invalid signature",
-      })
+      });
     }
 
     // If signature is valid, update booking status
-    const session = await mongoose.startSession()
-    session.startTransaction()
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
     try {
       const updatedBooking = await TourBooking.findByIdAndUpdate(
@@ -563,24 +686,24 @@ export const verifyTourPayment = async (req, res) => {
           paymentAmount: booking.totalPrice,
           paymentReference: razorpay_payment_id,
         },
-        { new: true, session },
-      )
+        { new: true, session }
+      );
 
       if (!updatedBooking) {
-        throw new Error("Booking not found during update")
+        throw new Error("Booking not found during update");
       }
 
       const updatedTour = await Tour.findByIdAndUpdate(
         tourId,
         { $inc: { bookedSlots: updatedBooking.groupSize } }, // Increase booked slots
-        { new: true, session },
-      )
+        { new: true, session }
+      );
 
       if (!updatedTour) {
-        throw new Error("Tour not found while updating bookedSlots")
+        throw new Error("Tour not found while updating bookedSlots");
       }
 
-      await session.commitTransaction()
+      await session.commitTransaction();
 
       return res.json({
         status: "SUCCESS",
@@ -590,73 +713,93 @@ export const verifyTourPayment = async (req, res) => {
           paymentId: razorpay_payment_id,
           bookingId: updatedBooking._id,
         },
-      })
+      });
     } catch (error) {
-      await session.abortTransaction()
-      throw error
+      await session.abortTransaction();
+      throw error;
     } finally {
-      session.endSession()
+      session.endSession();
     }
   } catch (error) {
-    console.error("Error verifying tour payment:", error)
+    console.error("Error verifying tour payment:", error);
     res.status(500).json({
       status: "ERROR",
       message: error.message || "Failed to verify payment",
-    })
+    });
   }
-}
+};
 
 const validateRazorpayConfig = () => {
   const requiredConfig = {
     RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID,
     RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET,
-  }
+  };
 
   const missingConfig = Object.entries(requiredConfig)
     .filter(([_, value]) => !value)
-    .map(([key]) => key)
+    .map(([key]) => key);
 
   if (missingConfig.length > 0) {
-    throw new Error(`Missing configuration: ${missingConfig.join(", ")}`)
+    throw new Error(`Missing configuration: ${missingConfig.join(", ")}`);
   }
 
-  return requiredConfig
-}
-
+  return requiredConfig;
+};
 
 export const createTourBooking = async (req, res) => {
-  const { tourId, groupSize, bookingDate, guestName, email, phone, specialRequests, totalAmount } = req.body
+  const {
+    tourId,
+    groupSize,
+    bookingDate,
+    guestName,
+    email,
+    phone,
+    specialRequests,
+    totalAmount,
+  } = req.body;
 
   try {
     // Validate required fields
-    if (!tourId || !groupSize || !bookingDate || !guestName || !email || !phone) {
-      return res.status(400).json({ message: "Missing required fields" })
+    if (
+      !tourId ||
+      !groupSize ||
+      !bookingDate ||
+      !guestName ||
+      !email ||
+      !phone
+    ) {
+      return res.status(400).json({ message: "Missing required fields" });
     }
 
     // Verify tour availability
-    const tour = await Tour.findById(tourId)
+    const tour = await Tour.findById(tourId);
     if (!tour) {
-      return res.status(404).json({ message: "Tour not found" })
+      return res.status(404).json({ message: "Tour not found" });
     }
 
     const overlappingBookings = await TourBooking.find({
       tour: tourId,
       bookingDate: new Date(bookingDate),
       status: "CONFIRMED",
-    })
+    });
 
-    const totalBooked = overlappingBookings.reduce((sum, booking) => sum + booking.groupSize, 0)
+    const totalBooked = overlappingBookings.reduce(
+      (sum, booking) => sum + booking.groupSize,
+      0
+    );
 
     if (groupSize > tour.groupSize - totalBooked) {
       return res.status(400).json({
-        message: `Only ${tour.groupSize - totalBooked} spots available for this tour`,
-      })
+        message: `Only ${
+          tour.groupSize - totalBooked
+        } spots available for this tour`,
+      });
     }
 
     // Validate total amount
-    const calculatedTotal = tour.price * groupSize
+    const calculatedTotal = tour.price * groupSize;
     if (Math.abs(calculatedTotal - totalAmount) > 0.01) {
-      return res.status(400).json({ message: "Total amount mismatch" })
+      return res.status(400).json({ message: "Total amount mismatch" });
     }
 
     // Create the booking with PENDING status
@@ -671,10 +814,10 @@ export const createTourBooking = async (req, res) => {
       totalPrice: calculatedTotal,
       status: "PENDING",
       paymentStatus: "PENDING",
-    })
+    });
 
     // Save the booking
-    const savedBooking = await booking.save()
+    const savedBooking = await booking.save();
 
     res.status(201).json({
       message: "Tour booking created successfully. Please proceed to payment.",
@@ -682,12 +825,12 @@ export const createTourBooking = async (req, res) => {
         ...savedBooking.toObject(),
         id: savedBooking._id.toString(), // Explicitly map _id to id
       },
-    })
+    });
   } catch (error) {
-    console.error("Error creating tour booking:", error)
-    res.status(500).json({ message: "Error creating tour booking" })
+    console.error("Error creating tour booking:", error);
+    res.status(500).json({ message: "Error creating tour booking" });
   }
-}
+};
 export const confirmTourBooking = async (req, res) => {
   try {
     const { bookingId } = req.params;
@@ -700,7 +843,9 @@ export const confirmTourBooking = async (req, res) => {
 
     // Ensure booking is still pending before confirming
     if (booking.status !== "PENDING") {
-      return res.status(400).json({ message: "Booking is not in a pending state" });
+      return res
+        .status(400)
+        .json({ message: "Booking is not in a pending state" });
     }
 
     // Find the corresponding tour
@@ -716,7 +861,9 @@ export const confirmTourBooking = async (req, res) => {
 
     // Check if there are enough available slots
     if (tour.bookedSlots + booking.groupSize > tour.groupSize) {
-      return res.status(400).json({ message: "Not enough available slots for this booking" });
+      return res
+        .status(400)
+        .json({ message: "Not enough available slots for this booking" });
     }
 
     // Update bookedSlots in the tour
@@ -728,20 +875,23 @@ export const confirmTourBooking = async (req, res) => {
     booking.status = status || "CONFIRMED";
     await booking.save();
 
-    res.json({ message: "Booking confirmed successfully", booking, updatedTour: tour });
+    res.json({
+      message: "Booking confirmed successfully",
+      booking,
+      updatedTour: tour,
+    });
   } catch (error) {
     console.error("Error confirming booking:", error);
     res.status(500).json({ message: "Failed to confirm booking" });
   }
 };
 
-
-export const getTourBookingById = async (req,res) => {
+export const getTourBookingById = async (req, res) => {
   try {
     const bookingId = req.params.id;
 
     const booking = await TourBooking.findById(bookingId);
-    
+
     if (!booking) {
       return res.status(404).json({ error: "Booking not found" });
     }
@@ -751,13 +901,11 @@ export const getTourBookingById = async (req,res) => {
     console.error("Error retrieving booking details:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
-}
-
+};
 
 export const deleteTourImage = async (req, res) => {
   try {
     let { tourId, imageIndex } = req.params;
-
 
     // Ensure `tourId` is a valid ObjectId
     if (!mongoose.Types.ObjectId.isValid(tourId)) {
@@ -777,7 +925,11 @@ export const deleteTourImage = async (req, res) => {
 
     // Validate index
     imageIndex = parseInt(imageIndex);
-    if (isNaN(imageIndex) || imageIndex < 0 || imageIndex >= tour.images.length) {
+    if (
+      isNaN(imageIndex) ||
+      imageIndex < 0 ||
+      imageIndex >= tour.images.length
+    ) {
       console.error("❌ Invalid image index");
       return res.status(400).json({ message: "Invalid image index" });
     }
@@ -800,8 +952,9 @@ export const deleteTourImage = async (req, res) => {
     // Save updated tour
     await tour.save();
 
-    res.status(200).json({ message: "Image deleted successfully", images: tour.images });
-
+    res
+      .status(200)
+      .json({ message: "Image deleted successfully", images: tour.images });
   } catch (error) {
     console.error("❌ Error deleting tour image:", error);
     res.status(500).json({ message: "Server error" });
@@ -815,42 +968,45 @@ export const getUserTourBooking = async (req, res) => {
     }
 
     // Find only CONFIRMED and PAID bookings for the user
-    const bookings = await TourBooking.find({ 
+    const bookings = await TourBooking.find({
       email: new RegExp(`^${req.user.email}$`, "i"),
       status: "CONFIRMED",
-      paymentStatus: "PAID"
+      paymentStatus: "PAID",
     })
-    .populate({
-      path: "tour",
-      select: "title location images startDate endDate duration price itinerary"
-    })
-    .sort({ bookingDate: -1 })
-    .lean(); // Use lean() to remove Mongoose metadata
+      .populate({
+        path: "tour",
+        select:
+          "title location images startDate endDate duration price itinerary",
+      })
+      .sort({ bookingDate: -1 })
+      .lean(); // Use lean() to remove Mongoose metadata
 
     if (!bookings.length) {
-      return res.status(404).json({ message: "No bookings found for this user" });
+      return res
+        .status(404)
+        .json({ message: "No bookings found for this user" });
     }
 
     // Fetch any reviews the user has submitted for these bookings
-    const bookingIds = bookings.map(booking => booking._id);
+    const bookingIds = bookings.map((booking) => booking._id);
 
     const reviews = await Review.find({
       bookingId: { $in: bookingIds },
-      bookingType: "tour"
+      bookingType: "tour",
     }).lean();
 
     // Create a map of booking IDs to reviews
     const reviewMap = {};
-    reviews.forEach(review => {
+    reviews.forEach((review) => {
       reviewMap[review.bookingId.toString()] = review;
     });
 
     // Format the response properly
-    const formattedBookings = bookings.map(booking => {
+    const formattedBookings = bookings.map((booking) => {
       const review = reviewMap[booking._id.toString()] || null;
 
       return {
-        _id: booking._id, 
+        _id: booking._id,
         status: booking.status,
         bookingDate: booking.bookingDate,
         guestName: booking.guestName,
@@ -860,12 +1016,12 @@ export const getUserTourBooking = async (req, res) => {
         participants: booking.groupSize,
         totalAmount: booking.totalPrice,
         paymentReference: booking.paymentReference,
-        
+
         // Tour details
         tourId: booking.tour?._id || null,
         tourName: booking.tour?.title || "Unknown Tour",
         location: booking.tour?.location || "Unknown Location",
-        tourImage: booking.tour?.images?.[0] || null, 
+        tourImage: booking.tour?.images?.[0] || null,
         tourDate: booking.tour?.startDate || null,
         tourEndDate: booking.tour?.endDate || null,
         duration: booking.tour?.duration || null,
@@ -875,7 +1031,7 @@ export const getUserTourBooking = async (req, res) => {
         // Review details
         userRating: review ? review.rating : 0,
         userReview: review ? review.comment : "",
-        reviewId: review ? review._id : null
+        reviewId: review ? review._id : null,
       };
     });
 
@@ -889,27 +1045,26 @@ export const getUserTourBooking = async (req, res) => {
 export const getStats = async (req, res) => {
   try {
     // Retrieve the stats document from the database (you can adjust the query if needed, e.g., find by a specific ID)
-    const stats = await Stats.findOne();  // Optionally, add filters if you want specific results
-    
+    const stats = await Stats.findOne(); // Optionally, add filters if you want specific results
+
     if (!stats) {
-      return res.status(404).json({ message: 'Stats not found' });
+      return res.status(404).json({ message: "Stats not found" });
     }
 
     // Return the stats data
     res.status(200).json(stats);
   } catch (error) {
-    console.error('Error retrieving stats:', error);
-    res.status(500).json({ message: 'Error retrieving stats' });
+    console.error("Error retrieving stats:", error);
+    res.status(500).json({ message: "Error retrieving stats" });
   }
 };
-
 
 export const postStats = async (req, res) => {
   try {
     const { destinations, tours, travellers, ratings } = req.body;
 
     // Check if stats already exist in the database (you can use a unique identifier or just check if there's any stats document)
-    const existingStats = await Stats.findOne();  // Optionally, add a filter if you need to look for specific conditions
+    const existingStats = await Stats.findOne(); // Optionally, add a filter if you need to look for specific conditions
 
     if (existingStats) {
       // Update the existing stats document
@@ -920,7 +1075,7 @@ export const postStats = async (req, res) => {
 
       // Save the updated stats to the database
       await existingStats.save();
-      res.status(200).json({ message: 'Stats updated successfully' });
+      res.status(200).json({ message: "Stats updated successfully" });
     } else {
       // Create a new stats document if no existing stats found
       const stats = new Stats({
@@ -932,11 +1087,11 @@ export const postStats = async (req, res) => {
 
       // Save the new stats to the database
       await stats.save();
-      res.status(201).json({ message: 'Stats saved successfully' });
+      res.status(201).json({ message: "Stats saved successfully" });
     }
   } catch (error) {
-    console.error('Error saving or updating stats:', error);
-    res.status(500).json({ message: 'Error saving or updating stats' });
+    console.error("Error saving or updating stats:", error);
+    res.status(500).json({ message: "Error saving or updating stats" });
   }
 };
 
@@ -948,13 +1103,13 @@ export const deleteStats = async (req, res) => {
     const stat = await Stats.findByIdAndDelete(id);
 
     if (!stat) {
-      return res.status(404).json({ message: 'Stat not found' });
+      return res.status(404).json({ message: "Stat not found" });
     }
 
-    res.status(200).json({ message: 'Stat deleted successfully' });
+    res.status(200).json({ message: "Stat deleted successfully" });
   } catch (error) {
-    console.error('Error deleting stat:', error);
-    res.status(500).json({ message: 'Error deleting stat' });
+    console.error("Error deleting stat:", error);
+    res.status(500).json({ message: "Error deleting stat" });
   }
 };
 
@@ -971,13 +1126,335 @@ export const updateStats = async (req, res) => {
     );
 
     if (!stat) {
-      return res.status(404).json({ message: 'Stat not found' });
+      return res.status(404).json({ message: "Stat not found" });
     }
 
-    res.status(200).json({ message: 'Stat updated successfully', stat });
+    res.status(200).json({ message: "Stat updated successfully", stat });
   } catch (error) {
-    console.error('Error updating stat:', error);
-    res.status(500).json({ message: 'Error updating stat' });
+    console.error("Error updating stat:", error);
+    res.status(500).json({ message: "Error updating stat" });
   }
 };
 
+// Helper function to generate Excel workbook for tour bookings
+const generateTourBookingsExcel = (bookings) => {
+  // Create a new Excel workbook and worksheet
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Tour Bookings");
+
+  // Define columns
+  worksheet.columns = [
+    { header: "Booking ID", key: "id", width: 30 },
+    { header: "Tour Name", key: "tourName", width: 25 },
+    { header: "Guest Name", key: "guestName", width: 20 },
+    { header: "Email", key: "email", width: 30 },
+    { header: "Phone", key: "phone", width: 15 },
+    { header: "Booking Date", key: "bookingDate", width: 15 },
+    { header: "Tour Start Date", key: "tourStartDate", width: 15 },
+    { header: "Tour End Date", key: "tourEndDate", width: 15 },
+    { header: "Group Size", key: "groupSize", width: 10 },
+    { header: "Total Amount", key: "totalAmount", width: 15 },
+    { header: "Status", key: "status", width: 15 },
+    { header: "Payment Status", key: "paymentStatus", width: 15 },
+    { header: "Special Requests", key: "specialRequests", width: 30 },
+    { header: "Created At", key: "createdAt", width: 15 },
+  ];
+
+  // Format header row
+  worksheet.getRow(1).font = { bold: true };
+  worksheet.getRow(1).fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FFE0E0E0" },
+  };
+
+  // Add data to worksheet
+  bookings.forEach((booking) => {
+    // Format dates
+    const bookingDate = new Date(booking.bookingDate);
+    const createdAtDate = new Date(booking.createdAt);
+
+    // Get tour data
+    const tourTitle = booking.tour ? booking.tour.title : "Unknown Tour";
+    const tourStartDate =
+      booking.tour && booking.tour.startDate
+        ? new Date(booking.tour.startDate)
+        : null;
+    const tourEndDate =
+      booking.tour && booking.tour.endDate
+        ? new Date(booking.tour.endDate)
+        : null;
+
+    // Add row
+    worksheet.addRow({
+      id: booking._id.toString(),
+      tourName: tourTitle,
+      guestName: booking.guestName,
+      email: booking.email,
+      phone: booking.phone,
+      bookingDate: bookingDate.toLocaleDateString(),
+      tourStartDate: tourStartDate ? tourStartDate.toLocaleDateString() : "N/A",
+      tourEndDate: tourEndDate ? tourEndDate.toLocaleDateString() : "N/A",
+      groupSize: booking.groupSize,
+      totalAmount: booking.totalPrice,
+      status: booking.status,
+      paymentStatus: booking.paymentStatus,
+      specialRequests: booking.specialRequests || "None",
+      createdAt: createdAtDate.toLocaleDateString(),
+    });
+  });
+
+  return workbook;
+};
+
+// Export all tour bookings with filters
+export const exportAllTourBookings = async (req, res) => {
+  try {
+    // Build filter object based on query parameters (same logic as in getAllTourBookings)
+    const filter = {};
+
+    // Add status filter if provided and not 'all'
+    if (req.query.status && req.query.status !== "all") {
+      filter.status = req.query.status;
+    }
+
+    // Add search functionality (search by guest name, email, or phone)
+    if (req.query.search) {
+      const searchRegex = new RegExp(req.query.search, "i");
+      filter.$or = [
+        { guestName: searchRegex },
+        { email: searchRegex },
+        { phone: searchRegex },
+      ];
+    }
+
+    // Extract sort parameter from query params
+    const sortParam = req.query.sort || "-createdAt"; // Default to sorting by createdAt in descending order
+
+    // Query tour bookings with filters
+    const bookings = await TourBooking.find(filter)
+      .populate({
+        path: "tour",
+        select: "title location price startDate endDate duration",
+      })
+      .sort(sortParam)
+      .lean();
+
+    if (bookings.length === 0) {
+      return res.status(404).json({
+        message: "No tour bookings found with the current filters",
+      });
+    }
+
+    // Create Excel workbook using the helper function
+    const workbook = generateTourBookingsExcel(bookings);
+
+    // Create a buffer to store the workbook
+    const buffer = await workbook.xlsx.writeBuffer();
+
+    // Set headers for file download
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+
+    // Get current date for filename
+    const today = new Date().toISOString().split("T")[0];
+
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=tour_bookings_export_${today}.xlsx`
+    );
+
+    // Send the buffer
+    res.send(buffer);
+  } catch (error) {
+    console.error("Error exporting all tour bookings:", error);
+    res.status(500).json({
+      message: "Failed to export tour bookings",
+      error:
+        process.env.NODE_ENV === "development"
+          ? error.message
+          : "Internal server error",
+    });
+  }
+};
+
+export const exportTourBookingsToExcel = async (req, res) => {
+  try {
+    const { fromDate, toDate } = req.query;
+
+    // Validate date parameters
+    if (!fromDate || !toDate) {
+      return res
+        .status(400)
+        .json({ message: "From date and to date are required" });
+    }
+
+    // Parse dates and set time to start/end of day
+    const startDate = new Date(fromDate);
+    startDate.setHours(0, 0, 0, 0);
+
+    const endDate = new Date(toDate);
+    endDate.setHours(23, 59, 59, 999);
+
+    // Query tour bookings within the date range (check if booking date is within range)
+    const bookings = await TourBooking.find({
+      bookingDate: { $gte: startDate, $lte: endDate },
+    })
+      .populate({
+        path: "tour",
+        select: "title location price startDate endDate duration",
+      })
+      .sort({ bookingDate: 1 })
+      .lean();
+
+    if (bookings.length === 0) {
+      return res.status(404).json({
+        message: "No tour bookings found in the specified date range",
+      });
+    }
+
+    // Create Excel workbook using the helper function
+    const workbook = generateTourBookingsExcel(bookings);
+
+    // Create a buffer to store the workbook
+    const buffer = await workbook.xlsx.writeBuffer();
+
+    // Set headers for file download
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=tour_bookings_${fromDate}_to_${toDate}.xlsx`
+    );
+
+    // Send the buffer
+    res.send(buffer);
+  } catch (error) {
+    console.error("Error exporting tour bookings to Excel:", error);
+    res.status(500).json({
+      message: "Failed to export tour bookings",
+      error:
+        process.env.NODE_ENV === "development"
+          ? error.message
+          : "Internal server error",
+    });
+  }
+};
+
+// Export all tours with filters
+export const exportToursToExcel = async (req, res) => {
+  try {
+    // Build filter object based on query parameters (same logic as in getAdminTours)
+    const filter = {};
+
+    // Add category filter if provided and not 'all'
+    if (req.query.category && req.query.category !== "all") {
+      filter.category = req.query.category;
+    }
+
+    // Add search functionality (search by title, description, or location)
+    if (req.query.search) {
+      const searchRegex = new RegExp(req.query.search, "i");
+      filter.$or = [
+        { title: searchRegex },
+        { description: searchRegex },
+        { location: searchRegex },
+      ];
+    }
+
+    // Extract sort parameter from query params
+    const sortParam = req.query.sort || "-createdAt"; // Default to sorting by createdAt in descending order
+
+    // Query tours with filters
+    const tours = await Tour.find(filter).sort(sortParam).lean();
+
+    if (tours.length === 0) {
+      return res.status(404).json({
+        message: "No tours found with the current filters",
+      });
+    }
+
+    // Create a new Excel workbook and worksheet
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Tour Packages");
+
+    // Define columns
+    worksheet.columns = [
+      { header: "Tour ID", key: "id", width: 30 },
+      { header: "Title", key: "title", width: 25 },
+      { header: "Description", key: "description", width: 40 },
+      { header: "Category", key: "category", width: 15 },
+      { header: "Price", key: "price", width: 15 },
+      { header: "Duration", key: "duration", width: 15 },
+      { header: "Group Size", key: "groupSize", width: 15 },
+      { header: "Location", key: "location", width: 20 },
+      { header: "Start Date", key: "startDate", width: 15 },
+      { header: "End Date", key: "endDate", width: 15 },
+      { header: "Created At", key: "createdAt", width: 15 },
+    ];
+
+    // Format header row
+    worksheet.getRow(1).font = { bold: true };
+    worksheet.getRow(1).fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFE0E0E0" },
+    };
+
+    // Add data to worksheet
+    tours.forEach((tour) => {
+      // Format dates
+      const startDate = tour.startDate ? new Date(tour.startDate) : null;
+      const endDate = tour.endDate ? new Date(tour.endDate) : null;
+      const createdAtDate = new Date(tour.createdAt);
+
+      // Add row
+      worksheet.addRow({
+        id: tour._id.toString(),
+        title: tour.title,
+        description: tour.description,
+        category: tour.category,
+        price: tour.price,
+        duration: tour.duration,
+        groupSize: tour.groupSize,
+        location: tour.location,
+        startDate: startDate ? startDate.toLocaleDateString() : "N/A",
+        endDate: endDate ? endDate.toLocaleDateString() : "N/A",
+        createdAt: createdAtDate.toLocaleDateString(),
+      });
+    });
+
+    // Create a buffer to store the workbook
+    const buffer = await workbook.xlsx.writeBuffer();
+
+    // Set headers for file download
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+
+    // Get current date for filename
+    const today = new Date().toISOString().split("T")[0];
+
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=tour_packages_export_${today}.xlsx`
+    );
+
+    // Send the buffer
+    res.send(buffer);
+  } catch (error) {
+    console.error("Error exporting tours to Excel:", error);
+    res.status(500).json({
+      message: "Failed to export tours",
+      error:
+        process.env.NODE_ENV === "development"
+          ? error.message
+          : "Internal server error",
+    });
+  }
+};

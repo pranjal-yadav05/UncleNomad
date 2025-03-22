@@ -1,9 +1,20 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog"
-import { Button } from "../components/ui/button"
-import { Input } from "../components/ui/input"
-import { Label } from "../components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
-import { useState, useEffect } from "react"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
+import { useState, useEffect } from "react";
 
 export default function TourBookingFormModal({
   isOpen,
@@ -14,27 +25,35 @@ export default function TourBookingFormModal({
   editMode,
   tours,
   modalError,
-  formLoading
+  formLoading,
 }) {
   const [totalPrice, setTotalPrice] = useState(0);
+
+  // Make sure tours is always treated as an array
+  const toursArray = Array.isArray(tours) ? tours : [];
 
   // Calculate the total price when tourId or groupSize changes
   useEffect(() => {
     if (newBooking.tourId && newBooking.groupSize) {
-      const selectedTour = tours.find(tour => tour._id == newBooking.tourId._id);
-      console.log('turr',selectedTour)
+      // Check if tourId is an object or a string
+      const tourIdValue =
+        typeof newBooking.tourId === "object"
+          ? newBooking.tourId._id
+          : newBooking.tourId;
+      const selectedTour = toursArray.find((tour) => tour._id === tourIdValue);
+
       if (selectedTour) {
         const calculatedPrice = selectedTour.price * newBooking.groupSize;
         setTotalPrice(calculatedPrice);
-        setNewBooking(prev => ({ ...prev, totalAmount: calculatedPrice }));
+        setNewBooking((prev) => ({ ...prev, totalAmount: calculatedPrice }));
       }
     }
-  }, [newBooking.tourId, newBooking.groupSize, tours]);
+  }, [newBooking.tourId, newBooking.groupSize, toursArray]);
 
   const formatDate = (date) => {
-    if (!date) return '';
+    if (!date) return "";
     const d = new Date(date);
-    return d.toISOString().split('T')[0];
+    return d.toISOString().split("T")[0];
   };
 
   return (
@@ -42,13 +61,13 @@ export default function TourBookingFormModal({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {editMode ? 'Edit Tour Booking' : 'Add New Tour Booking'}
+            {editMode ? "Edit Tour Booking" : "Add New Tour Booking"}
           </DialogTitle>
         </DialogHeader>
         {modalError && (
-        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded mb-4">
+          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded mb-4">
             {modalError}
-        </div>
+          </div>
         )}
 
         <form onSubmit={handleBookingSubmit} className="space-y-4">
@@ -58,13 +77,14 @@ export default function TourBookingFormModal({
               <Label htmlFor="tourId">Select Tour</Label>
               <Select
                 value={newBooking.tourId}
-                onValueChange={(value) => setNewBooking({ ...newBooking, tourId: value })}
-              >
+                onValueChange={(value) =>
+                  setNewBooking({ ...newBooking, tourId: value })
+                }>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a tour" />
                 </SelectTrigger>
                 <SelectContent>
-                  {tours.map((tour) => (
+                  {toursArray.map((tour) => (
                     <SelectItem key={tour._id} value={tour._id}>
                       {tour.title} - ₹{tour.price}
                     </SelectItem>
@@ -79,28 +99,34 @@ export default function TourBookingFormModal({
               <Input
                 id="guestName"
                 value={newBooking.guestName}
-                onChange={(e) => setNewBooking({ ...newBooking, guestName: e.target.value })}
+                onChange={(e) =>
+                  setNewBooking({ ...newBooking, guestName: e.target.value })
+                }
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
                 value={newBooking.email}
-                onChange={(e) => setNewBooking({ ...newBooking, email: e.target.value })}
+                onChange={(e) =>
+                  setNewBooking({ ...newBooking, email: e.target.value })
+                }
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="phone">Phone</Label>
               <Input
                 id="phone"
                 value={newBooking.phone}
-                onChange={(e) => setNewBooking({ ...newBooking, phone: e.target.value })}
+                onChange={(e) =>
+                  setNewBooking({ ...newBooking, phone: e.target.value })
+                }
                 required
               />
             </div>
@@ -112,7 +138,12 @@ export default function TourBookingFormModal({
                 type="number"
                 min="1"
                 value={newBooking.groupSize}
-                onChange={(e) => setNewBooking({ ...newBooking, groupSize: parseInt(e.target.value) || 1 })}
+                onChange={(e) =>
+                  setNewBooking({
+                    ...newBooking,
+                    groupSize: parseInt(e.target.value) || 1,
+                  })
+                }
                 required
               />
             </div>
@@ -124,7 +155,12 @@ export default function TourBookingFormModal({
                 id="bookingDate"
                 type="date"
                 value={formatDate(newBooking.bookingDate)}
-                onChange={(e) => setNewBooking({ ...newBooking, bookingDate: new Date(e.target.value) })}
+                onChange={(e) =>
+                  setNewBooking({
+                    ...newBooking,
+                    bookingDate: new Date(e.target.value),
+                  })
+                }
                 required
               />
             </div>
@@ -133,8 +169,9 @@ export default function TourBookingFormModal({
               <Label htmlFor="status">Booking Status</Label>
               <Select
                 value={newBooking.status}
-                onValueChange={(value) => setNewBooking({ ...newBooking, status: value })}
-              >
+                onValueChange={(value) =>
+                  setNewBooking({ ...newBooking, status: value })
+                }>
                 <SelectTrigger>
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
@@ -150,8 +187,9 @@ export default function TourBookingFormModal({
               <Label htmlFor="paymentStatus">Payment Status</Label>
               <Select
                 value={newBooking.paymentStatus}
-                onValueChange={(value) => setNewBooking({ ...newBooking, paymentStatus: value })}
-              >
+                onValueChange={(value) =>
+                  setNewBooking({ ...newBooking, paymentStatus: value })
+                }>
                 <SelectTrigger>
                   <SelectValue placeholder="Select payment status" />
                 </SelectTrigger>
@@ -169,7 +207,12 @@ export default function TourBookingFormModal({
               <Input
                 id="specialRequests"
                 value={newBooking.specialRequests}
-                onChange={(e) => setNewBooking({ ...newBooking, specialRequests: e.target.value })}
+                onChange={(e) =>
+                  setNewBooking({
+                    ...newBooking,
+                    specialRequests: e.target.value,
+                  })
+                }
               />
             </div>
 
@@ -177,7 +220,9 @@ export default function TourBookingFormModal({
             <div className="md:col-span-2 p-4 bg-gray-50 rounded-lg border border-gray-200">
               <div className="flex justify-between items-center">
                 <span className="font-medium">Total Price:</span>
-                <span className="text-lg font-bold">₹{totalPrice.toFixed(2)}</span>
+                <span className="text-lg font-bold">
+                  ₹{totalPrice.toFixed(2)}
+                </span>
               </div>
               {newBooking.tourId && (
                 <p className="text-sm text-gray-500 mt-1">
@@ -192,11 +237,15 @@ export default function TourBookingFormModal({
               Cancel
             </Button>
             <Button type="submit">
-                {formLoading ? "Processing..." : editMode ? 'Update Booking' : 'Add Booking'}
+              {formLoading
+                ? "Processing..."
+                : editMode
+                ? "Update Booking"
+                : "Add Booking"}
             </Button>
           </div>
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

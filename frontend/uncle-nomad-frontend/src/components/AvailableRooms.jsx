@@ -54,7 +54,7 @@ export default function AvailableRooms({
             : availableRooms.map((room) => (
                 <div
                   key={room._id}
-                  className="w-[340px] h-[500px] flex-shrink-0 snap-start">
+                  className="w-[340px] h-[500px] flex-shrink-0 snap-start rounded-2xl">
                   <Card
                     onClick={() => handleRoomClick(room)}
                     className="w-full h-full flex flex-col shadow-lg hover:shadow-2xl transition-all duration-500 rounded-2xl overflow-hidden group cursor-pointer bg-white dark:bg-gray-900">

@@ -1,5 +1,5 @@
-import React from 'react';
-import { Star } from 'lucide-react';
+import React from "react";
+import { Star } from "lucide-react";
 
 const ReviewCard = ({ name, date, rating, review }) => {
   return (
@@ -11,14 +11,18 @@ const ReviewCard = ({ name, date, rating, review }) => {
         </div>
         <div className="flex">
           {[1, 2, 3, 4, 5].map((star) => (
-            <Star 
-              key={star} 
-              className={`w-4 h-4 ${star <= rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} 
+            <Star
+              key={star}
+              className={`w-4 h-4 ${
+                star <= rating
+                  ? "text-yellow-400 fill-current"
+                  : "text-gray-300"
+              }`}
             />
           ))}
         </div>
       </div>
-      
+
       <p className="text-gray-700">{review}</p>
     </div>
   );

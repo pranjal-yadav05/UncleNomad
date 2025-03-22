@@ -12,6 +12,15 @@ import {
 } from "../components/ui/table";
 import TourBookingFormModal from "../modals/TourBookingFormModal";
 import TourBookingDetailsModal from "../modals/TourBookingDetailsModal";
+import { Label } from "../components/ui/label";
+import { Input } from "../components/ui/input";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "../components/ui/select";
 
 export default function ManageTourBookings() {
   const API_URL = process.env.REACT_APP_API_URL;
@@ -19,6 +28,14 @@ export default function ManageTourBookings() {
   const [tours, setTours] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [exportLoading, setExportLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortField, setSortField] = useState("createdAt");
+  const [sortOrder, setSortOrder] = useState("desc");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const [newBooking, setNewBooking] = useState({
     tourId: "",
@@ -46,7 +63,7 @@ export default function ManageTourBookings() {
   useEffect(() => {
     fetchBookings(currentPage);
     fetchTours();
-  }, [currentPage]);
+  }, [currentPage, sortField, sortOrder, statusFilter]);
 
   const fetchTours = async () => {
     try {
@@ -55,10 +72,14 @@ export default function ManageTourBookings() {
       });
       if (!response.ok) throw new Error("Failed to fetch tours");
       const data = await response.json();
-      setTours(data);
+
+      // Check if data has a tours property (new API format) or if it's an array directly (old format)
+      const toursArray = data.tours || data;
+      setTours(Array.isArray(toursArray) ? toursArray : []);
     } catch (error) {
       console.error("Error fetching tours:", error);
       setError("Failed to fetch tours. Please try again later.");
+      setTours([]); // Set to empty array on error
     }
   };
 
@@ -67,8 +88,26 @@ export default function ManageTourBookings() {
     setError("");
     try {
       const token = localStorage.getItem("token");
+
+      // Build query parameters
+      const params = new URLSearchParams({
+        page,
+        limit: 10,
+        sort: `${sortOrder === "desc" ? "-" : ""}${sortField}`,
+      });
+
+      // Add status filter if not 'all'
+      if (statusFilter !== "all") {
+        params.append("status", statusFilter);
+      }
+
+      // Add search term if present
+      if (searchTerm.trim()) {
+        params.append("search", searchTerm.trim());
+      }
+
       const response = await fetch(
-        `${API_URL}/api/tours/bookings?page=${page}&limit=10`,
+        `${API_URL}/api/tours/bookings?${params.toString()}`,
         {
           headers: {
             "x-api-key": process.env.REACT_APP_API_KEY,
@@ -86,7 +125,7 @@ export default function ManageTourBookings() {
       if (!Array.isArray(data.bookings)) {
         throw new Error("Invalid data format received from server");
       }
-      console.log('bookings',data.bookings)
+      console.log("bookings", data.bookings);
       setBookings(data.bookings);
       setTotalPages(data.totalPages);
       setCurrentPage(data.currentPage);
@@ -361,6 +400,183 @@ export default function ManageTourBookings() {
     return date.toLocaleDateString();
   };
 
+  // Function to handle exporting tour bookings to Excel
+  const handleExportToExcel = async () => {
+    try {
+      if (!fromDate || !toDate) {
+        setError("Please select both from and to dates for export");
+        return;
+      }
+
+      setExportLoading(true);
+      const token = localStorage.getItem("token");
+
+      const response = await fetch(
+        `${API_URL}/api/tours/bookings/export?fromDate=${fromDate}&toDate=${toDate}`,
+        {
+          headers: {
+            "x-api-key": process.env.REACT_APP_API_KEY,
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.status === 404) {
+        // Handle the "no bookings found" case specifically
+        setError("No tour bookings found in the selected date range");
+        setExportLoading(false);
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error("Failed to export tour bookings");
+      }
+
+      // Get the blob from the response
+      const blob = await response.blob();
+
+      // Create a URL for the blob
+      const url = window.URL.createObjectURL(blob);
+
+      // Create a temporary anchor element to download the file
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = url;
+
+      // Get the filename from the Content-Disposition header or use a default
+      const contentDisposition = response.headers.get("Content-Disposition");
+      const filename = contentDisposition
+        ? contentDisposition.split("filename=")[1].replace(/"/g, "")
+        : `tour_bookings_${fromDate}_to_${toDate}.xlsx`;
+
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+
+      // Clean up
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      setExportLoading(false);
+    } catch (error) {
+      console.error("Error exporting tour bookings:", error);
+      setError("Failed to export tour bookings. Please try again.");
+      setExportLoading(false);
+    }
+  };
+
+  // Handle search input change
+  const handleSearch = (e) => {
+    setSearchTerm(e.target.value);
+  };
+
+  // Handle search form submit
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    setCurrentPage(1); // Reset to first page
+    fetchBookings(1);
+  };
+
+  // Handle sort change
+  const handleSortChange = (field) => {
+    if (field === sortField) {
+      // If clicking on the same field, toggle order
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      // If clicking on a new field, set it as sort field and default to ascending
+      setSortField(field);
+      setSortOrder("asc");
+    }
+    setCurrentPage(1); // Reset to first page
+  };
+
+  // Get sort indicator
+  const getSortIndicator = (field) => {
+    if (field !== sortField) return null;
+    return sortOrder === "asc" ? "↑" : "↓";
+  };
+
+  // Handle status filter change
+  const handleStatusFilterChange = (value) => {
+    setStatusFilter(value);
+    setCurrentPage(1); // Reset to first page
+  };
+
+  // Function to handle downloading all data as Excel
+  const handleDownloadAllData = async () => {
+    try {
+      setExportLoading(true);
+      const token = localStorage.getItem("token");
+
+      // Build query parameters for filtered/sorted data
+      const params = new URLSearchParams({
+        sort: `${sortOrder === "desc" ? "-" : ""}${sortField}`,
+      });
+
+      // Add status filter if not 'all'
+      if (statusFilter !== "all") {
+        params.append("status", statusFilter);
+      }
+
+      // Add search term if present
+      if (searchTerm.trim()) {
+        params.append("search", searchTerm.trim());
+      }
+
+      const response = await fetch(
+        `${API_URL}/api/tours/bookings/export/all?${params.toString()}`,
+        {
+          headers: {
+            "x-api-key": process.env.REACT_APP_API_KEY,
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.status === 404) {
+        setError("No tour bookings found with the current filters");
+        setExportLoading(false);
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error("Failed to export tour bookings");
+      }
+
+      // Get the blob from the response
+      const blob = await response.blob();
+
+      // Create a URL for the blob
+      const url = window.URL.createObjectURL(blob);
+
+      // Create a temporary anchor element to download the file
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = url;
+
+      // Get current date for filename
+      const today = new Date().toISOString().split("T")[0];
+
+      // Get the filename from the Content-Disposition header or use a default
+      const contentDisposition = response.headers.get("Content-Disposition");
+      const filename = contentDisposition
+        ? contentDisposition.split("filename=")[1].replace(/"/g, "")
+        : `tour_bookings_export_${today}.xlsx`;
+
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+
+      // Clean up
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      setExportLoading(false);
+    } catch (error) {
+      console.error("Error exporting all tour bookings:", error);
+      setError("Failed to export tour bookings. Please try again.");
+      setExportLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-4">
@@ -385,10 +601,110 @@ export default function ManageTourBookings() {
         </div>
       )}
 
-      <div className="mb-8">
+      <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
         <Button variant="custom" onClick={() => setIsModalOpen(true)}>
           Add New Tour Booking
         </Button>
+
+        <Button
+          variant="outline"
+          onClick={handleDownloadAllData}
+          disabled={exportLoading}>
+          {exportLoading ? (
+            <div className="flex items-center gap-2">
+              <span className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-primary"></span>
+              <span>Exporting...</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span>Download Data</span>
+            </div>
+          )}
+        </Button>
+      </div>
+
+      <div className="bg-white p-4 rounded-lg shadow-sm mb-6 border">
+        <div className="flex flex-col md:flex-row md:items-end gap-4 mb-4">
+          {/* Search Form */}
+          <div className="flex-1">
+            <form onSubmit={handleSearchSubmit} className="flex gap-2">
+              <div className="flex-1">
+                <Label htmlFor="searchTerm" className="mb-1 block">
+                  Search
+                </Label>
+                <Input
+                  id="searchTerm"
+                  placeholder="Search by name, email, or phone..."
+                  value={searchTerm}
+                  onChange={handleSearch}
+                  className="w-full"
+                />
+              </div>
+              <Button type="submit" className="mt-auto">
+                Search
+              </Button>
+            </form>
+          </div>
+
+          {/* Status Filter */}
+          <div>
+            <Label htmlFor="statusFilter" className="mb-1 block">
+              Status
+            </Label>
+            <Select
+              value={statusFilter}
+              onValueChange={handleStatusFilterChange}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="CONFIRMED">Confirmed</SelectItem>
+                <SelectItem value="PENDING">Pending</SelectItem>
+                <SelectItem value="CANCELLED">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="border-t pt-4">
+          <h3 className="text-lg font-medium mb-4">Export Date Range</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div>
+              <Label htmlFor="fromDate">From Date</Label>
+              <Input
+                id="fromDate"
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="toDate">To Date</Label>
+              <Input
+                id="toDate"
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+              />
+            </div>
+            <div>
+              <Button
+                onClick={handleExportToExcel}
+                disabled={exportLoading || !fromDate || !toDate}
+                className="w-full">
+                {exportLoading ? (
+                  <div className="flex items-center gap-2">
+                    <span className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></span>
+                    <span>Exporting...</span>
+                  </div>
+                ) : (
+                  "Export Date Range"
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <TourBookingFormModal
@@ -428,21 +744,53 @@ export default function ManageTourBookings() {
           <Table className="border border-gray-300">
             <TableHeader>
               <TableRow className="bg-gray-100">
-                <TableHead>Guest Name</TableHead>
-                <TableHead>Tour</TableHead>
-                <TableHead>Booking Date</TableHead>
-                <TableHead>Group Size</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Payment Status</TableHead>
-                <TableHead>Total Price</TableHead>
+                <TableHead
+                  className="cursor-pointer"
+                  onClick={() => handleSortChange("guestName")}>
+                  Guest Name {getSortIndicator("guestName")}
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer"
+                  onClick={() => handleSortChange("tour")}>
+                  Tour {getSortIndicator("tour")}
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer"
+                  onClick={() => handleSortChange("bookingDate")}>
+                  Booking Date {getSortIndicator("bookingDate")}
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer"
+                  onClick={() => handleSortChange("groupSize")}>
+                  Group Size {getSortIndicator("groupSize")}
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer"
+                  onClick={() => handleSortChange("status")}>
+                  Status {getSortIndicator("status")}
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer"
+                  onClick={() => handleSortChange("paymentStatus")}>
+                  Payment Status {getSortIndicator("paymentStatus")}
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer"
+                  onClick={() => handleSortChange("totalPrice")}>
+                  Total Price {getSortIndicator("totalPrice")}
+                </TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {bookings.map((booking) => {
-                const tourName =
-                  tours.find((tour) => tour._id === booking.tour._id)?.title ||
-                  "Unknown Tour";
+                // Safely find tour by checking if tours is an array first
+                const tourName = Array.isArray(tours)
+                  ? tours.find(
+                      (tour) => tour._id === (booking.tour?._id || booking.tour)
+                    )?.title || "Unknown Tour"
+                  : "Unknown Tour";
+
                 return (
                   <TableRow key={booking._id} className="hover:bg-gray-50">
                     <TableCell>{booking.guestName}</TableCell>
@@ -534,8 +882,12 @@ export default function ManageTourBookings() {
         onClose={() => setIsDetailsModalOpen(false)}
         booking={selectedBooking}
         tour={
-          selectedBooking
-            ? tours.find((tour) => tour._id === selectedBooking.tour)
+          selectedBooking && Array.isArray(tours)
+            ? tours.find(
+                (tour) =>
+                  tour._id ===
+                  (selectedBooking.tour?._id || selectedBooking.tour)
+              ) || null
             : null
         }
       />

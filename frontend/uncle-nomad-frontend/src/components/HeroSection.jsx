@@ -212,7 +212,7 @@ export default function HeroSection() {
           <Button
             className="btns btn--outline btn--large"
             onClick={() => {
-              const availabilitySection = document.getElementById("about");
+              const availabilitySection = document.getElementById("tours");
               if (availabilitySection) {
                 const offset = 80;
                 const elementPosition =

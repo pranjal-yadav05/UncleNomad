@@ -41,6 +41,14 @@ export default function ManageBookings() {
     status: "pending",
   });
 
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [exportLoading, setExportLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortField, setSortField] = useState("createdAt");
+  const [sortOrder, setSortOrder] = useState("desc");
+  const [statusFilter, setStatusFilter] = useState("all");
+
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [currentBookingId, setCurrentBookingId] = useState(null);
@@ -113,8 +121,11 @@ export default function ManageBookings() {
   };
 
   useEffect(() => {
+    fetchRooms();
+  }, []);
+  useEffect(() => {
     fetchBookings(currentPage);
-  }, [currentPage]);
+  }, [currentPage, sortField, sortOrder, statusFilter]);
 
   const fetchRooms = async () => {
     try {
@@ -138,8 +149,26 @@ export default function ManageBookings() {
     setError("");
     try {
       const token = localStorage.getItem("token");
+
+      // Build query parameters
+      const params = new URLSearchParams({
+        page,
+        limit: 10,
+        sort: `${sortOrder === "desc" ? "-" : ""}${sortField}`,
+      });
+
+      // Add status filter if not 'all'
+      if (statusFilter !== "all") {
+        params.append("status", statusFilter);
+      }
+
+      // Add search term if present
+      if (searchTerm.trim()) {
+        params.append("search", searchTerm.trim());
+      }
+
       const response = await fetch(
-        `${API_URL}/api/bookings?page=${page}&limit=10`,
+        `${API_URL}/api/bookings?${params.toString()}`,
         {
           headers: {
             "x-api-key": process.env.REACT_APP_API_KEY,
@@ -313,6 +342,183 @@ export default function ManageBookings() {
     }
   };
 
+  // Handle search input change
+  const handleSearch = (e) => {
+    setSearchTerm(e.target.value);
+  };
+
+  // Handle search form submit
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    setCurrentPage(1); // Reset to first page
+    fetchBookings(1);
+  };
+
+  // Handle sort change
+  const handleSortChange = (field) => {
+    if (field === sortField) {
+      // If clicking on the same field, toggle order
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      // If clicking on a new field, set it as sort field and default to ascending
+      setSortField(field);
+      setSortOrder("asc");
+    }
+    setCurrentPage(1); // Reset to first page
+  };
+
+  // Get sort indicator
+  const getSortIndicator = (field) => {
+    if (field !== sortField) return null;
+    return sortOrder === "asc" ? "↑" : "↓";
+  };
+
+  // Handle status filter change
+  const handleStatusFilterChange = (value) => {
+    setStatusFilter(value);
+    setCurrentPage(1); // Reset to first page
+  };
+
+  // Function to handle exporting bookings to Excel
+  const handleExportToExcel = async () => {
+    try {
+      if (!fromDate || !toDate) {
+        setError("Please select both from and to dates for export");
+        return;
+      }
+
+      setExportLoading(true);
+      const token = localStorage.getItem("token");
+
+      const response = await fetch(
+        `${API_URL}/api/bookings/export?fromDate=${fromDate}&toDate=${toDate}`,
+        {
+          headers: {
+            "x-api-key": process.env.REACT_APP_API_KEY,
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.status === 404) {
+        // Handle the "no bookings found" case specifically
+        setError("No bookings found in the selected date range");
+        setExportLoading(false);
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error("Failed to export bookings");
+      }
+
+      // Get the blob from the response
+      const blob = await response.blob();
+
+      // Create a URL for the blob
+      const url = window.URL.createObjectURL(blob);
+
+      // Create a temporary anchor element to download the file
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = url;
+
+      // Get the filename from the Content-Disposition header or use a default
+      const contentDisposition = response.headers.get("Content-Disposition");
+      const filename = contentDisposition
+        ? contentDisposition.split("filename=")[1].replace(/"/g, "")
+        : `bookings_${fromDate}_to_${toDate}.xlsx`;
+
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+
+      // Clean up
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      setExportLoading(false);
+    } catch (error) {
+      console.error("Error exporting bookings:", error);
+      setError("Failed to export bookings. Please try again.");
+      setExportLoading(false);
+    }
+  };
+
+  // Function to handle downloading all data as Excel
+  const handleDownloadAllData = async () => {
+    try {
+      setExportLoading(true);
+      const token = localStorage.getItem("token");
+
+      // Build query parameters for filtered/sorted data
+      const params = new URLSearchParams({
+        sort: `${sortOrder === "desc" ? "-" : ""}${sortField}`,
+      });
+
+      // Add status filter if not 'all'
+      if (statusFilter !== "all") {
+        params.append("status", statusFilter);
+      }
+
+      // Add search term if present
+      if (searchTerm.trim()) {
+        params.append("search", searchTerm.trim());
+      }
+
+      const response = await fetch(
+        `${API_URL}/api/bookings/export/all?${params.toString()}`,
+        {
+          headers: {
+            "x-api-key": process.env.REACT_APP_API_KEY,
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.status === 404) {
+        setError("No bookings found with the current filters");
+        setExportLoading(false);
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error("Failed to export bookings");
+      }
+
+      // Get the blob from the response
+      const blob = await response.blob();
+
+      // Create a URL for the blob
+      const url = window.URL.createObjectURL(blob);
+
+      // Create a temporary anchor element to download the file
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = url;
+
+      // Get current date for filename
+      const today = new Date().toISOString().split("T")[0];
+
+      // Get the filename from the Content-Disposition header or use a default
+      const contentDisposition = response.headers.get("Content-Disposition");
+      const filename = contentDisposition
+        ? contentDisposition.split("filename=")[1].replace(/"/g, "")
+        : `bookings_export_${today}.xlsx`;
+
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+
+      // Clean up
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      setExportLoading(false);
+    } catch (error) {
+      console.error("Error exporting all bookings:", error);
+      setError("Failed to export bookings. Please try again.");
+      setExportLoading(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="p-4">
@@ -328,16 +534,116 @@ export default function ManageBookings() {
     <div className="p-4">
       <h2 className="text-2xl font-bold mb-6 text-gray-800">Manage Bookings</h2>
 
+      <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
+        <Button variant="custom" onClick={openBookingModal}>
+          Add New Booking
+        </Button>
+
+        <Button
+          variant="outline"
+          onClick={handleDownloadAllData}
+          disabled={exportLoading}>
+          {exportLoading ? (
+            <div className="flex items-center gap-2">
+              <span className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-primary"></span>
+              <span>Exporting...</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span>Download Data</span>
+            </div>
+          )}
+        </Button>
+      </div>
+
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded mb-4">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           {error}
         </div>
       )}
 
-      <div className="mb-8">
-        <Button variant="custom" onClick={openBookingModal}>
-          Add New Booking
-        </Button>
+      <div className="bg-white p-4 rounded-lg shadow-sm mb-6 border">
+        <div className="flex flex-col md:flex-row md:items-end gap-4 mb-4">
+          {/* Search Form */}
+          <div className="flex-1">
+            <form onSubmit={handleSearchSubmit} className="flex gap-2">
+              <div className="flex-1">
+                <Label htmlFor="searchTerm" className="mb-1 block">
+                  Search
+                </Label>
+                <Input
+                  id="searchTerm"
+                  placeholder="Search by name, email, or phone..."
+                  value={searchTerm}
+                  onChange={handleSearch}
+                  className="w-full"
+                />
+              </div>
+              <Button type="submit" className="mt-auto">
+                Search
+              </Button>
+            </form>
+          </div>
+
+          {/* Status Filter */}
+          <div>
+            <Label htmlFor="statusFilter" className="mb-1 block">
+              Status
+            </Label>
+            <Select
+              value={statusFilter}
+              onValueChange={handleStatusFilterChange}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="confirmed">Confirmed</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="border-t pt-4">
+          <h3 className="text-lg font-medium mb-4">Export Date Range</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div>
+              <Label htmlFor="fromDate">From Date</Label>
+              <Input
+                id="fromDate"
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="toDate">To Date</Label>
+              <Input
+                id="toDate"
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+              />
+            </div>
+            <div>
+              <Button
+                onClick={handleExportToExcel}
+                disabled={exportLoading || !fromDate || !toDate}
+                className="w-full">
+                {exportLoading ? (
+                  <div className="flex items-center gap-2">
+                    <span className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></span>
+                    <span>Exporting...</span>
+                  </div>
+                ) : (
+                  "Export Date Range"
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <BookingFormModal
@@ -364,11 +670,31 @@ export default function ManageBookings() {
           <Table className="border border-gray-300">
             <TableHeader>
               <TableRow className="bg-gray-100">
-                <TableHead>Guest Name</TableHead>
-                <TableHead>Check-in</TableHead>
-                <TableHead>Check-out</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Total Price</TableHead>
+                <TableHead
+                  className="cursor-pointer"
+                  onClick={() => handleSortChange("guestName")}>
+                  Guest Name {getSortIndicator("guestName")}
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer"
+                  onClick={() => handleSortChange("checkIn")}>
+                  Check-in {getSortIndicator("checkIn")}
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer"
+                  onClick={() => handleSortChange("checkOut")}>
+                  Check-out {getSortIndicator("checkOut")}
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer"
+                  onClick={() => handleSortChange("status")}>
+                  Status {getSortIndicator("status")}
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer"
+                  onClick={() => handleSortChange("totalPrice")}>
+                  Total Price {getSortIndicator("totalPrice")}
+                </TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>

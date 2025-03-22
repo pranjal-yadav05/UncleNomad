@@ -4,6 +4,15 @@ import { useEffect, useState } from "react";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import PackageFormModal from "../modals/PackageFormModal";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
 
 import {
   Table,
@@ -51,16 +60,39 @@ export default function ManagePackages() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortField, setSortField] = useState("createdAt");
+  const [sortOrder, setSortOrder] = useState("desc");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [exportLoading, setExportLoading] = useState(false);
 
   useEffect(() => {
     fetchPackages(currentPage);
-  }, [currentPage]);
+  }, [currentPage, sortField, sortOrder, categoryFilter]);
 
   const fetchPackages = async (page = 1) => {
     try {
       setIsLoading(true);
+
+      // Build query parameters
+      const params = new URLSearchParams({
+        page,
+        limit: 10,
+        sort: `${sortOrder === "desc" ? "-" : ""}${sortField}`,
+      });
+
+      // Add category filter if not 'all'
+      if (categoryFilter !== "all") {
+        params.append("category", categoryFilter);
+      }
+
+      // Add search term if present
+      if (searchTerm.trim()) {
+        params.append("search", searchTerm.trim());
+      }
+
       const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/api/admin/tours?page=${page}&limit=10`,
+        `${process.env.REACT_APP_API_URL}/api/admin/tours?${params.toString()}`,
         {
           headers: {
             "x-api-key": process.env.REACT_APP_API_KEY,
@@ -81,6 +113,119 @@ export default function ManagePackages() {
       console.error("Error fetching tour packages:", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Handle search input change
+  const handleSearch = (e) => {
+    setSearchTerm(e.target.value);
+  };
+
+  // Handle search form submit
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    setCurrentPage(1); // Reset to first page
+    fetchPackages(1);
+  };
+
+  // Handle sort change
+  const handleSortChange = (field) => {
+    if (field === sortField) {
+      // If clicking on the same field, toggle order
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      // If clicking on a new field, set it as sort field and default to ascending
+      setSortField(field);
+      setSortOrder("asc");
+    }
+    setCurrentPage(1); // Reset to first page
+  };
+
+  // Get sort indicator
+  const getSortIndicator = (field) => {
+    if (field !== sortField) return null;
+    return sortOrder === "asc" ? "↑" : "↓";
+  };
+
+  // Handle category filter change
+  const handleCategoryFilterChange = (value) => {
+    setCategoryFilter(value);
+    setCurrentPage(1); // Reset to first page
+  };
+
+  // Function to handle downloading all data as Excel
+  const handleExportData = async () => {
+    try {
+      setExportLoading(true);
+      const token = localStorage.getItem("token");
+
+      // Build query parameters for filtered/sorted data
+      const params = new URLSearchParams({
+        sort: `${sortOrder === "desc" ? "-" : ""}${sortField}`,
+      });
+
+      // Add category filter if not 'all'
+      if (categoryFilter !== "all") {
+        params.append("category", categoryFilter);
+      }
+
+      // Add search term if present
+      if (searchTerm.trim()) {
+        params.append("search", searchTerm.trim());
+      }
+
+      const response = await fetch(
+        `${API_URL}/api/tours/admin/tours/export?${params.toString()}`,
+        {
+          headers: {
+            "x-api-key": process.env.REACT_APP_API_KEY,
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.status === 404) {
+        setError("No tour packages found with the current filters");
+        setExportLoading(false);
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error("Failed to export tour packages");
+      }
+
+      // Get the blob from the response
+      const blob = await response.blob();
+
+      // Create a URL for the blob
+      const url = window.URL.createObjectURL(blob);
+
+      // Create a temporary anchor element to download the file
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = url;
+
+      // Get current date for filename
+      const today = new Date().toISOString().split("T")[0];
+
+      // Get the filename from the Content-Disposition header or use a default
+      const contentDisposition = response.headers.get("Content-Disposition");
+      const filename = contentDisposition
+        ? contentDisposition.split("filename=")[1].replace(/"/g, "")
+        : `tour_packages_export_${today}.xlsx`;
+
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+
+      // Clean up
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      setExportLoading(false);
+    } catch (error) {
+      console.error("Error exporting tour packages:", error);
+      setError("Failed to export tour packages. Please try again.");
+      setExportLoading(false);
     }
   };
 
@@ -210,12 +355,79 @@ export default function ManagePackages() {
       <h2 className="text-2xl font-bold mb-6 text-gray-800">
         Manage Tour Packages
       </h2>
-      {error && <p className="text-red-500 mb-4">{error}</p>}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded mb-4">
+          {error}
+        </div>
+      )}
 
-      <div className="mb-8">
+      <div className="flex flex-wrap justify-between items-center gap-4 mb-8">
         <Button variant="custom" onClick={() => setIsModalOpen(true)}>
           Add New Package
         </Button>
+
+        <Button
+          variant="outline"
+          onClick={handleExportData}
+          disabled={exportLoading}>
+          {exportLoading ? (
+            <div className="flex items-center gap-2">
+              <span className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-primary"></span>
+              <span>Exporting...</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span>Download Data</span>
+            </div>
+          )}
+        </Button>
+      </div>
+
+      <div className="bg-white p-4 rounded-lg shadow-sm mb-6 border">
+        <div className="flex flex-col md:flex-row md:items-end gap-4">
+          {/* Search Form */}
+          <div className="flex-1">
+            <form onSubmit={handleSearchSubmit} className="flex gap-2">
+              <div className="flex-1">
+                <Label htmlFor="searchTerm" className="mb-1 block">
+                  Search
+                </Label>
+                <Input
+                  id="searchTerm"
+                  placeholder="Search by title, description, or location..."
+                  value={searchTerm}
+                  onChange={handleSearch}
+                  className="w-full"
+                />
+              </div>
+              <Button type="submit" className="mt-auto">
+                Search
+              </Button>
+            </form>
+          </div>
+
+          {/* Category Filter */}
+          <div>
+            <Label htmlFor="categoryFilter" className="mb-1 block">
+              Category
+            </Label>
+            <Select
+              value={categoryFilter}
+              onValueChange={handleCategoryFilterChange}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                <SelectItem value="Adventure">Adventure</SelectItem>
+                <SelectItem value="Cultural">Cultural</SelectItem>
+                <SelectItem value="Nature">Nature</SelectItem>
+                <SelectItem value="Wildlife">Wildlife</SelectItem>
+                <SelectItem value="Beach">Beach</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </div>
 
       <PackageFormModal
@@ -239,12 +451,32 @@ export default function ManagePackages() {
           <TableHeader>
             <TableRow className="bg-gray-100">
               <TableHead>Image</TableHead>
-              <TableHead>Title</TableHead>
+              <TableHead
+                className="cursor-pointer"
+                onClick={() => handleSortChange("title")}>
+                Title {getSortIndicator("title")}
+              </TableHead>
               <TableHead>Description</TableHead>
-              <TableHead className="text-right">Price</TableHead>
-              <TableHead>Duration</TableHead>
-              <TableHead>Group Size</TableHead>
-              <TableHead>Location</TableHead>
+              <TableHead
+                className="cursor-pointer text-right"
+                onClick={() => handleSortChange("price")}>
+                Price {getSortIndicator("price")}
+              </TableHead>
+              <TableHead
+                className="cursor-pointer"
+                onClick={() => handleSortChange("duration")}>
+                Duration {getSortIndicator("duration")}
+              </TableHead>
+              <TableHead
+                className="cursor-pointer"
+                onClick={() => handleSortChange("groupSize")}>
+                Group Size {getSortIndicator("groupSize")}
+              </TableHead>
+              <TableHead
+                className="cursor-pointer"
+                onClick={() => handleSortChange("location")}>
+                Location {getSortIndicator("location")}
+              </TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
