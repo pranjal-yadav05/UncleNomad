@@ -220,16 +220,6 @@ export default function RoomFormModal({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="amenities">Rating (out of 5)</Label>
-            <Input
-              id="rating"
-              name="rating"
-              value={formData.rating || ""} // Ensure it's always a string
-              onChange={(e) => setFormData({ ...formData, rating: e.target.value })} // Store as a string
-            />
-          </div>
-
           {/* Boolean Fields */}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div className="flex items-center gap-2">

@@ -1,13 +1,13 @@
-import Room from '../models/Room.js';
-import { v2 as cloudinaryV2 } from 'cloudinary';
-import streamifier from 'streamifier';
-import Review from '../models/UserReview.js'
+import Room from "../models/Room.js";
+import { v2 as cloudinaryV2 } from "cloudinary";
+import streamifier from "streamifier";
+import Review from "../models/UserReview.js";
 // Configure Cloudinary
 cloudinaryV2.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
-  secure: true
+  secure: true,
 });
 
 // Fetch all rooms
@@ -15,30 +15,43 @@ export const getRooms = async (req, res) => {
   try {
     const rooms = await Room.find().lean();
 
-    const roomIds = rooms.map(room => room._id);
+    const roomIds = rooms.map((room) => room._id);
     const reviewsByRoom = await Review.aggregate([
-      { $match: { bookingType: "room", itemId: { $in: roomIds }, status:'approved' } },
+      {
+        $match: {
+          bookingType: "room",
+          itemId: { $in: roomIds },
+          status: "approved",
+        },
+      },
       { $sort: { createdAt: -1 } }, // Sort reviews by newest first
-      { 
-        $group: { 
-          _id: "$itemId", 
-          reviews: { $push: { userName: "$userName", rating: "$rating", comment: "$comment", createdAt: "$createdAt" } } 
-        } 
-      }
+      {
+        $group: {
+          _id: "$itemId",
+          reviews: {
+            $push: {
+              userName: "$userName",
+              rating: "$rating",
+              comment: "$comment",
+              createdAt: "$createdAt",
+            },
+          },
+        },
+      },
     ]);
 
     // Convert aggregation results into a map for quick lookup
     const reviewMap = {};
-    reviewsByRoom.forEach(entry => {
+    reviewsByRoom.forEach((entry) => {
       reviewMap[entry._id.toString()] = entry.reviews.slice(0, 4); // Take top 4 reviews
     });
 
     // Attach top 4 reviews to each tour
-    const roomsWithReviews = rooms.map(room => ({
+    const roomsWithReviews = rooms.map((room) => ({
       ...room,
-      reviews: reviewMap[room._id.toString()] || [] // Default to empty array if no reviews
+      reviews: reviewMap[room._id.toString()] || [], // Default to empty array if no reviews
     }));
-    
+
     res.json(roomsWithReviews);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -50,7 +63,7 @@ export const getRoomById = async (req, res) => {
   try {
     const room = await Room.findById(req.params.id);
     if (!room) {
-      return res.status(404).json({ message: 'Room not found' });
+      return res.status(404).json({ message: "Room not found" });
     }
     res.json(room);
   } catch (error) {
@@ -61,28 +74,28 @@ export const getRoomById = async (req, res) => {
 // Helper function to delete image from Cloudinary
 const deleteCloudinaryImage = async (imageUrl) => {
   if (!imageUrl) return null;
-  
+
   try {
     const urlPathname = new URL(imageUrl).pathname;
-    const pathParts = urlPathname.split('/');
+    const pathParts = urlPathname.split("/");
     const filenameWithExt = pathParts[pathParts.length - 1];
-    const filename = filenameWithExt.split('.')[0];
+    const filename = filenameWithExt.split(".")[0];
 
-    let folderPath = '';
+    let folderPath = "";
     let foundUncleNomad = false;
-    
+
     for (let i = 0; i < pathParts.length - 1; i++) {
-      if (foundUncleNomad || pathParts[i] === 'uncle-nomad') {
+      if (foundUncleNomad || pathParts[i] === "uncle-nomad") {
         foundUncleNomad = true;
-        folderPath += pathParts[i] + '/';
+        folderPath += pathParts[i] + "/";
       }
     }
 
     const publicId = folderPath + filename;
-    
+
     return await cloudinaryV2.uploader.destroy(publicId, {
-      resource_type: 'image',
-      invalidate: true
+      resource_type: "image",
+      invalidate: true,
     });
   } catch (error) {
     console.error("Error deleting image from Cloudinary:", error);
@@ -124,12 +137,11 @@ export const createRoom = async (req, res) => {
   try {
     const { type, price, capacity, totalRooms } = req.body;
 
-    const amenities = req.body.amenities 
-    ? typeof req.body.amenities === "string"
-      ? req.body.amenities.split(",").map(a => a.trim()) // Convert string to array
-      : req.body.amenities
-    : [];
-  
+    const amenities = req.body.amenities
+      ? typeof req.body.amenities === "string"
+        ? req.body.amenities.split(",").map((a) => a.trim()) // Convert string to array
+        : req.body.amenities
+      : [];
 
     const mealIncluded = req.body.mealIncluded === "true";
     const smokingAllowed = req.body.smokingAllowed === "true";
@@ -144,7 +156,6 @@ export const createRoom = async (req, res) => {
       amenities,
       mealIncluded,
       mealPrice: Number(req.body.mealPrice || 0),
-      rating: Number(req.body.rating || 0),
       extraBedPrice: Number(req.body.extraBedPrice || 0),
       smokingAllowed,
       alcoholAllowed,
@@ -161,8 +172,9 @@ export const createRoom = async (req, res) => {
       );
       const uploadedUrls = await Promise.all(uploadPromises);
 
-      newRoom.imageUrls = uploadedUrls.filter(url => url !== null);
-      newRoom.imageUrl = newRoom.imageUrls.length > 0 ? newRoom.imageUrls[0] : "";
+      newRoom.imageUrls = uploadedUrls.filter((url) => url !== null);
+      newRoom.imageUrl =
+        newRoom.imageUrls.length > 0 ? newRoom.imageUrls[0] : "";
 
       await newRoom.save();
     }
@@ -183,11 +195,11 @@ export const updateRoom = async (req, res) => {
       return res.status(404).json({ message: "Room not found" });
     }
 
-    const amenities = req.body.amenities 
-    ? typeof req.body.amenities === "string"
-      ? req.body.amenities.split(",").map(a => a.trim()) // Convert string to array
-      : req.body.amenities
-    : [];
+    const amenities = req.body.amenities
+      ? typeof req.body.amenities === "string"
+        ? req.body.amenities.split(",").map((a) => a.trim()) // Convert string to array
+        : req.body.amenities
+      : [];
 
     const updateData = {
       type: req.body.type,
@@ -197,7 +209,6 @@ export const updateRoom = async (req, res) => {
       amenities,
       mealIncluded: req.body.mealIncluded === "true",
       mealPrice: Number(req.body.mealPrice || 0),
-      rating: Number(req.body.rating || 0), 
       extraBedPrice: Number(req.body.extraBedPrice || 0),
       smokingAllowed: req.body.smokingAllowed === "true",
       alcoholAllowed: req.body.alcoholAllowed === "true",
@@ -208,7 +219,9 @@ export const updateRoom = async (req, res) => {
     };
 
     if (req.files && req.files.length > 0) {
-      const deletePromises = existingRoom.imageUrls.map(url => deleteCloudinaryImage(url));
+      const deletePromises = existingRoom.imageUrls.map((url) =>
+        deleteCloudinaryImage(url)
+      );
       await Promise.all(deletePromises);
 
       const uploadPromises = req.files.map((file, index) =>
@@ -216,11 +229,14 @@ export const updateRoom = async (req, res) => {
       );
       const uploadedUrls = await Promise.all(uploadPromises);
 
-      updateData.imageUrls = uploadedUrls.filter(url => url !== null);
-      updateData.imageUrl = updateData.imageUrls.length > 0 ? updateData.imageUrls[0] : "";
+      updateData.imageUrls = uploadedUrls.filter((url) => url !== null);
+      updateData.imageUrl =
+        updateData.imageUrls.length > 0 ? updateData.imageUrls[0] : "";
     }
 
-    const updatedRoom = await Room.findByIdAndUpdate(id, updateData, { new: true });
+    const updatedRoom = await Room.findByIdAndUpdate(id, updateData, {
+      new: true,
+    });
 
     res.status(200).json(updatedRoom);
   } catch (error) {
@@ -233,17 +249,19 @@ export const deleteRoom = async (req, res) => {
   try {
     const room = await Room.findByIdAndDelete(req.params.id);
     if (!room) {
-      return res.status(404).json({ message: 'Room not found' });
+      return res.status(404).json({ message: "Room not found" });
     }
 
     if (room.imageUrls && room.imageUrls.length > 0) {
-      const deletePromises = room.imageUrls.map(url => deleteCloudinaryImage(url));
+      const deletePromises = room.imageUrls.map((url) =>
+        deleteCloudinaryImage(url)
+      );
       await Promise.all(deletePromises);
     } else if (room.imageUrl) {
       await deleteCloudinaryImage(room.imageUrl);
     }
 
-    res.json({ message: 'Room deleted successfully' });
+    res.json({ message: "Room deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -252,16 +270,16 @@ export const deleteRoom = async (req, res) => {
 export const removeRoomImage = async (req, res) => {
   try {
     const { roomId, imageIndex } = req.params;
-    
+
     // Find the room
     const room = await Room.findById(roomId);
     if (!room) {
-      return res.status(404).json({ message: 'Room not found' });
+      return res.status(404).json({ message: "Room not found" });
     }
-    
+
     // Check if index is valid
     if (!room.imageUrls || imageIndex >= room.imageUrls.length) {
-      return res.status(400).json({ message: 'Invalid image index' });
+      return res.status(400).json({ message: "Invalid image index" });
     }
 
     // Get the image URL to delete
@@ -269,9 +287,11 @@ export const removeRoomImage = async (req, res) => {
 
     // Step 1: Delete the image from Cloudinary
     const cloudinaryResponse = await deleteCloudinaryImage(imageUrlToDelete);
-    
+
     if (cloudinaryResponse.result !== "ok") {
-      return res.status(500).json({ message: 'Failed to delete image from Cloudinary' });
+      return res
+        .status(500)
+        .json({ message: "Failed to delete image from Cloudinary" });
     }
 
     // Step 2: Remove the image from MongoDB using $pull
@@ -283,13 +303,14 @@ export const removeRoomImage = async (req, res) => {
 
     // Step 3: If removed image was the main imageUrl, set a new one
     if (updatedRoom.imageUrl === imageUrlToDelete) {
-      updatedRoom.imageUrl = updatedRoom.imageUrls.length > 0 ? updatedRoom.imageUrls[0] : "";
+      updatedRoom.imageUrl =
+        updatedRoom.imageUrls.length > 0 ? updatedRoom.imageUrls[0] : "";
       await updatedRoom.save();
     }
 
-    res.json({ message: 'Image removed successfully', updatedRoom });
+    res.json({ message: "Image removed successfully", updatedRoom });
   } catch (error) {
-    console.error('Error removing image:', error);
+    console.error("Error removing image:", error);
     res.status(500).json({ message: error.message });
   }
 };

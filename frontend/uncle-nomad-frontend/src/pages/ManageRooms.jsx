@@ -14,7 +14,6 @@ export default function ManageRooms() {
     amenities: [],
     mealIncluded: false,
     mealPrice: 0,
-    rating: 0,
     extraBedPrice: 0,
     smokingAllowed: false,
     alcoholAllowed: false,
@@ -71,7 +70,6 @@ export default function ManageRooms() {
     formDataToSend.append('totalRooms', formData.totalRooms);
     formDataToSend.append('mealIncluded', formData.mealIncluded);
     formDataToSend.append('mealPrice', formData.mealPrice);
-    formDataToSend.append('rating', formData.rating)
     formDataToSend.append('extraBedPrice', formData.extraBedPrice);
     formDataToSend.append('smokingAllowed', formData.smokingAllowed);
     formDataToSend.append('alcoholAllowed', formData.alcoholAllowed);
@@ -184,7 +182,6 @@ export default function ManageRooms() {
       amenities: [],
       mealIncluded: false,
       mealPrice: 0,
-      rating: 0,
       extraBedPrice: 0,
       smokingAllowed: false,
       alcoholAllowed: false,
@@ -224,7 +221,6 @@ export default function ManageRooms() {
                 <TableHead>Price</TableHead>
                 <TableHead>Capacity</TableHead>
                 <TableHead>Total Rooms</TableHead>
-                <TableHead>Rating</TableHead>
                 <TableHead>Amenities</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -232,11 +228,11 @@ export default function ManageRooms() {
             <TableBody>
               {rooms.map((room) => (
                 <TableRow key={room._id}>
+                  {console.log(room)}
                   <TableCell>{room.type}</TableCell>
                   <TableCell>₹{room.price}</TableCell>
                   <TableCell>{room.capacity}</TableCell>
                   <TableCell>{room.totalRooms}</TableCell>
-                  <TableCell>{room.rating}</TableCell>
                   <TableCell>{formatAmenities(room.amenities)}</TableCell>
                   <TableCell>
                     <div className="flex space-x-2">

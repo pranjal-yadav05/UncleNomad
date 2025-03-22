@@ -1,25 +1,25 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useLocation, useNavigate } from "react-router-dom"
-import { Button } from "../components/ui/button"
-import { Star } from "lucide-react"
-import Header from "../components/Header"
-import Footer from "../components/Footer"
-import { format } from "date-fns"
-import BookingConfirmationDialog from "../modals/BookingConfirmationDialog"
-import BookingFailedDialog from "../modals/BookingFailedDialog"
-import AnimatedSection from "../components/AnimatedSection"
-import CheckingPaymentModal from "../modals/CheckingPaymentModal"
+import { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { Button } from "../components/ui/button";
+import { Star } from "lucide-react";
+import Header from "../components/Header";
+import Footer from "../components/Footer";
+import { format } from "date-fns";
+import BookingConfirmationDialog from "../modals/BookingConfirmationDialog";
+import BookingFailedDialog from "../modals/BookingFailedDialog";
+import AnimatedSection from "../components/AnimatedSection";
+import CheckingPaymentModal from "../modals/CheckingPaymentModal";
 
 const RoomSelectionPage = () => {
-  const location = useLocation()
-  const navigate = useNavigate()
+  const location = useLocation();
+  const navigate = useNavigate();
 
   // Get data from location state
-  const availableRooms = location.state?.availableRooms || []
-  const checkIn = location.state?.checkIn
-  const checkOut = location.state?.checkOut
+  const availableRooms = location.state?.availableRooms || [];
+  const checkIn = location.state?.checkIn;
+  const checkOut = location.state?.checkOut;
 
   const [bookingForm, setBookingForm] = useState({
     selectedRooms: location.state?.selectedRooms || {},
@@ -35,34 +35,34 @@ const RoomSelectionPage = () => {
     specialRequests: "",
     checkIn: checkIn || null,
     checkOut: checkOut || null,
-  })
+  });
 
-  const [bookingError, setBookingError] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [isBookingConfirmed, setIsBookingConfirmed] = useState(false)
-  const [bookingDetails, setBookingDetails] = useState(null)
-  const [isBookingFailed, setIsBookingFailed] = useState(false)
-  const [error, setError] = useState(null)
-  const [checking, setChecking] = useState(false)
+  const [bookingError, setBookingError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isBookingConfirmed, setIsBookingConfirmed] = useState(false);
+  const [bookingDetails, setBookingDetails] = useState(null);
+  const [isBookingFailed, setIsBookingFailed] = useState(false);
+  const [error, setError] = useState(null);
+  const [checking, setChecking] = useState(false);
 
   useEffect(() => {
     if (isBookingConfirmed) {
       // Push a new state and prevent back navigation
-      window.history.pushState(null, null, window.location.href)
+      window.history.pushState(null, null, window.location.href);
       window.onpopstate = () => {
-        navigate("/", { replace: true }) // Redirect to home page if they try to go back
-      }
+        navigate("/", { replace: true }); // Redirect to home page if they try to go back
+      };
     }
-  }, [isBookingConfirmed, navigate])
+  }, [isBookingConfirmed, navigate]);
 
   useEffect(() => {
-    window.scrollTo(0, 0)
+    window.scrollTo(0, 0);
 
     // If no available rooms or dates, redirect back to availability section
     if (availableRooms.length === 0 || !checkIn || !checkOut) {
-      navigate("/#availability")
+      navigate("/#availability");
     }
-  }, [availableRooms, checkIn, checkOut, navigate])
+  }, [availableRooms, checkIn, checkOut, navigate]);
 
   // Handle room selection
   const handleRoomSelection = (roomId, count) => {
@@ -72,31 +72,31 @@ const RoomSelectionPage = () => {
         ...prev.selectedRooms,
         [roomId]: count,
       },
-    }))
-  }
+    }));
+  };
 
   // Validate room selection
   const validateRoomSelection = () => {
     const totalCapacity = availableRooms.reduce((sum, room) => {
-      const isDorm = room.type.toLowerCase() === "dorm"
-      const currentCount = bookingForm.selectedRooms[room._id] || 0
-      return sum + (isDorm ? currentCount : room.capacity * currentCount)
-    }, 0)
+      const isDorm = room.type.toLowerCase() === "dorm";
+      const currentCount = bookingForm.selectedRooms[room._id] || 0;
+      return sum + (isDorm ? currentCount : room.capacity * currentCount);
+    }, 0);
 
     if (bookingForm.numberOfGuests > totalCapacity) {
       setBookingError(
-        `Selected rooms can only accommodate ${totalCapacity} guests. You requested for ${bookingForm.numberOfGuests} guests.`,
-      )
-      return false
+        `Selected rooms can only accommodate ${totalCapacity} guests. You requested for ${bookingForm.numberOfGuests} guests.`
+      );
+      return false;
     }
 
     if (Object.keys(bookingForm.selectedRooms).length === 0) {
-      setBookingError("Please select at least one room to continue.")
-      return false
+      setBookingError("Please select at least one room to continue.");
+      return false;
     }
 
-    return true
-  }
+    return true;
+  };
 
   // Proceed to booking page
   const proceedToBooking = () => {
@@ -107,10 +107,10 @@ const RoomSelectionPage = () => {
           bookingForm,
           availableRooms,
         },
-      })
-      setBookingError("")
+      });
+      setBookingError("");
     }
-  }
+  };
 
   // View room details
   const handleViewRoomDetails = (room) => {
@@ -126,32 +126,32 @@ const RoomSelectionPage = () => {
         imageUrls: room.imageUrls || [], // Pass all available rooms
         amenities: room.amenities || [],
       },
-    })
-  }
+    });
+  };
 
   // Format dates
   const formatDate = (dateString) => {
-    if (!dateString) return "Select dates"
-    return format(new Date(dateString), "PPP")
-  }
+    if (!dateString) return "Select dates";
+    return format(new Date(dateString), "PPP");
+  };
 
   // Calculate number of nights
   const calculateNights = () => {
-    if (!checkIn || !checkOut) return 0
-    const checkInDate = new Date(checkIn)
-    const checkOutDate = new Date(checkOut)
-    const diffTime = Math.abs(checkOutDate - checkInDate)
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  }
+    if (!checkIn || !checkOut) return 0;
+    const checkInDate = new Date(checkIn);
+    const checkOutDate = new Date(checkOut);
+    const diffTime = Math.abs(checkOutDate - checkInDate);
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
 
   // Calculate total price
   const calculateTotalPrice = () => {
-    const nights = calculateNights()
+    const nights = calculateNights();
     return availableRooms.reduce((sum, room) => {
-      const count = bookingForm.selectedRooms[room._id] || 0
-      return sum + room.price * count * nights
-    }, 0)
-  }
+      const count = bookingForm.selectedRooms[room._id] || 0;
+      return sum + room.price * count * nights;
+    }, 0);
+  };
 
   return (
     <AnimatedSection animation="slide-up" duration={1000}>
@@ -162,10 +162,12 @@ const RoomSelectionPage = () => {
         <div className="absolute inset-0 bg-gradient-to-r from-blue-800 to-indigo-900 opacity-90"></div>
         <div className="container mx-auto px-4 relative z-10">
           <div className="text-center text-white">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">Select Your Rooms</h1>
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">
+              Select Your Rooms
+            </h1>
             <p className="text-xl opacity-80 max-w-2xl mx-auto">
-              Choose from our available accommodations for your stay from {formatDate(checkIn)} to{" "}
-              {formatDate(checkOut)}
+              Choose from our available accommodations for your stay from{" "}
+              {formatDate(checkIn)} to {formatDate(checkOut)}
             </p>
           </div>
         </div>
@@ -195,15 +197,16 @@ const RoomSelectionPage = () => {
             <div className="flex items-center space-x-4">
               <div className="text-right">
                 <span className="block text-sm text-gray-500">Total Price</span>
-                <span className="font-bold text-lg">₹{calculateTotalPrice()}</span>
+                <span className="font-bold text-lg">
+                  ₹{calculateTotalPrice()}
+                </span>
               </div>
 
               <Button
                 onClick={proceedToBooking}
                 variant="nomad"
                 className="bg-blue-600 hover:bg-blue-700 text-white"
-                disabled={Object.keys(bookingForm.selectedRooms).length === 0}
-              >
+                disabled={Object.keys(bookingForm.selectedRooms).length === 0}>
                 Proceed to Booking
               </Button>
             </div>
@@ -221,8 +224,7 @@ const RoomSelectionPage = () => {
             <div>{bookingError}</div>
             <button
               onClick={() => setBookingError("")}
-              className="mt-2 text-sm text-red-600 underline hover:text-red-700"
-            >
+              className="mt-2 text-sm text-red-600 underline hover:text-red-700">
               Dismiss
             </button>
           </div>
@@ -230,18 +232,22 @@ const RoomSelectionPage = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {availableRooms.map((room) => {
-            const isDorm = room.type.toLowerCase() === "dorm"
-            const currentCount = bookingForm.selectedRooms[room._id] || 0
+            const isDorm = room.type.toLowerCase() === "dorm";
+            const currentCount = bookingForm.selectedRooms[room._id] || 0;
             const remainingCapacity = isDorm
               ? room.availability.availableBeds - currentCount
-              : room.availability.availableRooms - currentCount
+              : room.availability.availableRooms - currentCount;
 
             return (
-              <div key={room._id} className="border rounded-lg overflow-hidden shadow-md bg-white">
+              <div
+                key={room._id}
+                className="border rounded-lg overflow-hidden shadow-md bg-white">
                 {/* Room Image */}
                 <div className="relative h-48">
                   <img
-                    src={room.imageUrl || "/placeholder.svg?height=200&width=400"}
+                    src={
+                      room.imageUrl || "/placeholder.svg?height=200&width=400"
+                    }
                     alt={`${room.name || room.type} Room`}
                     className="w-full h-full object-cover"
                   />
@@ -255,16 +261,42 @@ const RoomSelectionPage = () => {
                 {/* Room Details */}
                 <div className="p-4">
                   <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-lg font-semibold">{room.name || `${room.type} Room`}</h3>
-                    <div className="flex items-center">
-                      <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                      <span className="ml-1 text-sm">{room.rating}</span>
-                    </div>
+                    <h3 className="text-lg font-semibold">
+                      {room.name || `${room.type} Room`}
+                    </h3>
+                    {room.reviews && room.reviews.length > 0 ? (
+                      <div className="flex items-center">
+                        <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                        <span className="ml-1 text-sm">
+                          {room.averageRating ||
+                            (room.reviews.length > 0
+                              ? (
+                                  room.reviews.reduce(
+                                    (sum, review) => sum + (review.rating || 0),
+                                    0
+                                  ) / room.reviews.length
+                                ).toFixed(1)
+                              : null)}
+                        </span>
+                      </div>
+                    ) : room.averageRating > 0 ? (
+                      <div className="flex items-center">
+                        <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                        <span className="ml-1 text-sm">
+                          {room.averageRating}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="px-2 py-1 bg-blue-50 text-blue-600 text-xs rounded">
+                        New
+                      </div>
+                    )}
                   </div>
 
                   <div className="mb-4">
                     <p className="text-gray-600 text-sm mb-2">
-                      {isDorm ? "Shared Room" : "Private Room"} • Sleeps {room.capacity}
+                      {isDorm ? "Shared Room" : "Private Room"} • Sleeps{" "}
+                      {room.capacity}
                     </p>
                     <p className="text-gray-700 line-clamp-2 text-sm">
                       {room.description ||
@@ -274,17 +306,27 @@ const RoomSelectionPage = () => {
 
                   <div className="flex justify-between items-center mb-4">
                     <div>
-                      <span className="block text-gray-500 text-sm">Price per night</span>
+                      <span className="block text-gray-500 text-sm">
+                        Price per night
+                      </span>
                       <span className="font-bold text-lg">₹{room.price}</span>
-                      {isDorm && <span className="text-xs text-gray-500"> per bed</span>}
+                      {isDorm && (
+                        <span className="text-xs text-gray-500"> per bed</span>
+                      )}
                     </div>
 
                     <div>
-                      <span className="block text-gray-500 text-sm text-right">Availability</span>
+                      <span className="block text-gray-500 text-sm text-right">
+                        Availability
+                      </span>
                       <span className="text-sm">
                         {isDorm
-                          ? `${room.availability.availableBeds} bed${room.availability.availableBeds !== 1 ? "s" : ""}`
-                          : `${room.availability.availableRooms} room${room.availability.availableRooms !== 1 ? "s" : ""}`}
+                          ? `${room.availability.availableBeds} bed${
+                              room.availability.availableBeds !== 1 ? "s" : ""
+                            }`
+                          : `${room.availability.availableRooms} room${
+                              room.availability.availableRooms !== 1 ? "s" : ""
+                            }`}
                       </span>
                     </div>
                   </div>
@@ -293,8 +335,7 @@ const RoomSelectionPage = () => {
                     <Button
                       onClick={() => handleViewRoomDetails(room)}
                       variant="outline"
-                      className="text-blue-600 border-blue-600"
-                    >
+                      className="text-blue-600 border-blue-600">
                       View Details
                     </Button>
 
@@ -302,12 +343,11 @@ const RoomSelectionPage = () => {
                       <button
                         onClick={() => {
                           if (currentCount > 0) {
-                            handleRoomSelection(room._id, currentCount - 1)
+                            handleRoomSelection(room._id, currentCount - 1);
                           }
                         }}
                         className="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-100"
-                        disabled={currentCount <= 0}
-                      >
+                        disabled={currentCount <= 0}>
                         -
                       </button>
                       <span>{currentCount}</span>
@@ -315,23 +355,25 @@ const RoomSelectionPage = () => {
                         onClick={() => {
                           const maxAvailable = isDorm
                             ? room.availability.availableBeds
-                            : room.availability.availableRooms
+                            : room.availability.availableRooms;
                           if (currentCount < maxAvailable) {
-                            handleRoomSelection(room._id, currentCount + 1)
+                            handleRoomSelection(room._id, currentCount + 1);
                           }
                         }}
                         className="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-100"
                         disabled={
-                          currentCount >= (isDorm ? room.availability.availableBeds : room.availability.availableRooms)
-                        }
-                      >
+                          currentCount >=
+                          (isDorm
+                            ? room.availability.availableBeds
+                            : room.availability.availableRooms)
+                        }>
                         +
                       </button>
                     </div>
                   </div>
                 </div>
               </div>
-            )
+            );
           })}
         </div>
 
@@ -341,8 +383,7 @@ const RoomSelectionPage = () => {
             onClick={proceedToBooking}
             variant="nomad"
             className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg"
-            disabled={Object.keys(bookingForm.selectedRooms).length === 0}
-          >
+            disabled={Object.keys(bookingForm.selectedRooms).length === 0}>
             Proceed to Booking
           </Button>
         </div>
@@ -352,9 +393,9 @@ const RoomSelectionPage = () => {
         <BookingConfirmationDialog
           isOpen={isBookingConfirmed}
           onClose={() => {
-            setIsBookingConfirmed(false)
-            navigate("/", { replace: true }) // Replace current history entry with home page
-            window.history.pushState(null, null, "/") // Ensure back button doesn't work
+            setIsBookingConfirmed(false);
+            navigate("/", { replace: true }); // Replace current history entry with home page
+            window.history.pushState(null, null, "/"); // Ensure back button doesn't work
           }}
           booking={bookingDetails}
         />
@@ -369,8 +410,7 @@ const RoomSelectionPage = () => {
 
       <Footer />
     </AnimatedSection>
-  )
-}
+  );
+};
 
-export default RoomSelectionPage
-
+export default RoomSelectionPage;

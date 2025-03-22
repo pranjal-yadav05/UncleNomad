@@ -125,6 +125,7 @@ export default function HomePage() {
       .then((res) => res.json())
       .then((data) => {
         setRooms(data);
+        console.log(data);
         setIsLoading((prev) => ({ ...prev, rooms: false }));
       })
       .catch((error) => {
