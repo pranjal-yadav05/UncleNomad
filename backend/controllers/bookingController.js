@@ -428,6 +428,8 @@ export const createBooking = async (req, res) => {
     paymentReference,
     numberOfChildren,
     mealIncluded,
+    status,
+    paymentStatus,
   } = req.body;
 
   try {
@@ -542,7 +544,7 @@ export const createBooking = async (req, res) => {
       });
     }
 
-    // Create temporary booking with PENDING status
+    // Create booking with status from input or default to PENDING
     const booking = new Booking({
       rooms: validatedRooms,
       checkIn: new Date(checkIn),
@@ -555,8 +557,8 @@ export const createBooking = async (req, res) => {
       mealIncluded: mealIncluded || false,
       specialRequests,
       totalPrice: calculatedTotalPrice,
-      status: "PENDING",
-      paymentStatus: "PENDING",
+      status: status || "PENDING",
+      paymentStatus: paymentStatus || "PENDING",
       paymentReference: paymentReference || null,
     });
 
