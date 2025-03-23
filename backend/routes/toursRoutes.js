@@ -24,6 +24,7 @@ import {
   exportTourBookingsToExcel,
   exportAllTourBookings,
   exportToursToExcel,
+  generateTourBookingReceipt,
 } from "../controllers/tourController.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { auth } from "googleapis/build/src/apis/abusiveexperiencereport/index.js";
@@ -94,6 +95,11 @@ router.get("/user-tour-booking", authenticateToken, getUserTourBooking);
 router.post("/:id/verify-booking", authenticateToken, verifyTourBooking);
 router.post("/:id/book", authenticateToken, createTourBooking);
 router.get("/booking/:id", authenticateToken, getTourBookingById);
+router.get(
+  "/booking/:id/receipt",
+  authenticateToken,
+  generateTourBookingReceipt
+);
 router.put(
   "/:tourId/book/:bookingId/confirm",
   authenticateToken,

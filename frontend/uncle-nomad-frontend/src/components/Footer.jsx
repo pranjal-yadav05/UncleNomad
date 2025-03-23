@@ -50,7 +50,7 @@ const Footer = () => {
           {/* Follow Us */}
           <div className="space-y-6">
             <h3
-              className="text-xl font-semibold text-white"
+              className="text-2xl font-bold text-white tracking-wide"
               style={{ fontFamily: "SeaGardens, sans-serif" }}>
               Follow Us
             </h3>

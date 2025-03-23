@@ -100,7 +100,7 @@ const TourSection = ({
   };
 
   return (
-    <div id="tours" className="relative py-24 overflow-hidden">
+    <div id="tours" className="relative py-10 overflow-hidden w-full">
       {/* Background elements */}
       <div className="absolute inset-0 bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-900 -z-10"></div>
       <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-slate-900/80 to-transparent -z-10"></div>
@@ -113,7 +113,7 @@ const TourSection = ({
           <div className="text-center mb-6 md:mb-0">
             <h2
               className="text-4xl md:text-5xl font-extrabold text-white mb-3"
-              style={{ fontFamily: "Poppins" }}>
+              style={{ fontFamily: "Josefin Sans" }}>
               Curated Experiences
             </h2>
             <p className="mt-5 text-indigo-200 max-w-2xl mx-auto">

@@ -65,7 +65,7 @@ const TourCard = ({ tour, onClick, handleTourClick }) => {
       {/* Content */}
       <div className="p-5 flex flex-col h-full text-white">
         {/* Title */}
-        <h3 className="text-xl font-bold mb-2 truncate" style={{ fontFamily: "Poppins" }}>
+        <h3 className="text-xl font-bold mb-2 truncate">
         {tour.title}
         </h3>
 
@@ -76,7 +76,7 @@ const TourCard = ({ tour, onClick, handleTourClick }) => {
         </div>
 
         {/* Description */}
-        <p className="text-indigo-100/80 text-sm line-clamp-2 mb-4" style={{ fontFamily: "Poppins" }}>
+        <p className="text-indigo-100/80 text-sm line-clamp-2 mb-4" >
           {tour.description}
         </p>
 
@@ -118,7 +118,7 @@ const TourCard = ({ tour, onClick, handleTourClick }) => {
           onClick={handleButtonClick}
           variant='nomad'
           className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white hover:from-purple-600 hover:to-indigo-700 py-3 rounded-lg shadow-lg mt-auto border-0"
-          style={{ fontFamily: "Poppins" }}
+          
         >
           Book Now
         </Button>

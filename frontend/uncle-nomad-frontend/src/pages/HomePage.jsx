@@ -9,7 +9,10 @@ import Footer from "../components/Footer";
 import TourSection from "../components/TourSection";
 import AvailableRooms from "../components/AvailableRooms";
 import CounterSection from "../components/CounterSection";
-import AnimatedSection from "../components/AnimatedSection"; // Import enhanced component
+import AnimatedSection from "../components/AnimatedSection";
+import ParallaxSection from "../components/ParallaxSection";
+import MouseTracker from "../components/MouseTracker";
+import ScrollProgress from "../components/ScrollProgress";
 import GoogleReviews from "../components/GoogleReviews";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -139,59 +142,90 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
+    <MouseTracker
+      enabled={true}
+      effectOpacity={0.2}
+      effectBlur={80}
+      effectColor="rgba(65, 105, 225, 0.15)">
+      <div className="min-h-screen bg-gray-50">
+        <ScrollProgress color="#6366f1" height={4} showPercentage={true} />
+        <Header />
 
-      <main>
-        {/* HeroSection doesn't need animation as it's the first thing visitors see */}
-        <HeroSection />
-
-        <AnimatedSection animation="slide-up" duration={1000}>
-          <div
-            className="relative"
-            style={{
-              backgroundImage: "url('tourback.jpg')", // Add the background image path here
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-            }}>
-            <div className="absolute inset-0 bg-black opacity-50"></div>
-            <div id="tours">
-              <TourSection
-                setStats={setStats}
-                stats={stats}
-                setIsBookingModalOpen={setIsBookingModalOpen}
-                isBookingModalOpen={isBookingModalOpen}
-                tours={tours}
-                isLoading={isLoading.tours}
-              />
-            </div>
-
-            <CounterSection stats={stats} />
+        <main className="flex flex-col relative">
+          {/* HeroSection */}
+          <div className="relative">
+            <HeroSection />
           </div>
-        </AnimatedSection>
 
-        <AnimatedSection animation="slide-up" duration={1200}>
-          <div className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500">
-            {/* <div className="absolute inset-0 bg-black/30"></div> */}
-            <div id="availability" ref={roomsRef}>
-              <AvailableRooms
-                availableRooms={rooms}
-                handleBookNowClick={handleBookNowClick}
-                isLoading={isLoading.rooms}
-              />
+          {/* Tour Section with Parallax */}
+          <ParallaxSection
+            backgroundImage="tourback.jpg"
+            speed={0.4}
+            overlay={true}
+            overlayOpacity={0.8}
+            minHeight="auto"
+            className="py-0 relative z-10">
+            <AnimatedSection
+              animation="slide-up"
+              duration={1200}
+              intensity={1.2}>
+              <div id="tours">
+                <TourSection
+                  setStats={setStats}
+                  stats={stats}
+                  setIsBookingModalOpen={setIsBookingModalOpen}
+                  isBookingModalOpen={isBookingModalOpen}
+                  tours={tours}
+                  isLoading={isLoading.tours}
+                />
+              </div>
+
+              <AnimatedSection animation="fade" delay={300} duration={1500}>
+                <CounterSection stats={stats} />
+              </AnimatedSection>
+            </AnimatedSection>
+          </ParallaxSection>
+
+          <AnimatedSection
+            animation="slide-right"
+            duration={1400}
+            threshold={0.2}
+            className="relative z-20">
+            <div className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 relative pt-10">
+              <div id="availability" ref={roomsRef}>
+                <AvailableRooms
+                  availableRooms={rooms}
+                  handleBookNowClick={handleBookNowClick}
+                  isLoading={isLoading.rooms}
+                />
+              </div>
+
+              <AnimatedSection animation="bounce" delay={200} duration={1000}>
+                <GoogleReviews />
+              </AnimatedSection>
             </div>
-            <GoogleReviews />
-          </div>
-        </AnimatedSection>
+          </AnimatedSection>
 
-        {/* Use different animation styles for each section */}
-        <AnimatedSection animation="fade" duration={1200}>
-          <AboutSection />
-        </AnimatedSection>
-      </main>
-      <div id="footer">
-        <Footer />
+          <AnimatedSection
+            animation="flip"
+            duration={1200}
+            threshold={0.15}
+            staggerChildren={true}
+            staggerDelay={150}
+            className="relative z-30">
+            <AboutSection />
+          </AnimatedSection>
+
+          <AnimatedSection
+            animation="slide-up"
+            duration={800}
+            className="relative z-40">
+            <div id="footer">
+              <Footer />
+            </div>
+          </AnimatedSection>
+        </main>
       </div>
-    </div>
+    </MouseTracker>
   );
 }

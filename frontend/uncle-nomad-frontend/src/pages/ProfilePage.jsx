@@ -105,10 +105,13 @@ export default function ProfilePage() {
       }
 
       const data = await response.json();
-      // Sort bookings with newest (by checkIn date) first
-      const sortedBookings = data.sort(
-        (a, b) => new Date(b.checkIn) - new Date(a.checkIn)
-      );
+      // Sort bookings with newest creation date first
+      const sortedBookings = data.sort((a, b) => {
+        // Use createdAt or bookingDate, falling back to checkIn date if neither exists
+        const dateA = a.createdAt || a.bookingDate || a.checkIn;
+        const dateB = b.createdAt || b.bookingDate || b.checkIn;
+        return new Date(dateB) - new Date(dateA);
+      });
       setRoomBookings(sortedBookings);
     } catch (error) {
       console.error("Error fetching room bookings:", error);
@@ -137,10 +140,13 @@ export default function ProfilePage() {
 
       const data = await response.json();
 
-      // Sort bookings with newest (by tourDate) first
-      const sortedBookings = data.sort(
-        (a, b) => new Date(b.tourDate) - new Date(a.tourDate)
-      );
+      // Sort bookings with newest creation date first
+      const sortedBookings = data.sort((a, b) => {
+        // Use createdAt or bookingDate, falling back to tourDate if neither exists
+        const dateA = a.createdAt || a.bookingDate || a.tourDate;
+        const dateB = b.createdAt || b.bookingDate || b.tourDate;
+        return new Date(dateB) - new Date(dateA);
+      });
       setTourBookings(sortedBookings);
     } catch (error) {
       console.error("Error fetching tour bookings:", error);

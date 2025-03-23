@@ -26,8 +26,8 @@ export default function AvailableRooms({
   return (
     <section className="container mx-auto px-6 py-16 relative">
       <h2
-        className="text-4xl font-extrabold mb-10 text-center text-white"
-        style={{ fontFamily: "Poppins" }}>
+        className="text-4xl md:text-5xl font-extrabold mb-10 text-center text-white"
+        style={{ fontFamily: "Josefin Sans" }}>
         Our Home Stay in Manali
       </h2>
 

@@ -1,8 +1,19 @@
-import { MapPin, Star, CheckCircle } from "lucide-react";
+import {
+  MapPin,
+  Star,
+  CheckCircle,
+  Download,
+  Calendar,
+  Clock,
+  Users,
+} from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { formatDate } from "../utils/dateUtils";
+import { toast } from "react-hot-toast";
+import { generateRoomTicketTemplate } from "../templates/roomTicketTemplate";
+import { formatDateDDMMYYYY } from "../templates/dateUtils";
 
 function RoomBookingCard({
   booking,
@@ -10,6 +21,53 @@ function RoomBookingCard({
   openRatingDialog,
   hasReviewForRoom,
 }) {
+  // Calculate duration of stay in days
+  const checkInDate = new Date(booking.checkIn);
+  const checkOutDate = new Date(booking.checkOut);
+  const durationInDays = Math.ceil(
+    (checkOutDate - checkInDate) / (1000 * 60 * 60 * 24)
+  );
+
+  // Add the downloadTicket function
+  const downloadTicket = () => {
+    try {
+      // Debug: Log booking object to see price fields
+      console.log("Booking data for ticket:", {
+        _id: booking._id,
+        totalAmount: booking.totalAmount,
+        totalPrice: booking.totalPrice,
+        roomsInfo: booking.rooms.map((room) => ({
+          price: room.price,
+          pricePerNight: room.pricePerNight,
+          subtotal: room.subtotal,
+          numberOfNights: room.numberOfNights,
+        })),
+      });
+
+      // Generate the ticket HTML using the template
+      const ticketHtml = generateRoomTicketTemplate(
+        booking,
+        formatDateDDMMYYYY
+      );
+
+      // Create a new window and write the ticket HTML
+      const ticketWindow = window.open("", "_blank");
+      if (!ticketWindow) {
+        alert("Please allow pop-ups to view the ticket");
+        return;
+      }
+
+      // Write to the window and show the ticket
+      ticketWindow.document.write(ticketHtml);
+      ticketWindow.document.close();
+
+      toast.success("Ticket generated successfully!");
+    } catch (error) {
+      console.error("Error generating ticket:", error);
+      toast.error(`Error generating ticket: ${error.message}`);
+    }
+  };
+
   return (
     <Card className="overflow-hidden w-full">
       <div className="flex flex-col sm:flex-row">
@@ -55,7 +113,7 @@ function RoomBookingCard({
             </div>
             {booking.totalAmount && (
               <div className="text-right">
-                <span className="font-semibold">${booking.totalAmount}</span>
+                <span className="font-semibold">₹{booking.totalAmount}</span>
               </div>
             )}
           </div>
@@ -68,6 +126,22 @@ function RoomBookingCard({
             <div>
               <div className="text-sm text-muted-foreground">Check-out</div>
               <div className="font-medium">{formatDate(booking.checkOut)}</div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground">Duration</div>
+              <div className="font-medium">
+                {durationInDays} night{durationInDays !== 1 ? "s" : ""}
+              </div>
+            </div>
+          </div>
+
+          {/* Additional booking details */}
+          <div className="mt-3 mb-3 text-sm text-gray-600">
+            <div className="flex items-center mt-1">
+              <Users className="h-3 w-3 mr-1" />
+              <span>
+                Guests: {booking.numberOfGuests || booking.guests || 1}
+              </span>
             </div>
           </div>
 
@@ -139,6 +213,19 @@ function RoomBookingCard({
                 );
               })}
             </div>
+          </div>
+
+          {/* Actions */}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {/* Download Ticket Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full sm:w-auto mt-3"
+              onClick={downloadTicket}>
+              <Download className="h-3 w-3 mr-1" />
+              Download Ticket
+            </Button>
           </div>
         </div>
       </div>

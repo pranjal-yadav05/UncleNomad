@@ -9,6 +9,7 @@ import {
   getUserBooking,
   exportBookingsToExcel,
   exportAllBookings,
+  generateBookingReceipt,
 } from "../controllers/bookingController.js";
 import { authenticateToken } from "../middleware/auth.js";
 
@@ -20,6 +21,9 @@ router.post("/verify", authenticateToken, verifyBooking);
 router.get("/check-availability", checkAvailabiltiy);
 
 router.get("/user-bookings", authenticateToken, getUserBooking);
+
+// Generate receipt for a booking
+router.get("/:id/receipt", authenticateToken, generateBookingReceipt);
 
 // Export bookings to Excel
 router.get("/export", authenticateToken, exportBookingsToExcel);

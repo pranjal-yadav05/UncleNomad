@@ -290,7 +290,7 @@ export default function ToursPage() {
           <div className="container mx-auto px-4 relative z-20 text-center">
             <h1
               className="text-5xl md:text-6xl font-extrabold text-white mb-6"
-              style={{ fontFamily: "Poppins" }}>
+              >
               Discover Our Adventures
             </h1>
             <p className="text-xl text-white/90 max-w-2xl mx-auto mb-8">

@@ -1,8 +1,9 @@
 import Booking from "../models/Booking.js";
 import Room from "../models/Room.js";
-import express from "express";
 import Review from "../models/UserReview.js";
+import express from "express";
 import ExcelJS from "exceljs";
+import mongoose from "mongoose";
 
 const router = express.Router();
 
@@ -229,7 +230,8 @@ export const getBooking = async (req, res) => {
     const booking = await Booking.findById(req.params.id)
       .populate({
         path: "rooms.roomId",
-        select: "name type price capacity amenities imageUrls description",
+        select:
+          "name type price capacity amenities imageUrls description mealIncluded mealPrice beds extraBedPrice smokingAllowed alcoholAllowed childrenAllowed childrenPolicy",
       })
       .lean()
       .exec();
@@ -238,7 +240,73 @@ export const getBooking = async (req, res) => {
       return res.status(404).json({ message: "Booking not found" });
     }
 
-    res.json(booking);
+    // Calculate duration of stay
+    const checkInDate = new Date(booking.checkIn);
+    const checkOutDate = new Date(booking.checkOut);
+    const durationInDays = Math.ceil(
+      (checkOutDate - checkInDate) / (1000 * 60 * 60 * 24)
+    );
+
+    // Format payment status to be more user-friendly
+    const formattedPaymentStatus = booking.paymentStatus
+      ? booking.paymentStatus === "PAID"
+        ? "Paid"
+        : booking.paymentStatus === "PENDING"
+        ? "Pending"
+        : booking.paymentStatus === "FAILED"
+        ? "Failed"
+        : booking.paymentStatus
+      : "N/A";
+
+    // Format booking status to be more user-friendly
+    const formattedBookingStatus = booking.status
+      ? booking.status === "CONFIRMED"
+        ? "Confirmed"
+        : booking.status === "PENDING"
+        ? "Pending"
+        : booking.status === "CANCELLED"
+        ? "Cancelled"
+        : booking.status
+      : "N/A";
+
+    // Get user review if exists
+    const review = await Review.findOne({
+      bookingId: booking._id,
+      bookingType: "room",
+    }).lean();
+
+    // Enhance booking data with additional information
+    const enhancedBooking = {
+      ...booking,
+      duration: durationInDays,
+      status: formattedBookingStatus,
+      paymentStatus: formattedPaymentStatus,
+      totalAmount: booking.totalPrice, // For consistency with naming in frontend
+      location: "Uncle Nomad Stays", // Default location - replace with actual property location if available
+      userRating: review ? review.rating : 0,
+      userReview: review ? review.comment : "",
+      reviewId: review ? review._id : null,
+      rooms: booking.rooms.map((room, index) => {
+        const roomDetail = room.roomId || {};
+        return {
+          ...room,
+          roomId: room.roomId?._id || room.roomId,
+          roomType: room.roomType || roomDetail.type || "Standard Room",
+          roomNumber: `Room ${index + 1}`, // Placeholder - could be replaced with actual room numbers if available
+          images: roomDetail.imageUrls || [],
+          pricePerNight: room.price || roomDetail.price,
+          maxOccupancy: room.capacity || roomDetail.capacity || 2,
+          amenities: roomDetail.amenities || [],
+          bedType: getBedTypeFromRoomType(roomDetail.type),
+          mealIncluded: booking.mealIncluded || roomDetail.mealIncluded,
+          mealPrice: roomDetail.mealPrice,
+          subtotal: room.subtotal || room.price * durationInDays,
+          numberOfNights: room.numberOfNights || durationInDays,
+        };
+      }),
+    };
+
+    res.json(enhancedBooking);
   } catch (error) {
     console.error("Error in GET /bookings/:id:", error);
     res.status(500).json({
@@ -553,16 +621,35 @@ export const getUserBooking = async (req, res) => {
     ];
     const bookingIds = bookings.map((booking) => booking._id);
 
-    // Fetch room details with images
+    // Fetch detailed room information with all relevant fields for ticket
     const rooms = await Room.find(
       { _id: { $in: roomIds } },
-      "_id type imageUrls"
+      "_id name type imageUrls price capacity amenities mealIncluded mealPrice beds extraBedPrice smokingAllowed alcoholAllowed childrenAllowed childrenPolicy"
     ).lean();
+
+    // Create a detailed room map
     const roomMap = rooms.reduce((acc, room) => {
-      acc[room._id.toString()] = room.imageUrls || [];
+      acc[room._id.toString()] = {
+        roomType: room.type,
+        images: room.imageUrls || [],
+        pricePerNight: room.price,
+        maxOccupancy: room.capacity,
+        amenities: room.amenities || [],
+        bedType: getBedTypeFromRoomType(room.type),
+        mealIncluded: room.mealIncluded,
+        mealPrice: room.mealPrice,
+        extraBedPrice: room.extraBedPrice,
+        policies: {
+          smoking: room.smokingAllowed ? "Allowed" : "Not Allowed",
+          alcohol: room.alcoholAllowed ? "Allowed" : "Not Allowed",
+          children: room.childrenAllowed ? "Allowed" : "Not Allowed",
+          childrenPolicy: room.childrenPolicy || "Standard policy applies",
+        },
+      };
       return acc;
     }, {});
 
+    // Fetch user reviews
     const reviews = await Review.find({
       bookingId: { $in: bookingIds },
       bookingType: "room",
@@ -574,18 +661,65 @@ export const getUserBooking = async (req, res) => {
       reviewMap[review.bookingId.toString()] = review;
     });
 
-    // Attach images to each booked room
+    // Calculate duration for each booking
     const enrichedBookings = bookings.map((booking) => {
       const review = reviewMap[booking._id.toString()] || null;
+      const checkInDate = new Date(booking.checkIn);
+      const checkOutDate = new Date(booking.checkOut);
+      const durationInDays = Math.ceil(
+        (checkOutDate - checkInDate) / (1000 * 60 * 60 * 24)
+      );
+
+      // Format payment status to be more user-friendly
+      const formattedPaymentStatus = booking.paymentStatus
+        ? booking.paymentStatus === "PAID"
+          ? "Paid"
+          : booking.paymentStatus === "PENDING"
+          ? "Pending"
+          : booking.paymentStatus === "FAILED"
+          ? "Failed"
+          : booking.paymentStatus
+        : "N/A";
+
+      // Format booking status to be more user-friendly
+      const formattedBookingStatus = booking.status
+        ? booking.status === "CONFIRMED"
+          ? "Confirmed"
+          : booking.status === "PENDING"
+          ? "Pending"
+          : booking.status === "CANCELLED"
+          ? "Cancelled"
+          : booking.status
+        : "N/A";
+
       return {
         ...booking,
-        rooms: booking.rooms.map((room) => ({
-          ...room,
-          images: roomMap[room.roomId.toString()] || [],
-        })),
+        duration: durationInDays,
+        status: formattedBookingStatus,
+        paymentStatus: formattedPaymentStatus,
+        totalAmount: booking.totalPrice, // For consistency with naming in frontend
+        rooms: booking.rooms.map((room, index) => {
+          const roomDetails = roomMap[room.roomId.toString()] || {};
+          return {
+            ...room,
+            roomId: room.roomId,
+            roomType: room.roomType || roomDetails.roomType || "Standard Room",
+            roomNumber: `Room ${index + 1}`, // Placeholder - could be replaced with actual room numbers if available
+            images: roomDetails.images || [],
+            pricePerNight: room.price || roomDetails.pricePerNight,
+            maxOccupancy: room.capacity || roomDetails.maxOccupancy || 2,
+            amenities: roomDetails.amenities,
+            bedType: roomDetails.bedType,
+            mealIncluded: booking.mealIncluded || roomDetails.mealIncluded,
+            mealPrice: roomDetails.mealPrice,
+            subtotal: room.subtotal,
+            numberOfNights: room.numberOfNights || durationInDays,
+          };
+        }),
         userRating: review ? review.rating : 0,
         userReview: review ? review.comment : "",
         reviewId: review ? review._id : null,
+        location: "Uncle Nomad Stays", // Default location - replace with actual property location if available
       };
     });
 
@@ -595,6 +729,23 @@ export const getUserBooking = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch bookings" });
   }
 };
+
+// Helper function to determine bed type based on room type
+function getBedTypeFromRoomType(type) {
+  if (!type) return "Standard";
+
+  type = type.toLowerCase();
+  if (type.includes("king")) return "King Size";
+  if (type.includes("queen")) return "Queen Size";
+  if (type.includes("single")) return "Single";
+  if (type.includes("twin")) return "Twin";
+  if (type.includes("double")) return "Double";
+  if (type.includes("family")) return "Family";
+  if (type.includes("suite")) return "Suite";
+  if (type.includes("dorm") || type.includes("dormitory")) return "Bunk Bed";
+
+  return "Standard";
+}
 
 // Update the format function inside exportBookingsToExcel
 const formatDateDDMMYYYY = (dateString) => {
@@ -858,6 +1009,116 @@ export const exportAllBookings = async (req, res) => {
         process.env.NODE_ENV === "development"
           ? error.message
           : "Internal server error",
+    });
+  }
+};
+
+export const generateBookingReceipt = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        status: "ERROR",
+        message: "Invalid booking ID format",
+      });
+    }
+
+    // Fetch the booking with populated details
+    const booking = await Booking.findById(id)
+      .populate("rooms.roomId")
+      .populate({
+        path: "tour",
+        select: "name duration location price images",
+      })
+      .exec();
+
+    if (!booking) {
+      return res.status(404).json({
+        status: "ERROR",
+        message: "Booking not found",
+      });
+    }
+
+    // Check if user is authorized to access this receipt
+    if (
+      req.user._id.toString() !== booking.userId.toString() &&
+      req.user.role !== "admin"
+    ) {
+      return res.status(403).json({
+        status: "ERROR",
+        message: "You are not authorized to access this receipt",
+      });
+    }
+
+    // Generate receipt data
+    const receiptData = {
+      receiptNumber: `RCPT-${booking._id.toString().slice(-6)}-${Date.now()
+        .toString()
+        .slice(-4)}`,
+      booking: {
+        id: booking._id,
+        reference: booking.paymentReference,
+        createdAt: booking.createdAt,
+        status: booking.status,
+        paymentStatus: booking.paymentStatus,
+        paymentDate: booking.paymentDate,
+      },
+      customer: {
+        name: booking.guestName,
+        email: booking.email,
+        phone: booking.phone,
+      },
+      bookingDetails: booking.rooms
+        ? {
+            checkIn: booking.checkIn,
+            checkOut: booking.checkOut,
+            rooms: booking.rooms.map((room) => ({
+              name: room.roomName,
+              quantity: room.quantity,
+              nights: room.numberOfNights,
+              pricePerNight: room.price,
+              subtotal: room.subtotal,
+            })),
+            totalAmount: booking.totalPrice,
+          }
+        : {
+            tourName: booking.tourName,
+            tourDate: booking.tourDate,
+            tourEndDate: booking.tourEndDate,
+            participants: booking.participants,
+            duration: booking.duration,
+            pricePerPerson: booking.pricePerPerson,
+            totalAmount: booking.totalAmount,
+          },
+      paymentDetails: {
+        method: booking.paymentMethod || "Online Payment",
+        reference: booking.paymentReference,
+        amount:
+          booking.paymentAmount || booking.totalAmount || booking.totalPrice,
+        date: booking.paymentDate,
+      },
+      issueDate: new Date(),
+      companyDetails: {
+        name: "Uncle Nomad",
+        address: "123 Retreat Lane, Tourism Valley, India",
+        phone: "+91 9876543210",
+        email: "bookings@unclenomad.com",
+        website: "www.unclenomad.com",
+        gst: "GST12345678AB",
+      },
+    };
+
+    return res.status(200).json({
+      status: "SUCCESS",
+      data: receiptData,
+    });
+  } catch (error) {
+    console.error("Error generating receipt:", error);
+    return res.status(500).json({
+      status: "ERROR",
+      message: "Failed to generate receipt",
+      error: error.message,
     });
   }
 };

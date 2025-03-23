@@ -124,7 +124,7 @@ export default function GoogleReviews() {
     <section className="relative py-16 px-4 bg-gradient-to-b from-blue-50 to-white">
       <div className="container mx-auto max-w-5xl">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold mb-3 text-blue-600">What Our Guests Say</h2>
+          <h2 className="text-4xl md:text-5xl font-extrabold mb-3 text-blue-600" style={{fontFamily: "Josefin Sans"}}>What Our Guests Say</h2>
           <p className="text-gray-600 max-w-2xl mx-auto">
             Discover the experiences of our valued guests who have stayed with us
           </p>

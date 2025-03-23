@@ -40,7 +40,7 @@ export default function AboutSection() {
       id="about"
       className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white py-16">
       <div className="container mx-auto px-6">
-        <h2 className="text-4xl font-extrabold mb-12 text-center">About Us</h2>
+        <h2 className="text-4xl md:text-5xl font-extrabold mb-12 text-center" style={{fontFamily: "Josefin Sans"}}>About Us</h2>
 
         {/* Scrollable Row for Small Screens, Grid for Large Screens */}
         <div
@@ -52,7 +52,7 @@ export default function AboutSection() {
         </div>
 
         {/* Description */}
-        <p className="text-center mt-6 text-white/80 max-w-2xl mx-auto text-xl px-4 font-poppins">
+        <p className="text-center mt-6 text-white/80 max-w-2xl mx-auto text-xl px-4">
           Whether you're a solo backpacker, a group traveler, or someone looking
           for a personalized trip, we help you explore the beautiful, unexplored
           parts of the world effortlessly.
@@ -84,7 +84,7 @@ function Card({ title, description, imageSrc, icon: Icon }) {
 
       {/* Card Content */}
       <div className="p-4 flex-grow flex items-center">
-        <p className="text-white/80 text-base text-center w-full font-poppins">
+        <p className="text-white/80 text-base text-center w-full">
           {description}
         </p>
       </div>

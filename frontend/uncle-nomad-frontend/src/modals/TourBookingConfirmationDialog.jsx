@@ -7,8 +7,11 @@ import {
   DialogFooter,
 } from "../components/ui/dialog";
 import { Button } from "../components/ui/button";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, Download } from "lucide-react";
 import { formatDate } from "../utils/dateUtils";
+import { toast } from "react-hot-toast";
+import { generateTourTicketTemplate } from "../templates/tourTicketTemplate";
+import { formatDateDDMMYYYY } from "../templates/dateUtils";
 
 const TourBookingConfirmationDialog = ({
   tourBooking,
@@ -24,6 +27,33 @@ const TourBookingConfirmationDialog = ({
   const handleClose = () => {
     setOpen(false);
     onClose?.();
+  };
+
+  // Function to download ticket
+  const downloadTicket = () => {
+    try {
+      // Generate the ticket HTML using the template
+      const ticketHtml = generateTourTicketTemplate(
+        tourBooking,
+        formatDateDDMMYYYY
+      );
+
+      // Create a new window for the ticket
+      const ticketWindow = window.open("", "_blank");
+      if (!ticketWindow) {
+        alert("Please allow pop-ups to view the ticket");
+        return;
+      }
+
+      // Write to the window and show the ticket
+      ticketWindow.document.write(ticketHtml);
+      ticketWindow.document.close();
+
+      toast.success("Ticket generated successfully!");
+    } catch (error) {
+      console.error("Error generating ticket:", error);
+      toast.error(`Error generating ticket: ${error.message}`);
+    }
   };
 
   if (!tourBooking) {
@@ -89,7 +119,14 @@ const TourBookingConfirmationDialog = ({
           ))}
         </div>
 
-        <DialogFooter className="mt-6">
+        <DialogFooter className="mt-6 flex-col space-y-2">
+          <Button
+            onClick={downloadTicket}
+            variant="outline"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+            <Download className="h-4 w-4 mr-2" />
+            Download Ticket
+          </Button>
           <Button
             onClick={handleClose}
             className="w-full bg-brand-purple hover:bg-brand-purple/90 text-white">
