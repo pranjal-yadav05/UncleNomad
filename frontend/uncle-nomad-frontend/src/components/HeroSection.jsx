@@ -25,6 +25,7 @@ export default function HeroSection() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [touchStartX, setTouchStartX] = useState(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [videoLoaded, setVideoLoaded] = useState(false);
   const videoRef = useRef(null);
   const navigate = useNavigate();
 
@@ -62,10 +63,15 @@ export default function HeroSection() {
     }
   };
 
+  const handleVideoLoaded = () => {
+    setVideoLoaded(true);
+  };
+
   const handleMediaTransition = useCallback(
     (newIndex) => {
       setIsTransitioning(true);
       setCurrentIndex(newIndex);
+      setVideoLoaded(false);
 
       // Short delay to ensure DOM updates are complete
       setTimeout(() => {
@@ -143,6 +149,33 @@ export default function HeroSection() {
     };
   }, [currentIndex, isTransitioning, handleMediaTransition, mediaItems.length]);
 
+  // Preload next media item
+  useEffect(() => {
+    if (mediaItems.length > 1) {
+      const nextIndex = (currentIndex + 1) % mediaItems.length;
+      const nextItem = mediaItems[nextIndex];
+
+      if (nextItem && nextItem.type === "video") {
+        const link = document.createElement("link");
+        link.rel = "preload";
+        link.href = optimizedVideoUrl(nextItem.url);
+        link.as = "video";
+        document.head.appendChild(link);
+
+        // Also preload the thumbnail
+        const imgPreload = new Image();
+        imgPreload.src = getVideoThumbnail(nextItem.url);
+
+        return () => {
+          document.head.removeChild(link);
+        };
+      } else if (nextItem && nextItem.type === "image") {
+        const imgPreload = new Image();
+        imgPreload.src = nextItem.url;
+      }
+    }
+  }, [currentIndex, mediaItems]);
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.ctrlKey && e.shiftKey && e.key === "A") {
@@ -166,16 +199,28 @@ export default function HeroSection() {
       {mediaItems.length > 0 &&
         mediaItems[currentIndex] &&
         (mediaItems[currentIndex].type === "video" ? (
-          <video
-            key={currentIndex} // Add key to ensure proper remounting
-            ref={videoRef}
-            src={optimizedVideoUrl(mediaItems[currentIndex].url)}
-            autoPlay
-            muted
-            className="hero-media"
-            preload="metadata"
-            poster={getVideoThumbnail(mediaItems[currentIndex].url)}
-          />
+          <>
+            {!videoLoaded && (
+              <img
+                src={getVideoThumbnail(mediaItems[currentIndex].url)}
+                alt="Video Thumbnail"
+                className="hero-media"
+              />
+            )}
+            <video
+              key={currentIndex}
+              ref={videoRef}
+              src={optimizedVideoUrl(mediaItems[currentIndex].url)}
+              autoPlay
+              muted
+              className={`hero-media ${
+                videoLoaded ? "opacity-100" : "opacity-0"
+              }`}
+              preload="auto"
+              poster={getVideoThumbnail(mediaItems[currentIndex].url)}
+              onLoadedData={handleVideoLoaded}
+            />
+          </>
         ) : (
           <img
             src={mediaItems[currentIndex].url}
