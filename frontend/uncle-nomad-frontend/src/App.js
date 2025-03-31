@@ -22,6 +22,8 @@ import TourBookingPage from "./pages/TourBookingPage";
 import HomePage from "./pages/HomePage";
 import ManageStats from "./pages/ManageStats";
 import ManageReviews from "./pages/ManageReviews";
+import Blog from "./pages/Blog";
+import ManageBlogs from "./pages/ManageBlogs";
 import { Toaster } from "react-hot-toast";
 
 function App() {
@@ -34,6 +36,7 @@ function App() {
         <Route path="/rooms/:id" element={<RoomDetailsPage />} />
         <Route path="/admin-auth" element={<AdminAuth />} />
         <Route path="/gallery" element={<GalleryPage />} />
+        <Route path="/blog" element={<Blog />} />
         <Route path="/room-selection" element={<RoomSelectionPage />} />
         <Route path="/availability" element={<AvailabilityPage />} />
         <Route path="/profile" element={<ProfilePage />} />
@@ -53,6 +56,7 @@ function App() {
           <Route path="reviews" element={<ManageReviews />} />
           <Route path="stats" element={<ManageStats />} />
           <Route path="media" element={<ManageMedia />} />
+          <Route path="blogs" element={<ManageBlogs />} />
         </Route>
       </Routes>
     </BrowserRouter>
