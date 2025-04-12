@@ -6,6 +6,14 @@ const tourBookingSchema = new mongoose.Schema({
     ref: "Tour",
     required: true,
   },
+  selectedDate: {
+    startDate: { type: Date, required: true },
+    endDate: { type: Date, required: true },
+  },
+  selectedPackage: {
+    name: { type: String, required: true },
+    price: { type: Number, required: true },
+  },
   groupSize: {
     type: Number,
     required: true,

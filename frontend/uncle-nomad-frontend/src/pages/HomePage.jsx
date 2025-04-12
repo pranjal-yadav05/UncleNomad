@@ -57,7 +57,7 @@ export default function HomePage() {
           const offset = 80; // Default offset for header
           const elementPosition =
             section.getBoundingClientRect().top + window.scrollY;
-          let offsetPosition = elementPosition - offset;
+          let offsetPosition = elementPosition - offset + 100;
 
           // Ensure we don't scroll past the bottom of the page
           const maxScroll =

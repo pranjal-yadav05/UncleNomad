@@ -255,7 +255,8 @@ export default function HeroSection() {
         {/* Button */}
         <motion.div variants={itemVariants} className="hero-btns">
           <Button
-            className="btns btn--outline btn--large"
+            variant="outline"
+            className="btns btn--outline btn--large text-white hover:bg-white/10 border-white/20"
             onClick={() => {
               const availabilitySection = document.getElementById("tours");
               if (availabilitySection) {
@@ -263,7 +264,7 @@ export default function HeroSection() {
                 const elementPosition =
                   availabilitySection.getBoundingClientRect().top;
                 const offsetPosition =
-                  elementPosition + window.pageYOffset - offset;
+                  elementPosition + window.pageYOffset - offset + 100;
 
                 window.scrollTo({
                   top: offsetPosition,

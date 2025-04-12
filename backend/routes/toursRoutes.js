@@ -38,25 +38,50 @@ const upload = multer({ storage: storage });
 // Middleware for validating tour data
 const validateTourData = (req, res, next) => {
   const {
+    id,
     title,
     description,
-    price,
     duration,
-    groupSize,
     location,
-    startDate,
-    endDate,
+    groupSize,
+    availableDates,
+    pricingPackages,
   } = req.body;
+
+  // Parse JSON strings if necessary
+  const parsedAvailableDates =
+    typeof availableDates === "string"
+      ? JSON.parse(availableDates)
+      : availableDates;
+  const parsedPricingPackages =
+    typeof pricingPackages === "string"
+      ? JSON.parse(pricingPackages)
+      : pricingPackages;
+
   if (
+    !id ||
     !title ||
     !description ||
-    !price ||
     !duration ||
-    !groupSize ||
     !location ||
-    !startDate ||
-    !endDate
+    !groupSize ||
+    !parsedAvailableDates ||
+    parsedAvailableDates.length === 0 ||
+    !parsedPricingPackages ||
+    parsedPricingPackages.length === 0
   ) {
+    console.log("❌ Missing required fields in validateTourData:", {
+      id: !id,
+      title: !title,
+      description: !description,
+      duration: !duration,
+      location: !location,
+      groupSize: !groupSize,
+      availableDates:
+        !parsedAvailableDates || parsedAvailableDates.length === 0,
+      pricingPackages:
+        !parsedPricingPackages || parsedPricingPackages.length === 0,
+    });
     return res.status(400).json({ message: "All fields are required" });
   }
   next();

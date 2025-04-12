@@ -139,14 +139,45 @@ export default function ProfilePage() {
       }
 
       const data = await response.json();
+      console.log("Tour bookings API response:", data);
+
+      // Ensure we properly process the selectedDate and selectedPackage
+      const processedBookings = data.map((booking) => {
+        // Normalize status case (API might return uppercase)
+        if (booking.status) {
+          booking.status =
+            booking.status.charAt(0).toUpperCase() +
+            booking.status.slice(1).toLowerCase();
+        }
+
+        // Normalize payment status case
+        if (booking.paymentStatus) {
+          booking.paymentStatus =
+            booking.paymentStatus.charAt(0).toUpperCase() +
+            booking.paymentStatus.slice(1).toLowerCase();
+        }
+
+        // Calculate total amount if not present
+        if (!booking.totalAmount && booking.totalPrice) {
+          booking.totalAmount = booking.totalPrice;
+        }
+
+        // Set groupSize from participants if it doesn't exist
+        if (!booking.groupSize && booking.participants) {
+          booking.groupSize = booking.participants;
+        }
+
+        return booking;
+      });
 
       // Sort bookings with newest creation date first
-      const sortedBookings = data.sort((a, b) => {
+      const sortedBookings = processedBookings.sort((a, b) => {
         // Use createdAt or bookingDate, falling back to tourDate if neither exists
         const dateA = a.createdAt || a.bookingDate || a.tourDate;
         const dateB = b.createdAt || b.bookingDate || b.tourDate;
         return new Date(dateB) - new Date(dateA);
       });
+      console.log("Processed tour bookings:", sortedBookings);
       setTourBookings(sortedBookings);
     } catch (error) {
       console.error("Error fetching tour bookings:", error);

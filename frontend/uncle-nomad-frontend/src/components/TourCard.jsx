@@ -1,33 +1,40 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Card } from "../components/ui/card"
-import { Button } from "../components/ui/button"
-import { Badge } from "../components/ui/badge"
-import { Calendar, Clock, Heart, MapPin, Star, Users } from "lucide-react"
+import { useState } from "react";
+import { Card } from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Badge } from "../components/ui/badge";
+import { Calendar, Clock, Heart, MapPin, Star, Users } from "lucide-react";
 
 const TourCard = ({ tour, onClick, handleTourClick }) => {
-  const [isLiked, setIsLiked] = useState(false)
+  const [isLiked, setIsLiked] = useState(false);
 
   const handleButtonClick = (event) => {
-    event.stopPropagation()
-    handleTourClick(tour)
-  }
+    event.stopPropagation();
+    handleTourClick(tour);
+  };
 
   const handleLikeClick = (event) => {
-    event.stopPropagation()
-    setIsLiked(!isLiked)
-  }
+    event.stopPropagation();
+    setIsLiked(!isLiked);
+  };
+
+  // Get the lowest price from pricing packages
+  const getLowestPrice = () => {
+    if (!tour.pricingPackages || tour.pricingPackages.length === 0) {
+      return 0;
+    }
+    return Math.min(...tour.pricingPackages.map((pkg) => pkg.price));
+  };
 
   // Determine if tour is trending or has a special offer
-  const isTrending = tour.bookings > 50
-  const hasSpecialOffer = tour.discount > 0
+  const isTrending = tour.reviewCount > 5;
+  const hasSpecialOffer = false; // You can implement special offer logic if needed
 
   return (
     <Card
       className="w-full flex flex-col bg-white/5 backdrop-blur-md shadow-xl hover:shadow-2xl transition-all duration-300 cursor-pointer rounded-2xl overflow-hidden group border border-white/10"
-      onClick={onClick}
-    >
+      onClick={onClick}>
       {/* Image Container with Overlay */}
       <div className="w-full h-56 flex-shrink-0 overflow-hidden relative">
         <img
@@ -42,22 +49,30 @@ const TourCard = ({ tour, onClick, handleTourClick }) => {
         {/* Like Button */}
         <button
           onClick={(event) => event.stopPropagation()}
-          className="absolute top-3 right-3 w-10 h-10 rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center transition-all duration-300 hover:bg-white/20 z-10"
-        >
-          <img src={'/face-logo.png'} alt="Company Logo" className="object-contain" />
+          className="absolute top-3 right-3 w-10 h-10 rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center transition-all duration-300 hover:bg-white/20 z-10">
+          <img
+            src={"/face-logo.png"}
+            alt="Company Logo"
+            className="object-contain"
+          />
         </button>
-
 
         {/* Price Badge */}
         <div className="absolute bottom-3 right-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-3 py-1.5 rounded-full text-sm font-bold shadow-lg">
-          ₹{tour.price.toLocaleString()}
+          ₹{getLowestPrice().toLocaleString()}
         </div>
 
         {/* Special Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-2">
-          {isTrending && <Badge className="bg-amber-500 hover:bg-amber-600 text-white border-0">Trending</Badge>}
+          {isTrending && (
+            <Badge className="bg-amber-500 hover:bg-amber-600 text-white border-0">
+              Trending
+            </Badge>
+          )}
           {hasSpecialOffer && (
-            <Badge className="bg-red-500 hover:bg-red-600 text-white border-0">{tour.discount}% Off</Badge>
+            <Badge className="bg-red-500 hover:bg-red-600 text-white border-0">
+              Special Offer
+            </Badge>
           )}
         </div>
       </div>
@@ -65,9 +80,7 @@ const TourCard = ({ tour, onClick, handleTourClick }) => {
       {/* Content */}
       <div className="p-5 flex flex-col h-full text-white">
         {/* Title */}
-        <h3 className="text-xl font-bold mb-2 truncate">
-        {tour.title}
-        </h3>
+        <h3 className="text-xl font-bold mb-2 truncate">{tour.title}</h3>
 
         {/* Location */}
         <div className="flex items-center text-indigo-200 mb-3">
@@ -76,7 +89,7 @@ const TourCard = ({ tour, onClick, handleTourClick }) => {
         </div>
 
         {/* Description */}
-        <p className="text-indigo-100/80 text-sm line-clamp-2 mb-4" >
+        <p className="text-indigo-100/80 text-sm line-clamp-2 mb-4">
           {tour.description}
         </p>
 
@@ -84,15 +97,15 @@ const TourCard = ({ tour, onClick, handleTourClick }) => {
         <div className="grid grid-cols-3 gap-2 mb-4 text-xs text-indigo-100">
           <div className="flex items-center">
             <Calendar className="w-3.5 h-3.5 mr-1 text-indigo-300" />
-            <span>{tour.duration} days</span>
+            <span>{tour.duration}</span>
           </div>
           <div className="flex items-center">
             <Users className="w-3.5 h-3.5 mr-1 text-indigo-300" />
-            <span>Max {tour.maxGroupSize}</span>
+            <span>Max {tour.groupSize}</span>
           </div>
           <div className="flex items-center">
             <Clock className="w-3.5 h-3.5 mr-1 text-indigo-300" />
-            <span>{tour.startDates?.length || 0} dates</span>
+            <span>{tour.availableDates?.length || 0} dates</span>
           </div>
         </div>
 
@@ -103,29 +116,28 @@ const TourCard = ({ tour, onClick, handleTourClick }) => {
               <Star
                 key={star}
                 className={`w-4 h-4 ${
-                  star <= (tour.ratingsAverage || 4.5) ? "text-amber-400 fill-amber-400" : "text-gray-400"
+                  star <= (tour.averageRating || 4.5)
+                    ? "text-amber-400 fill-amber-400"
+                    : "text-gray-400"
                 }`}
               />
             ))}
           </div>
           <span className="text-xs ml-2 text-indigo-100">
-            {tour.ratingsAverage || 4.5} ({tour.ratingsQuantity || 24} reviews)
+            {tour.averageRating || 4.5} ({tour.reviewCount || 0} reviews)
           </span>
         </div>
 
         {/* Book Now Button */}
         <Button
           onClick={handleButtonClick}
-          variant='nomad'
-          className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white hover:from-purple-600 hover:to-indigo-700 py-3 rounded-lg shadow-lg mt-auto border-0"
-          
-        >
+          variant="nomad"
+          className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white hover:from-purple-600 hover:to-indigo-700 py-3 rounded-lg shadow-lg mt-auto border-0">
           Book Now
         </Button>
       </div>
     </Card>
-  )
-}
+  );
+};
 
-export default TourCard
-
+export default TourCard;

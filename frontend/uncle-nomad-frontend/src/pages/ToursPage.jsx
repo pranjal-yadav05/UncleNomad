@@ -111,6 +111,25 @@ export default function ToursPage() {
     }
   };
 
+  // Get the lowest price from pricing packages
+  const getLowestPrice = (tour) => {
+    // If pricingPackages exists and has values, use the lowest price
+    if (tour.pricingPackages && tour.pricingPackages.length > 0) {
+      return Math.min(
+        ...tour.pricingPackages.map((pkg) => parseInt(pkg.price) || 0)
+      );
+    }
+    // If priceOptions exists and has values, use the lowest one
+    else if (tour.priceOptions && Object.keys(tour.priceOptions).length > 0) {
+      const prices = Object.values(tour.priceOptions).map(
+        (price) => parseInt(price) || 0
+      );
+      return Math.min(...prices);
+    }
+    // Otherwise, fall back to the base price
+    return parseInt(tour.price) || 0;
+  };
+
   // When the user clicks the "Search" button or presses Enter in the search field
   const handleSearch = (e) => {
     if (e) e.preventDefault();
@@ -157,7 +176,7 @@ export default function ToursPage() {
     if (priceRange !== "all") {
       const [min, max] = priceRange.split("-").map(Number);
       result = result.filter((tour) => {
-        const price = parseInt(tour.price);
+        const price = getLowestPrice(tour);
         return price >= min && (max ? price <= max : true);
       });
     }
@@ -166,24 +185,72 @@ export default function ToursPage() {
     if (durationRange !== "all") {
       const [min, max] = durationRange.split("-").map(Number);
       result = result.filter((tour) => {
-        const duration = parseInt(tour.duration);
+        // Extract numeric duration if it's a string like "7 days/ 6 nights"
+        const durationStr = tour.duration.toString();
+        const durationMatch = durationStr.match(/(\d+)/);
+        const duration = durationMatch ? parseInt(durationMatch[0]) : 0;
+
         return duration >= min && (max ? duration <= max : true);
       });
     }
 
     // Apply sorting
     if (sortBy === "date") {
-      result.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+      result.sort((a, b) => {
+        // Sort by the earliest date in availableDates
+        const aDate =
+          a.availableDates && a.availableDates.length > 0
+            ? new Date(a.availableDates[0].startDate)
+            : a.startDate
+            ? new Date(a.startDate)
+            : new Date();
+
+        const bDate =
+          b.availableDates && b.availableDates.length > 0
+            ? new Date(b.availableDates[0].startDate)
+            : b.startDate
+            ? new Date(b.startDate)
+            : new Date();
+
+        return aDate - bDate;
+      });
     } else if (sortBy === "price-low") {
-      result.sort((a, b) => parseInt(a.price) - parseInt(b.price));
+      result.sort((a, b) => getLowestPrice(a) - getLowestPrice(b));
     } else if (sortBy === "price-high") {
-      result.sort((a, b) => parseInt(b.price) - parseInt(a.price));
+      result.sort((a, b) => getLowestPrice(b) - getLowestPrice(a));
     } else if (sortBy === "duration") {
-      result.sort((a, b) => parseInt(b.duration) - parseInt(a.duration));
+      result.sort((a, b) => {
+        // Extract numeric duration
+        const aDurationStr = a.duration.toString();
+        const aDurationMatch = aDurationStr.match(/(\d+)/);
+        const aDuration = aDurationMatch ? parseInt(aDurationMatch[0]) : 0;
+
+        const bDurationStr = b.duration.toString();
+        const bDurationMatch = bDurationStr.match(/(\d+)/);
+        const bDuration = bDurationMatch ? parseInt(bDurationMatch[0]) : 0;
+
+        return bDuration - aDuration;
+      });
     } else if (sortBy === "availability") {
-      result.sort(
-        (a, b) => b.groupSize - b.bookedSlots - (a.groupSize - a.bookedSlots)
-      );
+      result.sort((a, b) => {
+        const aAvailable =
+          a.availableDates && a.availableDates.length > 0
+            ? a.availableDates.reduce(
+                (total, date) => total + date.availableSpots,
+                0
+              )
+            : a.groupSize - (a.bookedSlots || 0);
+
+        const bAvailable =
+          b.availableDates && b.availableDates.length > 0
+            ? b.availableDates.reduce(
+                (total, date) => total + date.availableSpots,
+                0
+              )
+            : b.groupSize - (b.bookedSlots || 0);
+
+        return bAvailable - aAvailable;
+      });
     }
 
     setFilteredTours(result);
@@ -197,7 +264,15 @@ export default function ToursPage() {
 
   // Calculate available slots
   const getAvailableSlots = (tour) => {
-    return tour.groupSize - tour.bookedSlots;
+    if (tour.availableDates && tour.availableDates.length > 0) {
+      // Sum available spots across all date options
+      return tour.availableDates.reduce(
+        (total, date) => total + date.availableSpots,
+        0
+      );
+    }
+    // Fallback to legacy format
+    return tour.groupSize - (tour.bookedSlots || 0);
   };
 
   // Pagination controls
@@ -288,9 +363,7 @@ export default function ToursPage() {
             }}></div>
 
           <div className="container mx-auto px-4 relative z-20 text-center">
-            <h1
-              className="text-5xl md:text-6xl font-extrabold text-white mb-6"
-              >
+            <h1 className="text-5xl md:text-6xl font-extrabold text-white mb-6">
               Discover Our Adventures
             </h1>
             <p className="text-xl text-white/90 max-w-2xl mx-auto mb-8">
@@ -516,7 +589,7 @@ export default function ToursPage() {
                         <div className="flex flex-wrap gap-2 mb-4">
                           <div className="flex items-center bg-white/10 rounded-full px-3 py-1 text-xs text-white/90">
                             <Calendar className="w-3 h-3 mr-1 flex-shrink-0" />
-                            {tour.duration} days
+                            {tour.duration}
                           </div>
                           <div className="flex items-center bg-white/10 rounded-full px-3 py-1 text-xs text-white/90">
                             <Users className="w-3 h-3 mr-1 flex-shrink-0" />
@@ -529,10 +602,15 @@ export default function ToursPage() {
 
                         <div className="mt-auto flex justify-between items-center">
                           <div className="text-xs text-white/70">
-                            {formatDate(tour.startDate)}
+                            {tour.availableDates &&
+                            tour.availableDates.length > 0
+                              ? formatDate(tour.availableDates[0].startDate)
+                              : tour.startDate
+                              ? formatDate(tour.startDate)
+                              : "Contact for dates"}
                           </div>
                           <div className="text-xl font-bold text-white">
-                            ₹{parseInt(tour.price).toLocaleString()}
+                            ₹{getLowestPrice(tour).toLocaleString()}
                           </div>
                         </div>
                       </div>
@@ -563,7 +641,7 @@ export default function ToursPage() {
                             {tour.title}
                           </h3>
                           <div className="text-xl font-bold text-white">
-                            ₹{parseInt(tour.price).toLocaleString()}
+                            ₹{getLowestPrice(tour).toLocaleString()}
                           </div>
                         </div>
 
@@ -579,7 +657,7 @@ export default function ToursPage() {
                         <div className="flex flex-wrap gap-3 mb-4">
                           <div className="flex items-center bg-white/10 rounded-full px-3 py-1 text-sm text-white/90">
                             <Calendar className="w-4 h-4 mr-1 flex-shrink-0" />
-                            {tour.duration} days
+                            {tour.duration}
                           </div>
                           <div className="flex items-center bg-white/10 rounded-full px-3 py-1 text-sm text-white/90">
                             <Users className="w-4 h-4 mr-1 flex-shrink-0" />
@@ -589,8 +667,18 @@ export default function ToursPage() {
                             {tour.category}
                           </div>
                           <div className="flex items-center bg-white/10 rounded-full px-3 py-1 text-sm text-white/90">
-                            {formatDate(tour.startDate)} -{" "}
-                            {formatDate(tour.endDate)}
+                            {tour.availableDates &&
+                            tour.availableDates.length > 0
+                              ? `${formatDate(
+                                  tour.availableDates[0].startDate
+                                )} - ${formatDate(
+                                  tour.availableDates[0].endDate
+                                )}`
+                              : tour.startDate && tour.endDate
+                              ? `${formatDate(tour.startDate)} - ${formatDate(
+                                  tour.endDate
+                                )}`
+                              : "Contact for dates"}
                           </div>
                         </div>
 

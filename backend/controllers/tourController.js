@@ -232,39 +232,153 @@ export const getTours = async (req, res) => {
 
 export const createTour = async (req, res) => {
   try {
+    console.log("📝 Creating new tour...");
+    console.log("📦 Request body:", JSON.stringify(req.body, null, 2));
+    console.log("📸 Files received:", req.files ? req.files.length : 0);
+
     const {
+      id,
       title,
       description,
       category,
-      price,
       duration,
-      groupSize,
       location,
+      groupSize,
       itinerary,
-      startDate,
-      endDate,
+      inclusions,
+      exclusions,
+      availableDates,
+      pricingPackages,
     } = req.body;
+
+    // Log parsed fields
+    console.log("🔍 Parsed fields:", {
+      id,
+      title,
+      description,
+      category,
+      duration,
+      location,
+      groupSize,
+      itinerary,
+      inclusions,
+      exclusions,
+      availableDates,
+      pricingPackages,
+    });
+
+    // Parse JSON strings if they are strings
+    const parsedItinerary =
+      typeof itinerary === "string" ? JSON.parse(itinerary) : itinerary;
+    const parsedInclusions =
+      typeof inclusions === "string" ? JSON.parse(inclusions) : inclusions;
+    const parsedExclusions =
+      typeof exclusions === "string" ? JSON.parse(exclusions) : exclusions;
+    const parsedAvailableDates =
+      typeof availableDates === "string"
+        ? JSON.parse(availableDates)
+        : availableDates;
+    const parsedPricingPackages =
+      typeof pricingPackages === "string"
+        ? JSON.parse(pricingPackages)
+        : pricingPackages;
+
+    // Log parsed arrays
+    console.log("📅 Parsed arrays:", {
+      itinerary: parsedItinerary,
+      inclusions: parsedInclusions,
+      exclusions: parsedExclusions,
+      availableDates: parsedAvailableDates,
+      pricingPackages: parsedPricingPackages,
+    });
+
+    // Validate required fields
+    if (
+      !id ||
+      !title ||
+      !description ||
+      !duration ||
+      !location ||
+      !groupSize ||
+      !parsedAvailableDates ||
+      parsedAvailableDates.length === 0 ||
+      !parsedPricingPackages ||
+      parsedPricingPackages.length === 0
+    ) {
+      console.log("❌ Missing required fields:", {
+        id: !id,
+        title: !title,
+        description: !description,
+        duration: !duration,
+        location: !location,
+        groupSize: !groupSize,
+        availableDates:
+          !parsedAvailableDates || parsedAvailableDates.length === 0,
+        pricingPackages:
+          !parsedPricingPackages || parsedPricingPackages.length === 0,
+      });
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    // Validate availableDates structure
+    const invalidDatePeriod = parsedAvailableDates.find(
+      (period) =>
+        !period.startDate ||
+        !period.endDate ||
+        !period.maxGroupSize ||
+        period.availableSpots === undefined
+    );
+
+    if (invalidDatePeriod) {
+      console.log("❌ Invalid date period structure:", invalidDatePeriod);
+      return res.status(400).json({ message: "Invalid date period structure" });
+    }
+
+    // Validate pricingPackages structure
+    const invalidPackage = parsedPricingPackages.find(
+      (pkg) => !pkg.name || !pkg.price
+    );
+
+    if (invalidPackage) {
+      console.log("❌ Invalid pricing package structure:", invalidPackage);
+      return res
+        .status(400)
+        .json({ message: "Invalid pricing package structure" });
+    }
 
     // Create tour first with empty images array
     const newTour = new Tour({
+      id: parseInt(id),
       title,
       description,
-      category,
-      price,
+      category: category || "Adventure",
       duration,
-      groupSize,
       location,
-      itinerary: itinerary || [],
-      startDate,
-      endDate,
+      groupSize: parseInt(groupSize),
+      itinerary: parsedItinerary || [],
+      inclusions: parsedInclusions || [],
+      exclusions: parsedExclusions || [],
+      availableDates: parsedAvailableDates.map((period) => ({
+        ...period,
+        maxGroupSize: parseInt(period.maxGroupSize),
+        availableSpots: parseInt(period.availableSpots),
+      })),
+      pricingPackages: parsedPricingPackages.map((pkg) => ({
+        ...pkg,
+        price: parseFloat(pkg.price),
+      })),
       images: [],
     });
 
+    console.log("🎯 Tour object created:", JSON.stringify(newTour, null, 2));
+
     // Save tour to get a valid ID
     await newTour.save();
+    console.log("💾 Tour saved with ID:", newTour._id);
 
     // Upload images if available
     if (req.files && req.files.length > 0) {
+      console.log("🖼️ Processing image uploads...");
       // Upload each image and collect URLs
       const uploadPromises = req.files.map((file, index) =>
         uploadToCloudinary(file, newTour._id, index)
@@ -272,6 +386,7 @@ export const createTour = async (req, res) => {
 
       const uploadedUrls = await Promise.all(uploadPromises);
       const validUrls = uploadedUrls.filter((url) => url !== null);
+      console.log("✅ Images uploaded:", validUrls);
 
       // Update tour with image URLs - use findByIdAndUpdate for reliability
       const updatedTour = await Tour.findByIdAndUpdate(
@@ -279,14 +394,16 @@ export const createTour = async (req, res) => {
         { $set: { images: validUrls } },
         { new: true }
       );
+      console.log("💾 Tour updated with images");
 
       return res.status(201).json(updatedTour);
     }
 
+    console.log("✅ Tour creation completed successfully");
     // Return the created tour if no images
     res.status(201).json(newTour);
   } catch (error) {
-    console.error("Error creating tour:", error);
+    console.error("❌ Tour creation error:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -304,7 +421,13 @@ export const getTourById = async (req, res) => {
       .select("userName rating comment createdAt") // Only include necessary fields
       .lean();
 
-    res.json({ ...tour, reviews });
+    // Include availableDates and pricingPackages in the response
+    res.json({
+      ...tour.toObject(),
+      reviews,
+      availableDates: tour.availableDates || [],
+      pricingPackages: tour.pricingPackages || [],
+    });
   } catch (error) {
     console.error("Error fetching tour:", error);
     res.status(500).json({ message: "Server error" });
@@ -315,7 +438,7 @@ export const getTourById = async (req, res) => {
 export const updateTour = async (req, res) => {
   try {
     const { id } = req.params;
-
+    console.log("update called");
     // Check if the tour exists
     const existingTour = await Tour.findById(id);
     if (!existingTour) {
@@ -332,23 +455,26 @@ export const updateTour = async (req, res) => {
         return defaultValue;
       }
     };
-
+    console.log(req.body.inclusions);
     // Prepare update data
     const updateData = {
+      id: req.body.id || existingTour.id,
       title: req.body.title || existingTour.title,
       description: req.body.description || existingTour.description,
       category: req.body.category || existingTour.category,
-      price: req.body.price || existingTour.price,
       duration: req.body.duration || existingTour.duration,
-      groupSize: req.body.groupSize || existingTour.groupSize,
       location: req.body.location || existingTour.location,
       itinerary: parseJSON(req.body.itinerary, existingTour.itinerary),
       inclusions: parseJSON(req.body.inclusions, existingTour.inclusions),
       exclusions: parseJSON(req.body.exclusions, existingTour.exclusions),
-      priceOptions: parseJSON(req.body.priceOptions, existingTour.priceOptions),
-      startDate: req.body.startDate || existingTour.startDate,
-      endDate: req.body.endDate || existingTour.endDate,
-      bookedSlots: req.body.bookedSlots || existingTour.bookedSlots,
+      availableDates: parseJSON(
+        req.body.availableDates,
+        existingTour.availableDates
+      ),
+      pricingPackages: parseJSON(
+        req.body.pricingPackages,
+        existingTour.pricingPackages
+      ),
       images: existingTour.images || [],
     };
 
@@ -490,13 +616,13 @@ export const deleteTourBooking = async (req, res) => {
   }
 };
 
-// Tour booking functions
+// Verify tour booking
 export const verifyTourBooking = async (req, res) => {
   try {
-    const { tourId, groupSize, bookingDate } = req.body;
+    const { tourId, groupSize, selectedDate } = req.body;
 
     // Validate required fields
-    if (!tourId || !groupSize || !bookingDate) {
+    if (!tourId || !groupSize || !selectedDate) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
@@ -506,32 +632,30 @@ export const verifyTourBooking = async (req, res) => {
       return res.status(404).json({ message: "Tour not found" });
     }
 
-    // Check availability for the booking date
-    const overlappingBookings = await TourBooking.find({
-      tour: tourId,
-      bookingDate: new Date(bookingDate),
-      status: "CONFIRMED",
-    });
-
-    // Calculate total booked group size
-    const totalBooked = overlappingBookings.reduce(
-      (sum, booking) => sum + booking.groupSize,
-      0
+    // Find the selected date period
+    const datePeriod = tour.availableDates.find(
+      (date) =>
+        date.startDate.getTime() ===
+          new Date(selectedDate.startDate).getTime() &&
+        date.endDate.getTime() === new Date(selectedDate.endDate).getTime()
     );
 
-    // Check if requested group size is available
-    if (groupSize > tour.groupSize - totalBooked) {
+    if (!datePeriod) {
+      return res
+        .status(400)
+        .json({ message: "Selected date period not found" });
+    }
+
+    // Check availability
+    if (groupSize > datePeriod.availableSpots) {
       return res.status(400).json({
-        message: `Only ${
-          tour.groupSize - totalBooked
-        } spots available for this tour`,
+        message: `Only ${datePeriod.availableSpots} spots available for this date`,
       });
     }
 
     res.status(200).json({
       message: "Tour booking details are valid",
-      availableSlots: tour.groupSize - totalBooked,
-      totalPrice: tour.price * groupSize,
+      availableSpots: datePeriod.availableSpots,
     });
   } catch (error) {
     console.error("Error verifying tour booking:", error);
@@ -746,11 +870,13 @@ const validateRazorpayConfig = () => {
   return requiredConfig;
 };
 
+// Create tour booking
 export const createTourBooking = async (req, res) => {
   const {
     tourId,
     groupSize,
-    bookingDate,
+    selectedDate,
+    selectedPackage,
     guestName,
     email,
     phone,
@@ -765,7 +891,8 @@ export const createTourBooking = async (req, res) => {
     if (
       !tourId ||
       !groupSize ||
-      !bookingDate ||
+      !selectedDate ||
+      !selectedPackage ||
       !guestName ||
       !email ||
       !phone
@@ -779,27 +906,31 @@ export const createTourBooking = async (req, res) => {
       return res.status(404).json({ message: "Tour not found" });
     }
 
-    const overlappingBookings = await TourBooking.find({
-      tour: tourId,
-      bookingDate: new Date(bookingDate),
-      status: "CONFIRMED",
-    });
-
-    const totalBooked = overlappingBookings.reduce(
-      (sum, booking) => sum + booking.groupSize,
-      0
+    // Find the selected date period
+    const datePeriodIndex = tour.availableDates.findIndex(
+      (date) =>
+        date.startDate.getTime() ===
+          new Date(selectedDate.startDate).getTime() &&
+        date.endDate.getTime() === new Date(selectedDate.endDate).getTime()
     );
 
-    if (groupSize > tour.groupSize - totalBooked) {
+    if (datePeriodIndex === -1) {
+      return res
+        .status(400)
+        .json({ message: "Selected date period not found" });
+    }
+
+    const datePeriod = tour.availableDates[datePeriodIndex];
+
+    // Check availability
+    if (groupSize > datePeriod.availableSpots) {
       return res.status(400).json({
-        message: `Only ${
-          tour.groupSize - totalBooked
-        } spots available for this tour`,
+        message: `Only ${datePeriod.availableSpots} spots available for this date`,
       });
     }
 
     // Validate total amount
-    const calculatedTotal = tour.price * groupSize;
+    const calculatedTotal = selectedPackage.price * groupSize;
     if (Math.abs(calculatedTotal - totalAmount) > 0.01) {
       return res.status(400).json({ message: "Total amount mismatch" });
     }
@@ -807,8 +938,10 @@ export const createTourBooking = async (req, res) => {
     // Create the booking
     const booking = new TourBooking({
       tour: tourId,
+      selectedDate,
+      selectedPackage,
       groupSize,
-      bookingDate: new Date(bookingDate),
+      bookingDate: new Date(),
       guestName,
       email,
       phone,
@@ -824,6 +957,10 @@ export const createTourBooking = async (req, res) => {
       booking.paymentDate = new Date();
     }
 
+    // Update available spots in the tour's date period
+    tour.availableDates[datePeriodIndex].availableSpots -= groupSize;
+    await tour.save();
+
     // Save the booking
     const savedBooking = await booking.save();
 
@@ -831,7 +968,7 @@ export const createTourBooking = async (req, res) => {
       message: "Tour booking created successfully. Please proceed to payment.",
       booking: {
         ...savedBooking.toObject(),
-        id: savedBooking._id.toString(), // Explicitly map _id to id
+        id: savedBooking._id.toString(),
       },
     });
   } catch (error) {
@@ -856,9 +993,6 @@ export const confirmTourBooking = async (req, res) => {
       return res.status(404).json({ message: "Booking not found" });
     }
 
-    // Allow updates if booking is in any state
-    // This is less restrictive than before but gives admins more control
-
     // Find the corresponding tour
     const tour = await Tour.findById(booking.tour);
     if (!tour) {
@@ -870,25 +1004,42 @@ export const confirmTourBooking = async (req, res) => {
       tour.bookedSlots = 0;
     }
 
-    // Only update bookedSlots if status is changing to CONFIRMED
+    // Find the date period that matches the booking's selected date
+    const datePeriodIndex = tour.availableDates.findIndex(
+      (date) =>
+        date.startDate.getTime() ===
+          new Date(booking.selectedDate.startDate).getTime() &&
+        date.endDate.getTime() ===
+          new Date(booking.selectedDate.endDate).getTime()
+    );
+
+    if (datePeriodIndex === -1) {
+      return res.status(400).json({
+        message: "Selected date period not found in tour",
+      });
+    }
+
+    const datePeriod = tour.availableDates[datePeriodIndex];
+
+    // Only update bookedSlots and availableSpots if status is changing to CONFIRMED
     if (status === "CONFIRMED" && booking.status !== "CONFIRMED") {
       // Check if there are enough available slots
-      if (tour.bookedSlots + booking.groupSize > tour.groupSize) {
+      if (datePeriod.availableSpots < booking.groupSize) {
         return res.status(400).json({
-          message: `Not enough available slots for this booking. Only ${
-            tour.groupSize - tour.bookedSlots
-          } slots available.`,
+          message: `Not enough available spots for this booking. Only ${datePeriod.availableSpots} spots available for this date period.`,
         });
       }
 
-      // Update bookedSlots in the tour
+      // Update bookedSlots in the tour and availableSpots in date period
       tour.bookedSlots += booking.groupSize;
+      tour.availableDates[datePeriodIndex].availableSpots -= booking.groupSize;
       await tour.save();
     }
 
     // If changing from CONFIRMED to another status, free up slots
     if (booking.status === "CONFIRMED" && status && status !== "CONFIRMED") {
       tour.bookedSlots = Math.max(0, tour.bookedSlots - booking.groupSize);
+      tour.availableDates[datePeriodIndex].availableSpots += booking.groupSize;
       await tour.save();
     }
 
@@ -1035,6 +1186,9 @@ export const getUserTourBooking = async (req, res) => {
         select:
           "title location images startDate endDate duration price itinerary",
       })
+      .select(
+        "_id status bookingDate guestName email phone specialRequests groupSize totalPrice paymentReference paymentStatus selectedDate selectedPackage"
+      )
       .sort({ bookingDate: -1 })
       .lean(); // Use lean() to remove Mongoose metadata
 
@@ -1074,6 +1228,10 @@ export const getUserTourBooking = async (req, res) => {
         totalAmount: booking.totalPrice,
         paymentReference: booking.paymentReference,
         paymentStatus: booking.paymentStatus,
+
+        // Add the selected date and package information directly
+        selectedDate: booking.selectedDate || null,
+        selectedPackage: booking.selectedPackage || null,
 
         // Tour details
         tourId: booking.tour?._id || null,
@@ -1215,74 +1373,117 @@ const formatDateDDMMYYYY = (dateString) => {
 const generateTourBookingsExcel = (bookings) => {
   // Create a new Excel workbook and worksheet
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet("Tour Bookings");
+  const worksheetMain = workbook.addWorksheet("Tour Bookings");
 
-  // Define columns
-  worksheet.columns = [
+  // Define columns for main worksheet
+  worksheetMain.columns = [
     { header: "Booking ID", key: "id", width: 30 },
+    { header: "Tour ID", key: "tourId", width: 30 },
     { header: "Tour Name", key: "tourName", width: 25 },
     { header: "Guest Name", key: "guestName", width: 20 },
     { header: "Email", key: "email", width: 30 },
     { header: "Phone", key: "phone", width: 15 },
     { header: "Booking Date", key: "bookingDate", width: 15 },
-    { header: "Tour Start Date", key: "tourStartDate", width: 15 },
-    { header: "Tour End Date", key: "tourEndDate", width: 15 },
+    { header: "Start Date", key: "startDate", width: 15 },
+    { header: "End Date", key: "endDate", width: 15 },
+    { header: "Package Name", key: "packageName", width: 20 },
+    { header: "Price Per Person", key: "pricePerPerson", width: 15 },
     { header: "Group Size", key: "groupSize", width: 10 },
     { header: "Total Amount", key: "totalAmount", width: 15 },
     { header: "Status", key: "status", width: 15 },
     { header: "Payment Status", key: "paymentStatus", width: 15 },
+    { header: "Payment Reference", key: "paymentReference", width: 30 },
+    { header: "Payment Date", key: "paymentDate", width: 15 },
     { header: "Special Requests", key: "specialRequests", width: 30 },
     { header: "Created At", key: "createdAt", width: 15 },
+    { header: "Updated At", key: "updatedAt", width: 15 },
   ];
 
   // Format header row
-  worksheet.getRow(1).font = { bold: true };
-  worksheet.getRow(1).fill = {
+  worksheetMain.getRow(1).font = { bold: true };
+  worksheetMain.getRow(1).fill = {
     type: "pattern",
     pattern: "solid",
     fgColor: { argb: "FFE0E0E0" },
   };
 
-  // Add data to worksheet
-  bookings.forEach((booking) => {
-    // Format dates
-    const bookingDate = new Date(booking.bookingDate);
-    const createdAtDate = new Date(booking.createdAt);
+  // Create details worksheet for special requests and other extended information
+  const worksheetDetails = workbook.addWorksheet("Booking Details");
+  worksheetDetails.columns = [
+    { header: "Booking ID", key: "id", width: 30 },
+    { header: "Special Requests", key: "specialRequests", width: 50 },
+    { header: "Additional Notes", key: "notes", width: 50 },
+  ];
 
+  // Format header row for details worksheet
+  worksheetDetails.getRow(1).font = { bold: true };
+  worksheetDetails.getRow(1).fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FFE0E0E0" },
+  };
+
+  // Add data to worksheets
+  bookings.forEach((booking) => {
     // Get tour data
     const tourTitle = booking.tour ? booking.tour.title : "Unknown Tour";
-    const tourStartDate =
-      booking.tour && booking.tour.startDate
-        ? new Date(booking.tour.startDate)
-        : null;
-    const tourEndDate =
-      booking.tour && booking.tour.endDate
-        ? new Date(booking.tour.endDate)
-        : null;
+    const tourId = booking.tour ? booking.tour._id.toString() : "N/A";
 
-    // Add row
-    worksheet.addRow({
+    // Get selected date and package info
+    const startDate =
+      booking.selectedDate && booking.selectedDate.startDate
+        ? formatDateDDMMYYYY(booking.selectedDate.startDate)
+        : "N/A";
+
+    const endDate =
+      booking.selectedDate && booking.selectedDate.endDate
+        ? formatDateDDMMYYYY(booking.selectedDate.endDate)
+        : "N/A";
+
+    const packageName =
+      booking.selectedPackage && booking.selectedPackage.name
+        ? booking.selectedPackage.name
+        : "N/A";
+
+    const pricePerPerson =
+      booking.selectedPackage && booking.selectedPackage.price
+        ? `₹${booking.selectedPackage.price}`
+        : "N/A";
+
+    // Add row to main worksheet
+    worksheetMain.addRow({
       id: booking._id.toString(),
+      tourId: tourId,
       tourName: tourTitle,
       guestName: booking.guestName,
       email: booking.email,
       phone: booking.phone,
       bookingDate: formatDateDDMMYYYY(booking.bookingDate),
-      tourStartDate:
-        booking.tour && booking.tour.startDate
-          ? formatDateDDMMYYYY(booking.tour.startDate)
-          : "N/A",
-      tourEndDate:
-        booking.tour && booking.tour.endDate
-          ? formatDateDDMMYYYY(booking.tour.endDate)
-          : "N/A",
+      startDate: startDate,
+      endDate: endDate,
+      packageName: packageName,
+      pricePerPerson: pricePerPerson,
       groupSize: booking.groupSize,
-      totalAmount: booking.totalPrice,
+      totalAmount: `₹${booking.totalPrice}`,
       status: booking.status,
       paymentStatus: booking.paymentStatus,
+      paymentReference: booking.paymentReference || "N/A",
+      paymentDate: booking.paymentDate
+        ? formatDateDDMMYYYY(booking.paymentDate)
+        : "N/A",
       specialRequests: booking.specialRequests || "None",
       createdAt: formatDateDDMMYYYY(booking.createdAt),
+      updatedAt: formatDateDDMMYYYY(booking.updatedAt),
     });
+
+    // Add row to details worksheet for special requests and notes
+    if (booking.specialRequests) {
+      worksheetDetails.addRow({
+        id: booking._id.toString(),
+        specialRequests: booking.specialRequests,
+        notes: "", // Can add additional notes field if needed
+      });
+    }
   });
 
   return workbook;
@@ -1316,7 +1517,7 @@ export const exportAllTourBookings = async (req, res) => {
     const bookings = await TourBooking.find(filter)
       .populate({
         path: "tour",
-        select: "title location price startDate endDate duration",
+        select: "title location price _id",
       })
       .sort(sortParam)
       .lean();
@@ -1385,7 +1586,7 @@ export const exportTourBookingsToExcel = async (req, res) => {
     })
       .populate({
         path: "tour",
-        select: "title location price startDate endDate duration",
+        select: "title location price _id",
       })
       .sort({ bookingDate: 1 })
       .lean();
@@ -1461,64 +1662,159 @@ export const exportToursToExcel = async (req, res) => {
 
     // Create a new Excel workbook and worksheet
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Tour Packages");
 
-    // Define columns
-    worksheet.columns = [
-      { header: "Tour ID", key: "id", width: 30 },
-      { header: "Title", key: "title", width: 25 },
-      { header: "Description", key: "description", width: 40 },
+    // Create main worksheet for tour details
+    const worksheetMain = workbook.addWorksheet("Tour Details");
+
+    // Define columns for the main worksheet
+    worksheetMain.columns = [
+      { header: "Tour ID", key: "id", width: 10 },
+      { header: "MongoDB ID", key: "mongoId", width: 30 },
+      { header: "Title", key: "title", width: 30 },
+      { header: "Description", key: "description", width: 50 },
       { header: "Category", key: "category", width: 15 },
-      { header: "Price", key: "price", width: 15 },
       { header: "Duration", key: "duration", width: 15 },
-      { header: "Group Size", key: "groupSize", width: 15 },
+      { header: "Group Size", key: "groupSize", width: 12 },
       { header: "Location", key: "location", width: 20 },
-      { header: "Start Date", key: "startDate", width: 15 },
-      { header: "End Date", key: "endDate", width: 15 },
+      { header: "Average Rating", key: "averageRating", width: 15 },
+      { header: "Review Count", key: "reviewCount", width: 15 },
+      { header: "Images", key: "images", width: 70 },
+      { header: "Inclusions", key: "inclusions", width: 50 },
+      { header: "Exclusions", key: "exclusions", width: 50 },
       { header: "Created At", key: "createdAt", width: 15 },
     ];
 
-    // Format header row
-    worksheet.getRow(1).font = { bold: true };
-    worksheet.getRow(1).fill = {
-      type: "pattern",
-      pattern: "solid",
-      fgColor: { argb: "FFE0E0E0" },
-    };
+    // Create worksheet for available dates
+    const worksheetDates = workbook.addWorksheet("Available Dates");
+    worksheetDates.columns = [
+      { header: "Tour ID", key: "id", width: 10 },
+      { header: "Tour Title", key: "title", width: 30 },
+      { header: "Start Date", key: "startDate", width: 15 },
+      { header: "End Date", key: "endDate", width: 15 },
+      { header: "Max Group Size", key: "maxGroupSize", width: 15 },
+      { header: "Available Spots", key: "availableSpots", width: 15 },
+    ];
 
-    // Add data to worksheet
+    // Create worksheet for pricing packages
+    const worksheetPricing = workbook.addWorksheet("Pricing Packages");
+    worksheetPricing.columns = [
+      { header: "Tour ID", key: "id", width: 10 },
+      { header: "Tour Title", key: "title", width: 30 },
+      { header: "Package Name", key: "name", width: 25 },
+      { header: "Description", key: "description", width: 40 },
+      { header: "Price (₹)", key: "price", width: 15 },
+      { header: "Inclusions", key: "inclusions", width: 50 },
+      { header: "Exclusions", key: "exclusions", width: 50 },
+    ];
+
+    // Create worksheet for itinerary details
+    const worksheetItinerary = workbook.addWorksheet("Itinerary");
+    worksheetItinerary.columns = [
+      { header: "Tour ID", key: "id", width: 10 },
+      { header: "Tour Title", key: "title", width: 30 },
+      { header: "Day", key: "day", width: 5 },
+      { header: "Title", key: "dayTitle", width: 25 },
+      { header: "Description", key: "description", width: 40 },
+      { header: "Activities", key: "activities", width: 40 },
+      { header: "Accommodation", key: "accommodation", width: 25 },
+    ];
+
+    // Format header rows
+    [
+      worksheetMain,
+      worksheetDates,
+      worksheetPricing,
+      worksheetItinerary,
+    ].forEach((sheet) => {
+      sheet.getRow(1).font = { bold: true };
+      sheet.getRow(1).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFE0E0E0" },
+      };
+    });
+
+    // Add data to worksheets
     tours.forEach((tour) => {
-      // Format dates
-      const startDate = tour.startDate ? new Date(tour.startDate) : null;
-      const endDate = tour.endDate ? new Date(tour.endDate) : null;
-
-      // Handle createdAt date more safely
+      // Format createdAt date
       let createdAtFormatted = "N/A";
-      try {
-        if (tour.createdAt) {
-          const createdAtDate = new Date(tour.createdAt);
-          if (!isNaN(createdAtDate.getTime())) {
-            createdAtFormatted = createdAtDate.toLocaleDateString();
-          }
-        }
-      } catch (e) {
-        console.error("Error formatting createdAt date:", e);
+      if (tour.createdAt) {
+        createdAtFormatted = formatDateDDMMYYYY(tour.createdAt);
       }
 
-      // Add row
-      worksheet.addRow({
-        id: tour._id.toString(),
+      // Add main tour details
+      worksheetMain.addRow({
+        id: tour.id,
+        mongoId: tour._id.toString(),
         title: tour.title,
         description: tour.description,
         category: tour.category,
-        price: tour.price,
         duration: tour.duration,
         groupSize: tour.groupSize,
         location: tour.location,
-        startDate: tour.startDate ? formatDateDDMMYYYY(tour.startDate) : "N/A",
-        endDate: tour.endDate ? formatDateDDMMYYYY(tour.endDate) : "N/A",
-        createdAt: tour.createdAt ? formatDateDDMMYYYY(tour.createdAt) : "N/A",
+        averageRating: tour.averageRating || 0,
+        reviewCount: tour.reviewCount || 0,
+        images: tour.images ? tour.images.join("\n") : "N/A",
+        inclusions: tour.inclusions ? tour.inclusions.join("\n") : "N/A",
+        exclusions: tour.exclusions ? tour.exclusions.join("\n") : "N/A",
+        createdAt: createdAtFormatted,
       });
+
+      // Add available dates
+      if (
+        Array.isArray(tour.availableDates) &&
+        tour.availableDates.length > 0
+      ) {
+        tour.availableDates.forEach((date) => {
+          worksheetDates.addRow({
+            id: tour.id,
+            title: tour.title,
+            startDate: formatDateDDMMYYYY(date.startDate),
+            endDate: formatDateDDMMYYYY(date.endDate),
+            maxGroupSize: date.maxGroupSize,
+            availableSpots: date.availableSpots,
+          });
+        });
+      }
+
+      // Add pricing packages
+      if (
+        Array.isArray(tour.pricingPackages) &&
+        tour.pricingPackages.length > 0
+      ) {
+        tour.pricingPackages.forEach((pkg) => {
+          worksheetPricing.addRow({
+            id: tour.id,
+            title: tour.title,
+            name: pkg.name,
+            description: pkg.description || "N/A",
+            price: pkg.price,
+            inclusions:
+              pkg.inclusions && pkg.inclusions.length > 0
+                ? pkg.inclusions.join("\n")
+                : "N/A",
+            exclusions:
+              pkg.exclusions && pkg.exclusions.length > 0
+                ? pkg.exclusions.join("\n")
+                : "N/A",
+          });
+        });
+      }
+
+      // Add itinerary details
+      if (Array.isArray(tour.itinerary) && tour.itinerary.length > 0) {
+        tour.itinerary.forEach((day) => {
+          worksheetItinerary.addRow({
+            id: tour.id,
+            title: tour.title,
+            day: day.day,
+            dayTitle: day.title,
+            description: day.description,
+            activities: day.activities,
+            accommodation: day.accommodation,
+          });
+        });
+      }
     });
 
     // Create a buffer to store the workbook

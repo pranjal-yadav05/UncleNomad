@@ -40,12 +40,16 @@ export default function AboutSection() {
       id="about"
       className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white py-16">
       <div className="container mx-auto px-6">
-        <h2 className="text-4xl md:text-5xl font-extrabold mb-12 text-center" style={{fontFamily: "Josefin Sans"}}>About Us</h2>
+        <h2
+          className="text-4xl md:text-5xl font-extrabold mb-12 text-center"
+          style={{ fontFamily: "Josefin Sans" }}>
+          About Us
+        </h2>
 
         {/* Scrollable Row for Small Screens, Grid for Large Screens */}
         <div
           ref={carouselRef}
-          className="flex lg:grid lg:grid-cols-4 gap-6 overflow-x-auto scroll-smooth snap-x scrollbar-hide pb-8 px-2">
+          className="flex md:grid md:grid-cols-2 lg:grid-cols-4 gap-6 overflow-x-auto md:overflow-x-visible scroll-smooth snap-x scrollbar-hide pb-8 px-2">
           {cardData.map((card, index) => (
             <Card key={index} {...card} />
           ))}
@@ -65,7 +69,7 @@ export default function AboutSection() {
 function Card({ title, description, imageSrc, icon: Icon }) {
   return (
     <div
-      className="bg-white/10 rounded-xl shadow-lg transition-transform duration-300 hover:scale-110 hover:z-10 flex flex-col flex-shrink-0 w-[300px] h-[380px] snap-start"
+      className="bg-white/10 rounded-xl shadow-lg transition-transform duration-300 hover:scale-110 hover:z-10 w-[300px] md:w-full md:max-w-[300px] h-[380px] snap-start flex-shrink-0 md:flex-shrink mx-auto"
       style={{
         boxShadow: "0 4px 20px rgba(0, 0, 0, 0.2)",
       }}>

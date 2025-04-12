@@ -101,7 +101,6 @@ const Footer = () => {
                   Phone
                 </h4>
                 <p className="text-gray-300">
-                  Krunal{" "}
                   <a
                     href="tel:+917984691219"
                     className="text-blue-400 hover:underline">
@@ -109,7 +108,6 @@ const Footer = () => {
                   </a>
                 </p>
                 <p className="text-gray-300">
-                  Saurabh{" "}
                   <a
                     href="tel:+919760777730"
                     className="text-blue-400 hover:underline">

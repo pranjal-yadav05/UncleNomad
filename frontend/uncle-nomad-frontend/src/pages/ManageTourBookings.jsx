@@ -792,6 +792,8 @@ export default function ManageTourBookings() {
                   onClick={() => handleSortChange("bookingDate")}>
                   Booking Date {getSortIndicator("bookingDate")}
                 </TableHead>
+                <TableHead>Tour Dates</TableHead>
+                <TableHead>Package</TableHead>
                 <TableHead
                   className="cursor-pointer"
                   onClick={() => handleSortChange("groupSize")}>
@@ -830,6 +832,21 @@ export default function ManageTourBookings() {
                     <TableCell className="py-4">{tourName}</TableCell>
                     <TableCell className="py-4">
                       {formatDate(booking.bookingDate)}
+                    </TableCell>
+                    <TableCell className="py-4">
+                      {booking.selectedDate ? (
+                        <>
+                          {formatDate(booking.selectedDate.startDate)} -{" "}
+                          {formatDate(booking.selectedDate.endDate)}
+                        </>
+                      ) : (
+                        "N/A"
+                      )}
+                    </TableCell>
+                    <TableCell className="py-4">
+                      {booking.selectedPackage
+                        ? booking.selectedPackage.name
+                        : "N/A"}
                     </TableCell>
                     <TableCell className="py-4">{booking.groupSize}</TableCell>
                     <TableCell className="py-4">

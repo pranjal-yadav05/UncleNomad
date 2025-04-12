@@ -37,6 +37,11 @@ function TourBookingCard({
   const [showPayment, setShowPayment] = useState(false);
   const navigate = useNavigate();
 
+  // Debug the booking object structure to understand the data
+  console.log("Tour Booking Data:", booking);
+  console.log("Selected Date:", booking.selectedDate);
+  console.log("Selected Package:", booking.selectedPackage);
+
   // Check if booking is in the past
   const isPastBooking = new Date(booking.tourDate) < new Date();
   // Check if booking has already been rated
@@ -44,9 +49,26 @@ function TourBookingCard({
   // Check if user has already reviewed this tour
   const hasReviewed = hasReviewForTour(booking._id);
 
-  // Calculate tour duration
-  const formattedStartDate = formatDate(booking.tourDate);
-  const formattedEndDate = formatDate(booking.tourEndDate);
+  // Calculate tour duration with proper fallback for each property
+  const formattedStartDate =
+    booking.selectedDate &&
+    typeof booking.selectedDate === "object" &&
+    booking.selectedDate.startDate
+      ? formatDate(booking.selectedDate.startDate)
+      : booking.tourDate
+      ? formatDate(booking.tourDate)
+      : "N/A";
+
+  const formattedEndDate =
+    booking.selectedDate &&
+    typeof booking.selectedDate === "object" &&
+    booking.selectedDate.endDate
+      ? formatDate(booking.selectedDate.endDate)
+      : booking.tourEndDate
+      ? formatDate(booking.tourEndDate)
+      : formattedStartDate !== "N/A"
+      ? formattedStartDate // Show same date if only start date is available
+      : "N/A";
 
   // Check if itinerary exists
   const hasItinerary = booking.itinerary && booking.itinerary.length > 0;
@@ -65,9 +87,23 @@ function TourBookingCard({
   // Add the downloadTicket function
   const downloadTicket = () => {
     try {
+      // Prepare data with proper date values and price
+      const ticketData = {
+        ...booking,
+        // Ensure proper tour dates
+        tourDate: booking.selectedDate?.startDate || booking.tourDate,
+        tourEndDate: booking.selectedDate?.endDate || booking.tourEndDate,
+        // Ensure price per person is available
+        pricePerPerson:
+          booking.selectedPackage?.price ||
+          (booking.totalAmount && booking.groupSize
+            ? Math.round(booking.totalAmount / booking.groupSize)
+            : null),
+      };
+
       // Generate the ticket HTML using the template
       const ticketHtml = generateTourTicketTemplate(
-        booking,
+        ticketData,
         formatDateDDMMYYYY
       );
 
@@ -119,12 +155,16 @@ function TourBookingCard({
 
           <div className="text-center mt-3">
             <h4 className="font-bold text-lg">
-              {booking.tourName || "Tour Name Not Available"}
+              {booking.tourName ||
+                (booking.tour && booking.tour.title) ||
+                "Tour Name Not Available"}
             </h4>
-            {booking.location && (
+            {(booking.location || (booking.tour && booking.tour.location)) && (
               <div className="flex items-center justify-center text-sm text-muted-foreground mt-1">
                 <MapPin className="h-3 w-3 mr-1" />
-                <span>{booking.location}</span>
+                <span>
+                  {booking.location || (booking.tour && booking.tour.location)}
+                </span>
               </div>
             )}
           </div>
@@ -230,7 +270,15 @@ function TourBookingCard({
                 <span>Duration</span>
               </div>
               <div className="font-medium">
-                {booking.duration || "N/A"} Days
+                {booking.duration ||
+                  (booking.tour && booking.tour.duration) ||
+                  (booking.selectedDate &&
+                    `${Math.ceil(
+                      (new Date(booking.selectedDate.endDate) -
+                        new Date(booking.selectedDate.startDate)) /
+                        (1000 * 60 * 60 * 24)
+                    )} days`) ||
+                  "N/A"}
               </div>
             </div>
 
@@ -239,16 +287,23 @@ function TourBookingCard({
                 <Users className="h-3 w-3 mr-1" />
                 <span>Participants</span>
               </div>
-              <div className="font-medium">{booking.participants || "N/A"}</div>
+              <div className="font-medium">
+                {booking.groupSize || booking.participants || "N/A"}
+              </div>
             </div>
 
             <div>
               <div className="flex items-center text-sm text-muted-foreground mb-1">
                 <Package className="h-3 w-3 mr-1" />
-                <span>Price Per Person</span>
+                <span>Package</span>
               </div>
               <div className="font-medium">
-                ₹{booking.pricePerPerson || "N/A"}
+                {booking.selectedPackage?.name || "Standard Package"}
+                {booking.selectedPackage?.price && (
+                  <span className="text-sm text-muted-foreground ml-1">
+                    (₹{booking.selectedPackage.price}/person)
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -424,16 +479,21 @@ function TourBookingCard({
           </div>
 
           {/* Actions */}
-          <div className="mt-3 flex flex-wrap gap-2">
-            {/* Download Ticket Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full sm:w-auto"
-              onClick={downloadTicket}>
-              <Download className="h-3 w-3 mr-1" />
-              Download Ticket
-            </Button>
+          <div className="mt-4 flex flex-wrap gap-2 justify-between">
+            {/* Primary Actions */}
+            <div className="flex flex-wrap gap-2">
+              {/* Download Ticket Button - only show if confirmed */}
+              {isConfirmed && (
+                <Button
+                  onClick={downloadTicket}
+                  size="sm"
+                  variant="outline"
+                  className="flex items-center">
+                  <Download className="h-4 w-4 mr-1" />
+                  Download Ticket
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>

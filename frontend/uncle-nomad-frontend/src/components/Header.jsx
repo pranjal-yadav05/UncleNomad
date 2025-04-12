@@ -13,6 +13,7 @@ import {
   User,
   LogIn,
   LogOut,
+  FileText,
 } from "lucide-react";
 import LoginModal from "../modals/LoginModal";
 
@@ -177,14 +178,20 @@ const Header = () => {
               onClick={(e) => {
                 e.preventDefault();
                 navigate("/", { state: { section: "footer" } });
-                const getInTouchButton =
-                  document.getElementById("get-in-touch");
-                if (getInTouchButton) {
-                  getInTouchButton.classList.add("highlight");
-                  setTimeout(() => {
-                    getInTouchButton.classList.remove("highlight");
-                  }, 2000); // Remove highlight after 2 seconds
-                }
+                setTimeout(() => {
+                  window.scrollTo({
+                    top: document.documentElement.scrollHeight,
+                    behavior: "smooth",
+                  });
+                  const getInTouchButton =
+                    document.getElementById("get-in-touch");
+                  if (getInTouchButton) {
+                    getInTouchButton.classList.add("highlight");
+                    setTimeout(() => {
+                      getInTouchButton.classList.remove("highlight");
+                    }, 2000);
+                  }
+                }, 100);
               }}>
               Contact Us
             </a>
@@ -285,7 +292,7 @@ const Header = () => {
                   navigate("/blog");
                   setIsMenuOpen(false);
                 }}>
-                <Mail className="h-6 w-6" />
+                <FileText className="h-6 w-6" />
                 <span>Blog</span>
               </a>
               <a
@@ -295,6 +302,12 @@ const Header = () => {
                   e.preventDefault();
                   navigate("/", { state: { section: "footer" } });
                   setIsMenuOpen(false);
+                  setTimeout(() => {
+                    window.scrollTo({
+                      top: document.documentElement.scrollHeight,
+                      behavior: "smooth",
+                    });
+                  }, 100);
                 }}>
                 <Mail className="h-6 w-6" />
                 <span>Contact Us</span>

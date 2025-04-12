@@ -121,10 +121,15 @@ const TourDetailsPage = () => {
     );
   }
 
-  // Get pricing information (handle optional priceOptions)
+  // Get pricing information from pricingPackages or fallback to priceOptions/price
   const getPricingInfo = () => {
+    // If pricingPackages exists and has values, use the lowest price
+    if (tour.pricingPackages && tour.pricingPackages.length > 0) {
+      const prices = tour.pricingPackages.map((pkg) => Number(pkg.price));
+      return Math.min(...prices);
+    }
     // If priceOptions exists and has values, use the lowest one
-    if (tour.priceOptions && Object.keys(tour.priceOptions).length > 0) {
+    else if (tour.priceOptions && Object.keys(tour.priceOptions).length > 0) {
       const prices = Object.values(tour.priceOptions).map((p) =>
         Number.parseInt(p)
       );
@@ -213,21 +218,25 @@ const TourDetailsPage = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10 -mt-16 relative z-20">
           <TourInfoCard
             icon={<Calendar className="w-10 h-10 text-blue-600 mr-4" />}
-            title="Tour Dates"
-            content={`${formatDate(tour.startDate)} - ${formatDate(
-              tour.endDate
-            )}`}
+            title="Available Dates"
+            content={
+              tour.availableDates && tour.availableDates.length > 0
+                ? `${tour.availableDates.length} date periods`
+                : tour.startDate && tour.endDate
+                ? `${formatDate(new Date(tour.startDate))} - ${formatDate(
+                    new Date(tour.endDate)
+                  )}`
+                : "Contact for dates"
+            }
           />
           <TourInfoCard
             icon={<Users className="w-10 h-10 text-blue-600 mr-4" />}
-            title="Available Spots"
-            content={`${
-              tour.groupSize - tour.bookedSlots || "Limited"
-            } remaining`}
+            title="Group Size"
+            content={`Max ${tour.groupSize} people`}
           />
           <TourInfoCard
             icon={<IndianRupee className="w-10 h-10 text-blue-600 mr-4" />}
-            title="Starting Price"
+            title="Starting From"
             content={`₹${getPricingInfo()}`}
           />
         </div>
@@ -287,28 +296,40 @@ const TourDetailsPage = () => {
                   {tour.description}
                 </p>
 
-                <div className="bg-blue-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
-                  <h3 className="text-xl font-semibold text-blue-700 mb-2">
-                    Highlights
-                  </h3>
-                  <ul className="list-disc list-inside space-y-2 text-gray-700">
-                    {tour.inclusions
-                      ?.slice(0, 5)
-                      .map((inclusion, index) => (
+                {tour.inclusions && tour.inclusions.length > 0 && (
+                  <div className="bg-blue-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+                    <h3 className="text-xl font-semibold text-blue-700 mb-2">
+                      Highlights
+                    </h3>
+                    <ul className="list-disc list-inside space-y-2 text-gray-700">
+                      {tour.inclusions.map((inclusion, index) => (
                         <li key={index}>{inclusion}</li>
-                      )) || (
-                      <>
-                        <li>
-                          Explore the breathtaking landscapes of {tour.location}
-                        </li>
-                        <li>Experience authentic local culture and cuisine</li>
-                        <li>Professional guides throughout your journey</li>
-                        <li>Comfortable accommodations in scenic locations</li>
-                        <li>Small group size ensures personalized attention</li>
-                      </>
-                    )}
-                  </ul>
-                </div>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {tour.exclusions && tour.exclusions.length > 0 && (
+                  <div className="bg-gray-50 border-l-4 border-gray-400 p-6 rounded-r-lg mt-6">
+                    <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                      Not Included
+                    </h3>
+                    <ul className="list-disc list-inside space-y-2 text-gray-700">
+                      {tour.exclusions.map((exclusion, index) => (
+                        <li key={index}>{exclusion}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {tour.additionalInfo && (
+                  <div className="bg-amber-50 border-l-4 border-amber-500 p-6 rounded-r-lg mt-6">
+                    <h3 className="text-xl font-semibold text-amber-700 mb-2">
+                      Additional Information
+                    </h3>
+                    <p className="text-gray-700">{tour.additionalInfo}</p>
+                  </div>
+                )}
 
                 <ImageGallery
                   images={tour.images}
@@ -404,114 +425,121 @@ const TourDetailsPage = () => {
 
           {/* Pricing Tab */}
           {activeTab === "pricing" && (
-            <div>
-              <h2 className="text-3xl font-bold text-gray-800 mb-6">
-                Tour Pricing Options
-              </h2>
-              <p className="text-gray-700 mb-8">
-                Choose the package that best suits your preferences and budget.
-              </p>
+            <div className="space-y-8">
+              <h3 className="text-2xl font-bold mb-4">Pricing Options</h3>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {tour.priceOptions &&
-                Object.entries(tour.priceOptions).length > 0 ? (
-                  Object.entries(tour.priceOptions).map(
+              {/* Pricing Packages Display */}
+              {tour.pricingPackages && tour.pricingPackages.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {tour.pricingPackages.map((pkg, index) => (
+                    <div
+                      key={index}
+                      className="bg-white border rounded-lg shadow-sm overflow-hidden">
+                      <div className="p-5 border-b bg-gray-50">
+                        <h4 className="text-lg font-semibold">{pkg.name}</h4>
+                        <p className="text-2xl font-bold text-blue-600 mt-2">
+                          ₹{pkg.price}
+                        </p>
+                      </div>
+                      <div className="p-5">
+                        {pkg.description && (
+                          <p className="text-gray-600 mb-4">
+                            {pkg.description}
+                          </p>
+                        )}
+                        {pkg.features && pkg.features.length > 0 && (
+                          <div className="mb-4">
+                            <h5 className="font-medium mb-2">Features:</h5>
+                            <ul className="list-disc pl-5 space-y-1">
+                              {pkg.features.map((feature, idx) => (
+                                <li key={idx} className="text-gray-700">
+                                  {feature}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : tour.priceOptions &&
+                Object.keys(tour.priceOptions).length > 0 ? (
+                // Legacy price options display
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {Object.entries(tour.priceOptions).map(
                     ([option, price], index) => (
                       <PricingCard
-                        key={option}
-                        title={option
-                          .replace(/([A-Z])/g, " $1")
-                          .replace(/_/g, " ")
-                          .trim()}
+                        key={index}
+                        title={option}
                         price={price}
-                        isPopular={index === 1}
+                        isPopular={index === 0}
                         features={[
-                          `${tour.duration} days guided tour`,
-                          "Accommodation included",
-                          "Transportation during tour",
-                          "Professional guide",
+                          "All inclusive package",
+                          "Meals and accommodations",
+                          "Local guide",
+                          "Transportation",
                         ]}
                         onSelect={handleBookNow}
                       />
                     )
-                  )
-                ) : (
-                  // If no price options, show a single pricing card with the base price
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <PricingCard
                     title="Standard Package"
                     price={tour.price || "Contact for price"}
                     isPopular={true}
                     features={[
-                      `${tour.duration} days guided tour`,
-                      "Accommodation included",
-                      "Transportation during tour",
-                      "Professional guide",
+                      "All inclusive package",
+                      "Meals and accommodations",
+                      "Local guide",
+                      "Transportation",
                     ]}
                     onSelect={handleBookNow}
                   />
-                )}
+                </div>
+              )}
+
+              <div className="mt-8 bg-gray-50 p-6 rounded-lg">
+                <h4 className="text-xl font-semibold mb-3">What's Included</h4>
+                <ul className="list-disc pl-5 grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {tour.inclusions && tour.inclusions.length > 0 ? (
+                    tour.inclusions.map((item, index) => (
+                      <li key={index} className="text-gray-700">
+                        {item}
+                      </li>
+                    ))
+                  ) : (
+                    <>
+                      <li className="text-gray-700">Accommodation</li>
+                      <li className="text-gray-700">Meals as per itinerary</li>
+                      <li className="text-gray-700">Transportation</li>
+                      <li className="text-gray-700">Guide services</li>
+                      <li className="text-gray-700">Entry fees</li>
+                      <li className="text-gray-700">Activities</li>
+                    </>
+                  )}
+                </ul>
               </div>
 
-              <div className="mt-12 bg-gray-50 p-6 rounded-lg">
-                <h3 className="text-xl font-semibold mb-4">What's Included</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
-                  {tour.inclusions?.map((item, index) => (
-                    <div key={index} className="flex items-start">
-                      <span className="text-green-500 mr-2">✓</span>
-                      <span>{item}</span>
-                    </div>
-                  )) || (
-                    <>
-                      <div className="flex items-start">
-                        <span className="text-green-500 mr-2">✓</span>
-                        <span>Professional, English-speaking guide</span>
-                      </div>
-                      <div className="flex items-start">
-                        <span className="text-green-500 mr-2">✓</span>
-                        <span>Accommodation as per selected package</span>
-                      </div>
-                      <div className="flex items-start">
-                        <span className="text-green-500 mr-2">✓</span>
-                        <span>Transportation during the tour</span>
-                      </div>
-                      <div className="flex items-start">
-                        <span className="text-green-500 mr-2">✓</span>
-                        <span>All entrance fees to attractions</span>
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                <h3 className="text-xl font-semibold mt-8 mb-4">
+              <div className="bg-gray-50 p-6 rounded-lg">
+                <h4 className="text-xl font-semibold mb-3">
                   What's Not Included
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
-                  {tour.exclusions?.map((item, index) => (
-                    <div key={index} className="flex items-start">
-                      <span className="text-red-500 mr-2">✕</span>
-                      <span>{item}</span>
-                    </div>
-                  )) || (
+                </h4>
+                <ul className="list-disc pl-5 grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {tour.exclusions && tour.exclusions.length > 0 ? (
+                    tour.exclusions.map((item, index) => (
+                      <li key={index} className="text-gray-700">
+                        {item}
+                      </li>
+                    ))
+                  ) : (
                     <>
-                      <div className="flex items-start">
-                        <span className="text-red-500 mr-2">✕</span>
-                        <span>International or domestic flights</span>
-                      </div>
-                      <div className="flex items-start">
-                        <span className="text-red-500 mr-2">✕</span>
-                        <span>Travel insurance</span>
-                      </div>
-                      <div className="flex items-start">
-                        <span className="text-red-500 mr-2">✕</span>
-                        <span>Personal expenses</span>
-                      </div>
-                      <div className="flex items-start">
-                        <span className="text-red-500 mr-2">✕</span>
-                        <span>Meals not specified in the itinerary</span>
-                      </div>
                     </>
                   )}
-                </div>
+                </ul>
               </div>
             </div>
           )}

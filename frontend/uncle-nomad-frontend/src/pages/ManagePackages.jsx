@@ -33,17 +33,15 @@ export default function ManagePackages() {
     title: "",
     description: "",
     category: "Adventure",
-    price: "",
     duration: "",
-    groupSize: "",
     location: "",
-    startDate: "",
-    endDate: "",
-    priceOptions: {},
     inclusions: [],
     exclusions: [],
     itinerary: [],
-    images: [], // Changed from image to images array to match PackageFormModal
+    availableDates: [],
+    pricingPackages: [],
+    images: [],
+    groupSize: "",
   });
 
   const [currentDay, setCurrentDay] = useState({
@@ -243,46 +241,106 @@ export default function ManagePackages() {
     setIsUploading(true);
 
     try {
+      // Log the package data before validation
+      console.log("📦 Package data before validation:", {
+        title: newPackage.title,
+        description: newPackage.description,
+        category: newPackage.category,
+        duration: newPackage.duration,
+        location: newPackage.location,
+        groupSize: newPackage.groupSize,
+        availableDates: newPackage.availableDates,
+        pricingPackages: newPackage.pricingPackages,
+      });
+
+      // Validate required fields
+      if (
+        !newPackage.title ||
+        !newPackage.description ||
+        !newPackage.duration ||
+        !newPackage.location ||
+        !newPackage.groupSize ||
+        !newPackage.availableDates ||
+        newPackage.availableDates.length === 0 ||
+        !newPackage.pricingPackages ||
+        newPackage.pricingPackages.length === 0
+      ) {
+        console.log("❌ Missing required fields:", {
+          title: !newPackage.title,
+          description: !newPackage.description,
+          duration: !newPackage.duration,
+          location: !newPackage.location,
+          groupSize: !newPackage.groupSize,
+          availableDates:
+            !newPackage.availableDates ||
+            newPackage.availableDates.length === 0,
+          pricingPackages:
+            !newPackage.pricingPackages ||
+            newPackage.pricingPackages.length === 0,
+        });
+        throw new Error("All fields are required");
+      }
+
       const formData = new FormData();
 
-      // Append text fields to FormData
-      formData.append("id", newPackage.id);
+      // Append basic fields
+      // Generate a numeric ID if not provided
+      if (!newPackage.id) {
+        formData.append("id", Math.floor(Math.random() * 10000).toString());
+      } else {
+        formData.append("id", newPackage.id.toString());
+      }
+
       formData.append("title", newPackage.title);
       formData.append("description", newPackage.description);
-      formData.append("category", newPackage.category);
-      formData.append("price", newPackage.price);
+      formData.append("category", newPackage.category || "Adventure");
       formData.append("duration", newPackage.duration);
-      formData.append("groupSize", newPackage.groupSize);
       formData.append("location", newPackage.location);
+      formData.append("groupSize", newPackage.groupSize);
+
+      // Process itinerary to remove problematic _id field
+      const processedItinerary = newPackage.itinerary.map((item) => {
+        // Create a new object without _id or remove invalid _id
+        const { _id, ...rest } = item;
+        return rest;
+      });
+
+      // Ensure inclusions and exclusions are always arrays
+      const inclusionsArray = Array.isArray(newPackage.inclusions)
+        ? newPackage.inclusions
+        : [];
+      const exclusionsArray = Array.isArray(newPackage.exclusions)
+        ? newPackage.exclusions
+        : [];
+
+      // Debug log for inclusions and exclusions
+      console.log("Inclusions before sending:", inclusionsArray);
+      console.log("Exclusions before sending:", exclusionsArray);
+
+      // Append arrays and objects
+      formData.append("inclusions", JSON.stringify(inclusionsArray));
+      formData.append("exclusions", JSON.stringify(exclusionsArray));
+      formData.append("itinerary", JSON.stringify(processedItinerary || []));
       formData.append(
-        "startDate",
-        newPackage.startDate ? new Date(newPackage.startDate).toISOString() : ""
+        "availableDates",
+        JSON.stringify(newPackage.availableDates || [])
       );
       formData.append(
-        "endDate",
-        newPackage.endDate ? new Date(newPackage.endDate).toISOString() : ""
+        "pricingPackages",
+        JSON.stringify(newPackage.pricingPackages || [])
       );
 
-      // Convert JSON fields to string before sending
-      formData.append(
-        "priceOptions",
-        JSON.stringify(newPackage.priceOptions || {})
-      );
-      formData.append(
-        "inclusions",
-        JSON.stringify(newPackage.inclusions || [])
-      );
-      formData.append(
-        "exclusions",
-        JSON.stringify(newPackage.exclusions || [])
-      );
-      formData.append("itinerary", JSON.stringify(newPackage.itinerary || []));
+      // Log the form data being sent
+      console.log("📤 FormData contents:");
+      for (let [key, value] of formData.entries()) {
+        console.log(`${key}:`, value);
+      }
 
-      // Append all images to FormData
+      // Append images
       if (newPackage.images && newPackage.images.length > 0) {
         newPackage.images.forEach((image) => {
           if (typeof image !== "string") {
-            formData.append("images", image); // Only append new File objects
+            formData.append("images", image);
           }
         });
       }
@@ -292,21 +350,26 @@ export default function ManagePackages() {
         : `${API_URL}/api/tours`;
       const method = editMode ? "PUT" : "POST";
       const token = localStorage.getItem("token");
+
+      console.log("🌐 Sending request to:", url);
+      console.log("🔑 Using method:", method);
+
       const response = await fetch(url, {
         method,
         headers: {
           "x-api-key": process.env.REACT_APP_API_KEY,
           Authorization: `Bearer ${token}`,
         },
-        body: formData, // ✅ Send as FormData, NOT JSON
+        body: formData,
       });
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.error("❌ Server error response:", errorData);
         throw new Error(errorData.message || "Failed to save package");
       }
 
-      fetchPackages();
+      await fetchPackages();
       resetForm();
     } catch (error) {
       console.error("❌ Package creation error:", error);
@@ -320,21 +383,19 @@ export default function ManagePackages() {
   const resetForm = () => {
     setIsModalOpen(false);
     setNewPackage({
-      id: "",
+      id: Math.floor(Math.random() * 9999) + 1, // Generate a random numeric ID between 1 and 10000
       title: "",
       description: "",
-      category: "",
-      price: "",
+      category: "Adventure",
       duration: "",
-      groupSize: "",
       location: "",
-      startDate: "",
-      endDate: "",
-      priceOptions: {},
       inclusions: [],
       exclusions: [],
       itinerary: [],
-      images: [], // Changed from image to images array
+      availableDates: [],
+      pricingPackages: [],
+      images: [],
+      groupSize: "",
     });
     setCurrentDay({
       day: "",
@@ -467,11 +528,6 @@ export default function ManagePackages() {
               </TableHead>
               <TableHead>Description</TableHead>
               <TableHead
-                className="cursor-pointer text-right"
-                onClick={() => handleSortChange("price")}>
-                Price {getSortIndicator("price")}
-              </TableHead>
-              <TableHead
                 className="cursor-pointer"
                 onClick={() => handleSortChange("duration")}>
                 Duration {getSortIndicator("duration")}
@@ -512,7 +568,6 @@ export default function ManagePackages() {
                 <TableCell className="max-w-[300px] truncate">
                   {pkg.description}
                 </TableCell>
-                <TableCell className="text-right">₹{pkg.price}</TableCell>
                 <TableCell>{pkg.duration}</TableCell>
                 <TableCell>{pkg.groupSize}</TableCell>
                 <TableCell>{pkg.location}</TableCell>
@@ -534,7 +589,7 @@ export default function ManagePackages() {
                         title: pkg.title,
                         description: pkg.description,
                         category: pkg.category,
-                        price: pkg.price.toString(),
+                        price: pkg.price ? pkg.price.toString() : "",
                         duration: pkg.duration,
                         groupSize: pkg.groupSize,
                         location: pkg.location,
@@ -548,6 +603,8 @@ export default function ManagePackages() {
                         inclusions: pkg.inclusions || [],
                         exclusions: pkg.exclusions || [],
                         itinerary: pkg.itinerary || [],
+                        availableDates: pkg.availableDates || [],
+                        pricingPackages: pkg.pricingPackages || [],
                         images: packageImages,
                       });
                       setEditMode(true);

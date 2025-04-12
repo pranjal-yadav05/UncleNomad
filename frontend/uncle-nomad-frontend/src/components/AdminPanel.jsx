@@ -53,7 +53,7 @@ const AdminPanel = () => {
     { path: "bookings", label: "Bookings" },
     { path: "tourbookings", label: "Tour Bookings" },
     { path: "rooms", label: "Rooms" },
-    { path: "packages", label: "Packages" },
+    { path: "packages", label: "Tours" },
     { path: "queries", label: "Queries" },
     { path: "media", label: "Media" },
     { path: "gallery", label: "Gallery" },

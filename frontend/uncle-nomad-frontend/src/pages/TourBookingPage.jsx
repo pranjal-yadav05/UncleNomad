@@ -9,15 +9,13 @@ import {
   ArrowLeftIcon,
   UserCircleIcon,
   CreditCardIcon,
+  CalendarIcon,
+  UserIcon,
+  MapPinIcon,
+  ClockIcon,
+  CubeIcon,
 } from "@heroicons/react/24/outline";
-import {
-  Loader2,
-  CheckCircle,
-  Calendar,
-  User,
-  MapPin,
-  Clock,
-} from "lucide-react";
+import { Loader2, CheckCircle } from "lucide-react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import DisclaimerDialog from "../modals/DisclaimerDialog";
@@ -27,6 +25,8 @@ import TourBookingConfirmationDialog from "../modals/TourBookingConfirmationDial
 import TourPaymentForm from "../components/TourPaymentForm";
 import AnimatedSection from "../components/AnimatedSection";
 import { formatDate } from "../utils/dateUtils";
+import TourDatePackageSelector from "../components/TourDatePackageSelector";
+import { toast } from "react-hot-toast";
 
 const TourBookingPage = () => {
   const location = useLocation();
@@ -48,6 +48,8 @@ const TourBookingPage = () => {
     groupSize: 1,
     specialRequests: "",
     totalAmount: 0,
+    selectedDate: null,
+    selectedPackage: null,
   });
 
   const [step, setStep] = useState(1);
@@ -344,13 +346,32 @@ const TourBookingPage = () => {
     const errors = {};
 
     // Check if group size is within limits
-    const availableSlots = selectedTour.groupSize - selectedTour.bookedSlots;
     if (!bookingDetails.groupSize || bookingDetails.groupSize < 1) {
       errors.groupSize = "Group size must be at least 1";
-    } else if (bookingDetails.groupSize > availableSlots) {
-      errors.groupSize = `Only ${availableSlots} slots available for this tour`;
+    } else {
+      // Check against the available spots based on selected date or tour availability
+      const maxAvailable = bookingDetails.selectedDate
+        ? bookingDetails.selectedDate.availableSpots
+        : selectedTour.groupSize - selectedTour.bookedSlots;
+
+      if (bookingDetails.groupSize > maxAvailable) {
+        errors.groupSize = `Only ${maxAvailable} spots available for this date period`;
+      }
     }
 
+    // Only validate other required fields, not date/package when moving between steps
+    // Will check date/package only when proceeding to payment
+    if (!bookingDetails.guestName) {
+      errors.guestName = "Guest name is required";
+    }
+    if (!validateEmail(bookingDetails.email)) {
+      errors.email = "Valid email is required";
+    }
+    if (!validatePhone(bookingDetails.phone)) {
+      errors.phone = "Valid phone number is required";
+    }
+
+    console.log("Validation errors in validateStep2:", errors);
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -358,25 +379,89 @@ const TourBookingPage = () => {
   // Handle step navigation
   const handleNextStep = () => {
     if (step === 1 && validateStep1()) {
+      // When moving to step 2, ensure we preserve date/package selection
+      console.log("Moving to step 2, current selection:", {
+        date: bookingDetails.selectedDate,
+        package: bookingDetails.selectedPackage,
+      });
       setStep(2);
     } else if (step === 2 && validateStep2()) {
+      // When moving to step 3, ensure we preserve date/package selection
+      console.log("Moving to step 3, current selection:", {
+        date: bookingDetails.selectedDate,
+        package: bookingDetails.selectedPackage,
+      });
       setStep(3);
     }
   };
 
   const handlePreviousStep = () => {
+    // Clear validation errors when navigating back
+    setValidationErrors({});
+
     if (step === 2) {
-      setStep(1);
+      setStep(1); // Go back to date/package selection
     } else if (step === 3) {
-      setStep(2);
+      setStep(2); // Go back to guest details
     }
+  };
+
+  // Handling edit button clicks - bypass validation when editing previous steps
+  const handleEditStep = (targetStep) => {
+    // Clear validation errors before editing a previous step
+    setValidationErrors({});
+    setStep(targetStep);
   };
 
   // Handle disclaimer dialog
   const handleDisclaimer = () => {
-    if (!validateStep2()) {
-      return; // Stop here if validation fails
+    // Clear previous errors
+    setValidationErrors({});
+
+    // Manually check for date and package selections
+    const errors = {};
+
+    if (!bookingDetails.selectedDate) {
+      errors.selectedDate = "Please select a tour date";
     }
+
+    if (!bookingDetails.selectedPackage) {
+      errors.selectedPackage = "Please select a package";
+    }
+
+    // Check group size
+    if (!bookingDetails.groupSize || bookingDetails.groupSize < 1) {
+      errors.groupSize = "Group size must be at least 1";
+    } else {
+      // Check against the available spots based on selected date or tour availability
+      const maxAvailable = bookingDetails.selectedDate
+        ? bookingDetails.selectedDate.availableSpots
+        : selectedTour.groupSize - selectedTour.bookedSlots;
+
+      if (bookingDetails.groupSize > maxAvailable) {
+        errors.groupSize = `Only ${maxAvailable} spots available for this date period`;
+      }
+    }
+
+    // If there are errors, show them and return
+    if (Object.keys(errors).length > 0) {
+      console.log("Validation errors in handleDisclaimer:", errors);
+      setValidationErrors(errors);
+
+      if (errors.selectedDate || errors.selectedPackage) {
+        // If date/package errors, we need to go back to step 1
+        setStep(1);
+        toast.error("Please select a tour date and package before proceeding");
+      }
+      return;
+    }
+
+    // Debug log to see what's in bookingDetails before disclaimer
+    console.log("Debug - bookingDetails before disclaimer:", {
+      hasDate: !!bookingDetails.selectedDate,
+      hasPackage: !!bookingDetails.selectedPackage,
+      fullDetails: bookingDetails,
+    });
 
     setIsDisclaimerOpen(true);
   };
@@ -386,15 +471,56 @@ const TourBookingPage = () => {
     try {
       setIsLoading(true);
 
+      // Debug log to see what's in bookingDetails
+      console.log(
+        "Start of proceedToPayment: bookingDetails =",
+        bookingDetails
+      );
+
+      // Final validation before proceeding
+      if (!bookingDetails.selectedDate || !bookingDetails.selectedPackage) {
+        console.error("Missing date or package selection!");
+        setStep(1); // Go back to date selection
+        throw new Error("Please select a date and package before proceeding");
+      }
+
+      // Use cloned booking details to avoid state update issues
+      const processingBookingDetails = JSON.parse(
+        JSON.stringify(bookingDetails)
+      );
+      console.log("Using booking details:", processingBookingDetails);
+
+      // Calculate correct total amount based on selected package price
       const totalAmount =
-        selectedTour.price * Number.parseInt(bookingDetails.groupSize);
+        processingBookingDetails.selectedPackage.price *
+        processingBookingDetails.groupSize;
+
+      // Format dates correctly to ensure they're properly sent to the backend
+      const formattedSelectedDate = {
+        startDate: new Date(
+          processingBookingDetails.selectedDate.startDate
+        ).toISOString(),
+        endDate: new Date(
+          processingBookingDetails.selectedDate.endDate
+        ).toISOString(),
+        maxGroupSize: processingBookingDetails.selectedDate.maxGroupSize,
+        availableSpots: processingBookingDetails.selectedDate.availableSpots,
+      };
 
       const bookingData = {
-        ...bookingDetails,
-        totalAmount: totalAmount,
-        bookingDate: new Date(),
         tourId: selectedTour._id,
+        guestName: processingBookingDetails.guestName,
+        email: processingBookingDetails.email,
+        phone: processingBookingDetails.phone,
+        groupSize: processingBookingDetails.groupSize,
+        specialRequests: processingBookingDetails.specialRequests,
+        totalAmount: totalAmount,
+        selectedDate: formattedSelectedDate,
+        selectedPackage: processingBookingDetails.selectedPackage,
+        bookingDate: new Date().toISOString(),
       };
+
+      console.log("Sending booking data:", bookingData);
 
       const token = localStorage.getItem("authToken");
       if (!token) {
@@ -416,6 +542,7 @@ const TourBookingPage = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.error("Booking error response:", errorData);
         throw new Error(errorData.message || "Failed to create booking");
       }
 
@@ -507,6 +634,81 @@ const TourBookingPage = () => {
     return selectedTour.price * (bookingDetails.groupSize || 1);
   };
 
+  // Handle date and package selection
+  const handleDatePackageSelection = (selection) => {
+    // Ensure dates are properly converted to Date objects
+    const selectedDate = {
+      ...selection.date,
+      startDate:
+        selection.date.startDate instanceof Date
+          ? selection.date.startDate
+          : new Date(selection.date.startDate),
+      endDate:
+        selection.date.endDate instanceof Date
+          ? selection.date.endDate
+          : new Date(selection.date.endDate),
+    };
+
+    // Calculate the correct total amount based on the selected package and group size
+    const totalAmount =
+      selection.package.price * (bookingDetails.groupSize || 1);
+
+    console.log("Before updating bookingDetails:", bookingDetails);
+
+    setBookingDetails((prev) => {
+      const newState = {
+        ...prev,
+        selectedDate: selectedDate,
+        selectedPackage: selection.package,
+        totalAmount: totalAmount,
+      };
+      console.log("After updating bookingDetails:", newState);
+      return newState;
+    });
+
+    console.log("Selected date and package:", {
+      date: selectedDate,
+      package: selection.package,
+      totalAmount,
+    });
+
+    setStep(2);
+  };
+
+  // Handle payment form submission
+  const handlePaymentSubmit = (paymentData) => {
+    // Validate payment information
+    if (
+      !paymentData.cardNumber ||
+      !paymentData.expiryDate ||
+      !paymentData.cvv
+    ) {
+      toast.error("Please provide all required payment information.");
+      return;
+    }
+
+    // Update booking with payment information (in a real app, you'd process this securely)
+    setBookingDetails((prev) => ({
+      ...prev,
+      paymentMethod: paymentData.paymentMethod || "Credit Card",
+      cardDetails: {
+        last4: paymentData.cardNumber.slice(-4),
+        // In a production environment, never store complete card details
+      },
+    }));
+
+    // In a real application, you would:
+    // 1. Send the booking data to your backend API
+    // 2. Process the payment securely
+    // 3. Store the booking in your database
+
+    console.log("Final booking details:", bookingDetails);
+
+    // Show success message and reset or redirect
+    toast.success("Booking completed successfully!");
+    setStep(4); // Move to confirmation step
+  };
+
   if (!selectedTour) {
     return null; // Don't render anything while redirecting
   }
@@ -550,9 +752,9 @@ const TourBookingPage = () => {
                   className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${
                     step >= 1 ? "bg-blue-600 text-white" : "bg-gray-200"
                   }`}>
-                  <UserCircleIcon className="w-4 h-4" />
+                  <CalendarIcon className="w-4 h-4" />
                 </div>
-                <span className="text-xs">Guest Details</span>
+                <span className="text-xs">Select Date & Package</span>
               </div>
 
               <div
@@ -568,9 +770,9 @@ const TourBookingPage = () => {
                   className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${
                     step >= 2 ? "bg-blue-600 text-white" : "bg-gray-200"
                   }`}>
-                  <CreditCardIcon className="w-4 h-4" />
+                  <UserCircleIcon className="w-4 h-4" />
                 </div>
-                <span className="text-xs">Tour Details</span>
+                <span className="text-xs">Guest Details</span>
               </div>
 
               <div
@@ -600,17 +802,16 @@ const TourBookingPage = () => {
           <div className="flex flex-col lg:flex-row gap-8">
             {/* Main Content */}
             <div className="w-full lg:w-2/3 order-2 lg:order-1">
-              {/* Guest Details Section */}
+              {/* Date & Package Selection Section - Always visible but shows as completed after step 1 */}
               <div
-                ref={guestDetailsRef}
                 className={`bg-white rounded-lg shadow-md p-6 mb-6 ${
                   step !== 1 ? "opacity-70" : ""
                 }`}>
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold">Guest Details</h2>
+                  <h2 className="text-xl font-bold">Date & Package</h2>
                   {step !== 1 && (
                     <Button
-                      onClick={() => setStep(1)}
+                      onClick={() => handleEditStep(1)}
                       variant="outline"
                       size="sm">
                       Edit
@@ -618,7 +819,63 @@ const TourBookingPage = () => {
                   )}
                 </div>
 
-                {step === 1 ? (
+                {step !== 1 &&
+                bookingDetails.selectedDate &&
+                bookingDetails.selectedPackage ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center">
+                      <CheckCircle className="text-green-500 w-5 h-5 mr-2" />
+                      <div>
+                        <p className="font-medium">
+                          {formatDate(
+                            new Date(bookingDetails.selectedDate.startDate)
+                          )}{" "}
+                          -{" "}
+                          {formatDate(
+                            new Date(bookingDetails.selectedDate.endDate)
+                          )}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Package: {bookingDetails.selectedPackage.name} (₹
+                          {Number(
+                            bookingDetails.selectedPackage.price
+                          ).toLocaleString()}{" "}
+                          per person)
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+
+                {step === 1 && (
+                  <TourDatePackageSelector
+                    tour={selectedTour}
+                    onSelectionComplete={handleDatePackageSelection}
+                    initialDate={bookingDetails.selectedDate}
+                    initialPackage={bookingDetails.selectedPackage}
+                  />
+                )}
+              </div>
+
+              {/* Guest Details Section */}
+              <div
+                ref={guestDetailsRef}
+                className={`bg-white rounded-lg shadow-md p-6 mb-6 ${
+                  step !== 2 ? "opacity-70" : ""
+                }`}>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold">Guest Details</h2>
+                  {step !== 2 && (
+                    <Button
+                      onClick={() => handleEditStep(2)}
+                      variant="outline"
+                      size="sm">
+                      Edit
+                    </Button>
+                  )}
+                </div>
+
+                {step === 2 ? (
                   <div className="space-y-4">
                     {localStorage.getItem("authToken") && (
                       <div className="p-3 mb-4 text-sm text-green-700 bg-green-100 rounded-md border border-green-300">
@@ -764,18 +1021,30 @@ const TourBookingPage = () => {
                     </div>
 
                     <div className="pt-4">
-                      <Button
-                        onClick={handleNextStep}
-                        variant="nomad"
-                        className="w-full"
-                        disabled={
-                          !bookingDetails.guestName ||
-                          !bookingDetails.email ||
-                          !bookingDetails.phone ||
-                          !isOtpVerified
-                        }>
-                        Continue to Tour Details
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={handlePreviousStep}
+                          variant="outline"
+                          className="w-full">
+                          Back to Date & Package
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            if (validateStep2()) {
+                              handleNextStep(); // Move to step 3
+                            }
+                          }}
+                          variant="nomad"
+                          className="w-full"
+                          disabled={
+                            !bookingDetails.guestName ||
+                            !bookingDetails.email ||
+                            !bookingDetails.phone ||
+                            !isOtpVerified
+                          }>
+                          Continue to Tour Details
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ) : (
@@ -800,13 +1069,13 @@ const TourBookingPage = () => {
                 id="tourDetails"
                 ref={tourSummaryRef}
                 className={`bg-white rounded-lg shadow-md p-6 mb-6 ${
-                  step !== 2 ? "opacity-70" : ""
+                  step !== 3 ? "opacity-70" : ""
                 }`}>
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-bold">Tour Details</h2>
-                  {step !== 2 && step > 2 && (
+                  {step !== 3 && (
                     <Button
-                      onClick={() => setStep(2)}
+                      onClick={() => handleEditStep(3)}
                       variant="outline"
                       size="sm">
                       Edit
@@ -814,30 +1083,77 @@ const TourBookingPage = () => {
                   )}
                 </div>
 
-                {step === 2 ? (
+                {step === 3 ? (
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="groupSize">
                         Number of Participants *
                       </Label>
-                      <div className="flex items-center">
-                        <Input
-                          id="groupSize"
-                          type="number"
-                          min="1"
-                          max={
-                            selectedTour.groupSize - selectedTour.bookedSlots
-                          }
-                          value={bookingDetails.groupSize}
-                          onChange={handleInputChange}
-                          required
-                          className={
-                            validationErrors.groupSize ? "border-red-500" : ""
-                          }
-                        />
-                        <span className="ml-2 text-xs text-gray-500">
-                          Max:{" "}
-                          {selectedTour.groupSize - selectedTour.bookedSlots}
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center border rounded-md overflow-hidden">
+                          <button
+                            type="button"
+                            className="px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-500"
+                            onClick={() => {
+                              if (bookingDetails.groupSize > 1) {
+                                setBookingDetails((prev) => {
+                                  const newGroupSize = prev.groupSize - 1;
+                                  return {
+                                    ...prev,
+                                    groupSize: newGroupSize,
+                                    totalAmount: prev.selectedPackage
+                                      ? prev.selectedPackage.price *
+                                        newGroupSize
+                                      : prev.totalAmount,
+                                  };
+                                });
+                              }
+                            }}
+                            disabled={bookingDetails.groupSize <= 1}>
+                            -
+                          </button>
+                          <span className="px-4 py-2 min-w-[40px] text-center border-l border-r">
+                            {bookingDetails.groupSize}
+                          </span>
+                          <button
+                            type="button"
+                            className="px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-500"
+                            onClick={() => {
+                              // Get max available spots
+                              const maxAvailable = bookingDetails.selectedDate
+                                ? bookingDetails.selectedDate.availableSpots
+                                : selectedTour.groupSize -
+                                  selectedTour.bookedSlots;
+
+                              if (bookingDetails.groupSize < maxAvailable) {
+                                setBookingDetails((prev) => {
+                                  const newGroupSize = prev.groupSize + 1;
+                                  return {
+                                    ...prev,
+                                    groupSize: newGroupSize,
+                                    totalAmount: prev.selectedPackage
+                                      ? prev.selectedPackage.price *
+                                        newGroupSize
+                                      : prev.totalAmount,
+                                  };
+                                });
+                              }
+                            }}
+                            disabled={
+                              bookingDetails.groupSize >=
+                              (bookingDetails.selectedDate
+                                ? bookingDetails.selectedDate.availableSpots
+                                : selectedTour.groupSize -
+                                  selectedTour.bookedSlots)
+                            }>
+                            +
+                          </button>
+                        </div>
+                        <span className="text-sm text-gray-500">
+                          Available spots:{" "}
+                          {bookingDetails.selectedDate
+                            ? bookingDetails.selectedDate.availableSpots
+                            : selectedTour.groupSize - selectedTour.bookedSlots}
                         </span>
                       </div>
                       {validationErrors.groupSize && (
@@ -901,7 +1217,7 @@ const TourBookingPage = () => {
                       </Button>
                     </div>
                   </div>
-                ) : step > 2 ? (
+                ) : step > 3 ? (
                   <div className="space-y-2">
                     <div className="flex items-center">
                       <CheckCircle className="text-green-500 w-5 h-5 mr-2" />
@@ -935,12 +1251,12 @@ const TourBookingPage = () => {
                   {isPaymentActive && paymentData ? (
                     <div className="w-full">
                       <TourPaymentForm
-                        setIsCheckingOpen={setChecking}
                         paymentData={paymentData}
                         bookingForm={bookingDetails}
                         onPaymentSuccess={handlePaymentSuccess}
                         onPaymentFailure={handlePaymentFailure}
                         onClose={() => setIsPaymentActive(false)}
+                        setIsCheckingOpen={setChecking}
                       />
                     </div>
                   ) : (
@@ -960,103 +1276,204 @@ const TourBookingPage = () => {
               )}
             </div>
 
-            {/* Tour Summary Sidebar */}
-            <div className="w-full lg:w-1/3 order-1 lg:order-2">
-              <div className="bg-white rounded-lg shadow-md p-6 sticky top-4">
-                <h2 className="text-xl font-bold mb-4">Tour Summary</h2>
+            {/* Booking Summary Section */}
+            <div
+              ref={tourSummaryRef}
+              className="w-full lg:w-1/3 order-1 lg:order-2">
+              <div className="bg-white rounded-lg shadow-md p-6 sticky top-8 space-y-5">
+                <h3 className="text-lg font-bold border-b pb-3">
+                  Booking Summary
+                </h3>
 
-                <div className="space-y-4">
-                  <div className="flex items-start border-b pb-4">
-                    <div className="w-20 h-20 rounded-md overflow-hidden bg-gray-100 mr-3 flex-shrink-0">
-                      <img
-                        src={
-                          selectedTour.images?.[0] ||
-                          "/placeholder.svg?height=80&width=80"
-                        }
-                        alt={selectedTour.title}
-                        className="w-full h-full object-cover"
-                      />
+                <div className="flex items-start gap-4">
+                  <div className="w-20 h-20 flex-shrink-0 overflow-hidden rounded-md">
+                    <img
+                      src={
+                        selectedTour.images && selectedTour.images[0]
+                          ? selectedTour.images[0]
+                          : "/placeholder.svg?height=80&width=80"
+                      }
+                      alt={selectedTour.title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900">
+                      {selectedTour.title}
+                    </h4>
+                    <div className="text-sm text-gray-600 mt-1 flex items-center">
+                      <MapPinIcon className="w-4 h-4 mr-1" />
+                      {selectedTour.location}
                     </div>
-                    <div>
-                      <h3 className="font-medium text-lg">
-                        {selectedTour.title}
-                      </h3>
-                      <div className="flex items-center text-sm text-gray-500 mt-1">
-                        <MapPin className="h-4 w-4 mr-1" />
-                        <span>{selectedTour.location}</span>
+                    <div className="text-sm text-gray-600 mt-1 flex items-center">
+                      <ClockIcon className="w-4 h-4 mr-1" />
+                      {selectedTour.duration}
+                    </div>
+                  </div>
+                </div>
+
+                {bookingDetails.selectedDate && (
+                  <div className="py-3 border-t border-gray-200">
+                    <h4 className="font-medium text-gray-900 mb-2">
+                      Selected Date
+                    </h4>
+                    <div className="p-3 bg-blue-50 rounded text-sm">
+                      <div className="font-medium text-blue-800">
+                        {formatDate(
+                          new Date(bookingDetails.selectedDate.startDate)
+                        )}{" "}
+                        -{" "}
+                        {formatDate(
+                          new Date(bookingDetails.selectedDate.endDate)
+                        )}
+                      </div>
+                      <div className="text-blue-600 mt-1">
+                        {bookingDetails.selectedDate.availableSpots} spots
+                        available
                       </div>
                     </div>
                   </div>
+                )}
 
-                  <div className="space-y-3 text-sm">
-                    <div className="flex items-center">
-                      <Calendar className="h-4 w-4 mr-2 text-gray-500" />
-                      <div>
-                        <p className="font-medium">Dates</p>
-                        <p className="text-gray-600">
-                          {formatDate(selectedTour.startDate)} -{" "}
-                          {formatDate(selectedTour.endDate)}
-                        </p>
+                {bookingDetails.selectedPackage && (
+                  <div className="py-3 border-t border-gray-200">
+                    <h4 className="font-medium text-gray-900 mb-2">
+                      Selected Package
+                    </h4>
+                    <div className="p-3 bg-green-50 rounded text-sm">
+                      <div className="font-medium text-green-800">
+                        {bookingDetails.selectedPackage.name}
                       </div>
-                    </div>
-
-                    <div className="flex items-center">
-                      <Clock className="h-4 w-4 mr-2 text-gray-500" />
-                      <div>
-                        <p className="font-medium">Duration</p>
-                        <p className="text-gray-600">
-                          {selectedTour.duration} days
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start">
-                      <User className="h-4 w-4 mr-2 mt-1 text-gray-500" />
-                      <div>
-                        <p className="font-medium">Group Size</p>
-                        <p className="text-gray-600">
-                          {bookingDetails.groupSize || 1}{" "}
-                          {(bookingDetails.groupSize || 1) === 1
-                            ? "participant"
-                            : "participants"}
-                        </p>
+                      {bookingDetails.selectedPackage.description && (
+                        <div className="text-green-600 mt-1">
+                          {bookingDetails.selectedPackage.description}
+                        </div>
+                      )}
+                      <div className="font-medium text-green-800 mt-2">
+                        ₹
+                        {Number(
+                          bookingDetails.selectedPackage.price
+                        ).toLocaleString()}{" "}
+                        per person
                       </div>
                     </div>
                   </div>
+                )}
 
-                  <div className="border-t pt-4 mt-4">
-                    <div className="flex justify-between text-sm">
-                      <span>Price per person</span>
-                      <span>{formatPrice(selectedTour.price)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm mt-2">
-                      <span>Participants</span>
-                      <span>× {bookingDetails.groupSize || 1}</span>
-                    </div>
+                <div className="py-3 border-t border-gray-200">
+                  <div className="space-y-2">
+                    <div className="font-medium">Number of Travelers</div>
+                    <div className="flex items-center border rounded-md overflow-hidden">
+                      <button
+                        className="px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-500"
+                        onClick={() => {
+                          if (bookingDetails.groupSize > 1) {
+                            setBookingDetails((prev) => {
+                              const newGroupSize = prev.groupSize - 1;
+                              return {
+                                ...prev,
+                                groupSize: newGroupSize,
+                                totalAmount: prev.selectedPackage
+                                  ? prev.selectedPackage.price * newGroupSize
+                                  : prev.totalAmount,
+                              };
+                            });
+                          }
+                        }}
+                        disabled={bookingDetails.groupSize <= 1}>
+                        -
+                      </button>
+                      <span className="px-4 py-2 min-w-[40px] text-center border-l border-r">
+                        {bookingDetails.groupSize}
+                      </span>
+                      <button
+                        className="px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-500"
+                        onClick={() => {
+                          // Get max available spots
+                          const maxAvailable = bookingDetails.selectedDate
+                            ? bookingDetails.selectedDate.availableSpots
+                            : selectedTour.groupSize - selectedTour.bookedSlots;
 
-                    <div className="flex justify-between font-bold text-lg mt-4 pt-4 border-t">
-                      <span>Total</span>
-                      <span>{formatPrice(calculateTotalPrice())}</span>
+                          if (bookingDetails.groupSize < maxAvailable) {
+                            setBookingDetails((prev) => {
+                              const newGroupSize = prev.groupSize + 1;
+                              return {
+                                ...prev,
+                                groupSize: newGroupSize,
+                                totalAmount: prev.selectedPackage
+                                  ? prev.selectedPackage.price * newGroupSize
+                                  : prev.totalAmount,
+                              };
+                            });
+                          }
+                        }}
+                        disabled={
+                          bookingDetails.groupSize >=
+                          (bookingDetails.selectedDate
+                            ? bookingDetails.selectedDate.availableSpots
+                            : selectedTour.groupSize - selectedTour.bookedSlots)
+                        }>
+                        +
+                      </button>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1 text-right">
-                      Inclusive of all taxes and fees
-                    </p>
+                    {!bookingDetails.selectedDate && (
+                      <p className="text-xs text-amber-600">
+                        Select a date and package first
+                      </p>
+                    )}
                   </div>
+                </div>
 
-                  {step === 1 && (
+                <div className="pt-4 border-t border-gray-200">
+                  <div className="flex justify-between mb-2">
+                    <span className="text-gray-600">Price per person</span>
+                    <span className="font-medium">
+                      {bookingDetails.selectedPackage
+                        ? `₹${Number(
+                            bookingDetails.selectedPackage.price
+                          ).toLocaleString()}`
+                        : "Select a package"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between mb-2">
+                    <span className="text-gray-600">Number of travelers</span>
+                    <span>{bookingDetails.groupSize}</span>
+                  </div>
+                  <div className="flex justify-between pt-3 border-t border-dashed mt-3">
+                    <span className="font-semibold">Total Amount</span>
+                    <span className="font-bold text-lg">
+                      {bookingDetails.selectedPackage
+                        ? `₹${Number(
+                            bookingDetails.selectedPackage.price *
+                              bookingDetails.groupSize
+                          ).toLocaleString()}`
+                        : "Pending selection"}
+                    </span>
+                  </div>
+                </div>
+
+                {step === 2 && (
+                  <div className="pt-4">
                     <Button
-                      onClick={handleNextStep}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white mt-4"
+                      variant="custom"
+                      className="w-full py-3"
+                      onClick={() => {
+                        if (validateStep2()) {
+                          handleNextStep(); // Move to step 3
+                        }
+                      }}
                       disabled={
-                        !bookingDetails.guestName ||
-                        !bookingDetails.email ||
-                        !bookingDetails.phone ||
-                        !isOtpVerified
+                        !isOtpVerified && !localStorage.getItem("authToken")
                       }>
                       Continue to Tour Details
                     </Button>
-                  )}
-                </div>
+                    {!isOtpVerified && !localStorage.getItem("authToken") && (
+                      <p className="text-xs text-center mt-2 text-red-500">
+                        Please verify your email to continue
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1083,7 +1500,36 @@ const TourBookingPage = () => {
                   : "participants"}{" "}
                 for {selectedTour?.title}
               </li>
-              <li>Total amount: {formatPrice(calculateTotalPrice())}</li>
+              <li>
+                Package:{" "}
+                {bookingDetails.selectedPackage?.name || "Not selected"}{" "}
+                {bookingDetails.selectedPackage
+                  ? `(₹
+                ${Number(
+                  bookingDetails.selectedPackage.price
+                ).toLocaleString()}{" "}
+                per person)`
+                  : ""}
+              </li>
+              <li>
+                Dates:{" "}
+                {bookingDetails.selectedDate
+                  ? `${formatDate(
+                      new Date(bookingDetails.selectedDate.startDate)
+                    )} - ${formatDate(
+                      new Date(bookingDetails.selectedDate.endDate)
+                    )}`
+                  : "Not selected"}
+              </li>
+              <li>
+                Total amount:{" "}
+                {bookingDetails.selectedPackage
+                  ? `₹${Number(
+                      bookingDetails.selectedPackage.price *
+                        bookingDetails.groupSize
+                    ).toLocaleString()}`
+                  : "Pending package selection"}
+              </li>
               <li>
                 Cancellation policies apply as per our terms and conditions
               </li>

@@ -72,6 +72,34 @@ export default function TourBookingDetailsModal({
             </div>
           </div>
 
+          {/* Date and Package Info */}
+          <div className="bg-indigo-50 p-4 rounded-lg">
+            <h3 className="font-semibold text-lg text-indigo-800 mb-2">
+              Date & Package Details
+            </h3>
+            <div className="grid grid-cols-1 gap-2">
+              {booking.selectedDate && (
+                <p>
+                  <span className="font-medium">Tour Dates:</span>{" "}
+                  {formatDateWithFallback(booking.selectedDate.startDate)} -{" "}
+                  {formatDateWithFallback(booking.selectedDate.endDate)}
+                </p>
+              )}
+              {booking.selectedPackage && (
+                <>
+                  <p>
+                    <span className="font-medium">Package:</span>{" "}
+                    {booking.selectedPackage.name}
+                  </p>
+                  <p>
+                    <span className="font-medium">Package Price:</span> ₹
+                    {booking.selectedPackage.price}
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+
           {/* Guest Info */}
           <div className="bg-gray-50 p-4 rounded-lg">
             <h3 className="font-semibold text-lg mb-2">Guest Information</h3>
