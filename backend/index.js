@@ -33,25 +33,36 @@ const PORT = process.env.PORT || 5000;
 
 // const frontendUrl = process.env.FRONTEND_URL;
 
-const allowedOrigins = [
-  process.env.FRONTEND_URL,
-  process.env.PROD_IN,
-  process.env.PROD_COM,
-];
+const allowedOrigins = [process.env.FRONTEND_URL, process.env.PROD_URL].filter(
+  Boolean
+); // Remove any undefined/null values
 
 // Middleware
 app.use(
   cors({
     origin: function (origin, callback) {
+      console.log("Incoming request origin:", origin);
+      console.log("Allowed origins:", allowedOrigins);
+      console.log("FRONTEND_URL:", process.env.FRONTEND_URL);
+
       if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
+        console.log("Origin allowed:", origin);
+        return callback(null, true);
       }
+
+      console.log("Origin not allowed:", origin);
+      return callback(new Error(`Not allowed by CORS: ${origin}`));
     },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-api-key", "Accept"],
+    exposedHeaders: ["Content-Range", "X-Content-Range"],
+    maxAge: 600, // 10 minutes
   })
 );
+
+// Add a pre-flight OPTIONS handler for all routes
+app.options("*", cors());
 
 app.use(express.json());
 
