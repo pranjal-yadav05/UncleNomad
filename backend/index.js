@@ -33,26 +33,34 @@ const PORT = process.env.PORT || 5000;
 
 // const frontendUrl = process.env.FRONTEND_URL;
 
-const allowedOrigins = [process.env.FRONTEND_URL, process.env.PROD_IN, process.env.PROD_COM].filter(
-  Boolean
-); // Remove any undefined/null values
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  process.env.PROD_IN,
+  process.env.PROD_COM,
+].filter(Boolean); // Remove any undefined/null values
 
 // Middleware
 app.use(
   cors({
     origin: function (origin, callback) {
-
       if (!origin || allowedOrigins.includes(origin)) {
         console.log("Origin allowed:", origin);
         return callback(null, true);
       }
-
       console.log("Origin not allowed:", origin);
       return callback(new Error(`Not allowed by CORS: ${origin}`));
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "x-api-key", "Accept"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "x-api-key",
+      "Accept",
+      "Content-Length",
+      "Content-Range",
+      "Range",
+    ],
     exposedHeaders: ["Content-Range", "X-Content-Range"],
     maxAge: 600, // 10 minutes
   })
