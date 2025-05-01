@@ -41,6 +41,13 @@ const upload = multer({
   },
 });
 
+// Add timeout handling middleware
+router.use((req, res, next) => {
+  req.setTimeout(300000); // 5 minutes timeout
+  res.setTimeout(300000);
+  next();
+});
+
 // Upload media route - matches frontend API endpoint
 router.post("/", upload.single("file"), uploadMedia);
 

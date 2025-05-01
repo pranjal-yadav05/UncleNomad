@@ -37,16 +37,24 @@ const allowedOrigins = [
   process.env.FRONTEND_URL,
   process.env.PROD_IN,
   process.env.PROD_COM,
+  "https://www.unclenomad.in",
+  "https://unclenomad.in",
 ].filter(Boolean); // Remove any undefined/null values
 
 // Middleware
 app.use(
   cors({
     origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(origin)) {
         console.log("Origin allowed:", origin);
         return callback(null, true);
       }
+
       console.log("Origin not allowed:", origin);
       return callback(new Error(`Not allowed by CORS: ${origin}`));
     },
@@ -60,6 +68,8 @@ app.use(
       "Content-Length",
       "Content-Range",
       "Range",
+      "Origin",
+      "X-Requested-With",
     ],
     exposedHeaders: ["Content-Range", "X-Content-Range"],
     maxAge: 600, // 10 minutes
@@ -68,6 +78,18 @@ app.use(
 
 // Add a pre-flight OPTIONS handler for all routes
 app.options("*", cors());
+
+// Add specific CORS headers for the upload route
+app.use("/api/upload", (req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization, x-api-key, Accept, Content-Length, Content-Range, Range"
+  );
+  res.header("Access-Control-Allow-Credentials", "true");
+  next();
+});
 
 app.use(express.json());
 
