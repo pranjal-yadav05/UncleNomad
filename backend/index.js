@@ -39,13 +39,12 @@ const allowedOrigins = [
   process.env.PROD_COM,
   "https://www.unclenomad.in",
   "https://unclenomad.in",
-].filter(Boolean); // Remove any undefined/null values
+].filter(Boolean);
 
 // Middleware
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) {
         return callback(null, true);
       }
@@ -72,22 +71,27 @@ app.use(
       "X-Requested-With",
     ],
     exposedHeaders: ["Content-Range", "X-Content-Range"],
-    maxAge: 600, // 10 minutes
+    maxAge: 600,
   })
 );
 
-// Add a pre-flight OPTIONS handler for all routes
-app.options("*", cors());
-
 // Add specific CORS headers for the upload route
 app.use("/api/upload", (req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.header(
-    "Access-Control-Allow-Headers",
-    "Content-Type, Authorization, x-api-key, Accept, Content-Length, Content-Range, Range"
-  );
-  res.header("Access-Control-Allow-Credentials", "true");
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+    res.header("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.header(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization, x-api-key, Accept, Content-Length, Content-Range, Range"
+    );
+    res.header("Access-Control-Allow-Credentials", "true");
+
+    // Handle preflight requests
+    if (req.method === "OPTIONS") {
+      return res.status(200).end();
+    }
+  }
   next();
 });
 

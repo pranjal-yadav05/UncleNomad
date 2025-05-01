@@ -56,12 +56,12 @@ export const uploadMedia = async (req, res) => {
 
     // Set up upload options based on file type
     const uploadOptions = {
-      resource_type: type, // Use the validated type directly
+      resource_type: type,
       public_id: publicId,
       overwrite: true,
       quality: "auto",
       folder: "uncle-nomad",
-      chunk_size: 6000000, // 6MB chunks for better upload handling
+      chunk_size: 6000000,
     };
 
     // For videos, add specific video options
@@ -110,6 +110,10 @@ export const uploadMedia = async (req, res) => {
       resourceType: result.resource_type,
     });
 
+    // Set CORS headers before sending response
+    res.header("Access-Control-Allow-Origin", req.headers.origin);
+    res.header("Access-Control-Allow-Credentials", "true");
+
     res.json({
       url: result.secure_url,
       publicId: result.public_id,
@@ -124,6 +128,10 @@ export const uploadMedia = async (req, res) => {
     });
   } catch (error) {
     console.error("Error uploading media:", error);
+    // Set CORS headers even for error responses
+    res.header("Access-Control-Allow-Origin", req.headers.origin);
+    res.header("Access-Control-Allow-Credentials", "true");
+
     res.status(500).json({
       message: "Media upload failed",
       error: error.message,

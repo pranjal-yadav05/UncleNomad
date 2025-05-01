@@ -108,29 +108,47 @@ const ManageMedia = () => {
         // Upload file to Cloudinary
         const formData = new FormData();
         formData.append("file", newMedia.file);
-        // Explicitly append type to ensure it's included in the request
         formData.append("type", newMedia.type);
 
-        const uploadResponse = await axios.post(
-          `${process.env.REACT_APP_API_URL}/api/upload`,
-          formData,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-              Accept: "application/json",
-              "x-api-key": process.env.REACT_APP_API_KEY,
-            },
-            timeout: 300000, // 5 minutes timeout
-            maxContentLength: 100 * 1024 * 1024, // 100MB
-            maxBodyLength: 100 * 1024 * 1024, // 100MB
-            onUploadProgress: (progressEvent) => {
-              const percentCompleted = Math.round(
-                (progressEvent.loaded * 100) / progressEvent.total
-              );
-              console.log(`Upload progress: ${percentCompleted}%`);
-            },
+        // Add retry logic for the upload
+        let retryCount = 0;
+        const maxRetries = 3;
+        let uploadResponse;
+
+        while (retryCount < maxRetries) {
+          try {
+            uploadResponse = await axios.post(
+              `${process.env.REACT_APP_API_URL}/api/upload`,
+              formData,
+              {
+                headers: {
+                  "Content-Type": "multipart/form-data",
+                  Accept: "application/json",
+                  "x-api-key": process.env.REACT_APP_API_KEY,
+                },
+                timeout: 300000,
+                maxContentLength: 100 * 1024 * 1024,
+                maxBodyLength: 100 * 1024 * 1024,
+                onUploadProgress: (progressEvent) => {
+                  const percentCompleted = Math.round(
+                    (progressEvent.loaded * 100) / progressEvent.total
+                  );
+                  console.log(`Upload progress: ${percentCompleted}%`);
+                },
+              }
+            );
+            break; // If successful, break the retry loop
+          } catch (error) {
+            retryCount++;
+            if (retryCount === maxRetries) {
+              throw error; // If all retries failed, throw the error
+            }
+            console.log(`Upload attempt ${retryCount} failed, retrying...`);
+            await new Promise((resolve) =>
+              setTimeout(resolve, 2000 * retryCount)
+            ); // Exponential backoff
           }
-        );
+        }
 
         mediaData.url = uploadResponse.data.url;
         mediaData.publicId = uploadResponse.data.publicId;
@@ -139,16 +157,37 @@ const ManageMedia = () => {
         mediaData.url = urlInput;
       }
 
-      await axios.post(
-        `${process.env.REACT_APP_API_URL}/api/media`,
-        mediaData,
-        {
-          headers: {
-            "x-api-key": process.env.REACT_APP_API_KEY,
-          },
-          timeout: 300000, // 5 minutes timeout
+      // Add retry logic for the media creation
+      let retryCount = 0;
+      const maxRetries = 3;
+
+      while (retryCount < maxRetries) {
+        try {
+          await axios.post(
+            `${process.env.REACT_APP_API_URL}/api/media`,
+            mediaData,
+            {
+              headers: {
+                "x-api-key": process.env.REACT_APP_API_KEY,
+              },
+              timeout: 300000,
+            }
+          );
+          break; // If successful, break the retry loop
+        } catch (error) {
+          retryCount++;
+          if (retryCount === maxRetries) {
+            throw error; // If all retries failed, throw the error
+          }
+          console.log(
+            `Media creation attempt ${retryCount} failed, retrying...`
+          );
+          await new Promise((resolve) =>
+            setTimeout(resolve, 2000 * retryCount)
+          ); // Exponential backoff
         }
-      );
+      }
+
       await fetchMedia();
 
       setNewMedia({
@@ -168,9 +207,14 @@ const ManageMedia = () => {
         );
       } else if (error.response?.status === 413) {
         setErrorMessage("File is too large. Maximum size is 100MB.");
+      } else if (error.response?.status === 401) {
+        setErrorMessage("Authentication failed. Please check your API key.");
+      } else if (error.response?.status === 403) {
+        setErrorMessage("Access denied. Please check your permissions.");
       } else {
         setErrorMessage(
-          error.response?.data?.message || "Failed to upload media"
+          error.response?.data?.message ||
+            "Failed to upload media. Please try again."
         );
       }
     } finally {
