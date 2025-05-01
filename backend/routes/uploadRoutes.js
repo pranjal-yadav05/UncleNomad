@@ -3,6 +3,30 @@ const router = express.Router();
 import { uploadMedia, deleteMedia } from "../controllers/uploadController.js";
 import multer from "multer";
 
+
+router.use((req, res, next) => {
+  // Get the origin from the request
+  const origin = req.headers.origin;
+  
+  // Check if the origin is allowed (same logic as your main CORS config)
+  const allowedOrigins = [process.env.FRONTEND_URL, process.env.PROD_IN, process.env.PROD_COM].filter(Boolean);
+  
+  if (!origin || allowedOrigins.includes(origin)) {
+    // Set proper CORS headers specifically for this route
+    res.header('Access-Control-Allow-Origin', origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key, Accept');
+    res.header('Access-Control-Allow-Credentials', 'true');
+  }
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  next();
+});
+
 // Configure multer for file uploads
 const upload = multer({
   storage: multer.memoryStorage(),

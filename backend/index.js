@@ -41,9 +41,6 @@ const allowedOrigins = [process.env.FRONTEND_URL, process.env.PROD_IN, process.e
 app.use(
   cors({
     origin: function (origin, callback) {
-      console.log("Incoming request origin:", origin);
-      console.log("Allowed origins:", allowedOrigins);
-      console.log("FRONTEND_URL:", process.env.FRONTEND_URL);
 
       if (!origin || allowedOrigins.includes(origin)) {
         console.log("Origin allowed:", origin);
