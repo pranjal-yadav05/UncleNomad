@@ -33,7 +33,7 @@ const PORT = process.env.PORT || 5000;
 
 // const frontendUrl = process.env.FRONTEND_URL;
 
-const allowedOrigins = [process.env.FRONTEND_URL, process.env.PROD_URL].filter(
+const allowedOrigins = [process.env.FRONTEND_URL, process.env.PROD_IN, process.env.PROD_COM].filter(
   Boolean
 ); // Remove any undefined/null values
 
