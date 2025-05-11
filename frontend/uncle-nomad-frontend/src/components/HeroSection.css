@@ -71,10 +71,9 @@ img.hero-media {
 }
 
 .hero-container h1 {
-  font-size: 100px;
+  font-size: 70px;
   margin-top: -100px;
   font-weight: 700;
-  letter-spacing: 2px;
 }
 
 .hero-container p {
@@ -126,5 +125,12 @@ img.hero-media {
 
   .hero-container p {
     font-size: 24px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .hero-container h1 {
+    font-size: 40px;
+    margin-top: -100px;
   }
 }

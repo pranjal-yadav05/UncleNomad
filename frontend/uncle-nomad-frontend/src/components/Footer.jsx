@@ -37,11 +37,10 @@ const Footer = () => {
           />
 
           <p
-            className="max-w-lg text-gray-300 mb-10"
-            style={{ fontFamily: "Playwrite IT Moderna" }}>
+            className="max-w-lg text-gray-300"
+            style={{ fontWeight: "bold", marginBottom: "100px" }}>
             Discover breathtaking mountain getaways and unforgettable adventures
-            with Uncle Nomad. Your journey to extraordinary experiences starts
-            here.
+            with Uncle Nomad.
           </p>
         </div>
 

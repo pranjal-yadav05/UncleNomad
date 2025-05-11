@@ -236,16 +236,11 @@ export default function HeroSection() {
         initial="hidden"
         animate="visible">
         {/* Heading */}
-        <motion.h1
-          variants={itemVariants}
-          style={{
-            fontFamily: "SeaGardens3DRegular, sans-serif",
-            fontStyle: "italic",
-            textAlign: "center",
-            color: "white",
-          }}>
-          ADVENTURE AWAITS
-        </motion.h1>
+        <motion.div variants={itemVariants}>
+          <h1 className="text-5xl font-extrabold tracking-tight mb-2 text-white">
+            Adventure Awaits
+          </h1>
+        </motion.div>
 
         {/* Subtext */}
         <motion.p variants={itemVariants} className="text-white text-lg">

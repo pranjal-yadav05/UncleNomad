@@ -148,7 +148,7 @@ export default function GalleryPage() {
             transition={{ duration: 0.6 }}
             className="text-center mb-16"
           >
-            <h1 className="text-5xl font-extrabold tracking-tight mb-2">Journey in Frames</h1>
+            <h1 className="text-5xl font-extrabold tracking-tight mb-2">Together in Glimpses</h1>
             <p className="text-xl text-gray-300">Pictures Perfect Moments</p>
           </motion.div>
 
