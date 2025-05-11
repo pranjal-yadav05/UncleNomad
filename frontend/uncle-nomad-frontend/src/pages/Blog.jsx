@@ -107,9 +107,14 @@ const Blog = () => {
                   animation="slide-up"
                   duration={1200}
                   intensity={1.2}>
-                  <h1 className="text-4xl font-bold text-center mb-12 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 bg-clip-text text-transparent">
-                    Travel Stories
-                  </h1>
+                  <div className="text-center mb-16">
+                    <h1 className="text-5xl font-extrabold tracking-tight mb-2 text-white">
+                      Travel Stories
+                    </h1>
+                    <p className="text-xl text-gray-300">
+                      Memorable Journeys, Lasting Impressions
+                    </p>
+                  </div>
                 </AnimatedSection>
 
                 <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 text-center">
@@ -166,17 +171,20 @@ const Blog = () => {
                   animation="slide-up"
                   duration={1200}
                   intensity={1.2}>
-                  <h1
-                    className="text-4xl md:text-5xl text-center font-extrabold text-white mb-3"
-                    style={{ fontFamily: "Josefin Sans" }}>
-                    Travel Stories
-                  </h1>
+                  <div className="text-center mb-16">
+                    <h1 className="text-5xl font-extrabold tracking-tight mb-2 text-white">
+                      Travel Stories
+                    </h1>
+                    <p className="text-xl text-gray-300">
+                      Memorable Journeys, Lasting Impressions
+                    </p>
+                  </div>
                 </AnimatedSection>
 
                 {/* Improved Tab Navigation for better mobile experience */}
-                <div className="flex justify-center mb-8">
+                <div className="flex justify-center mb-8 max-w-4xl mx-auto">
                   <div className="w-full overflow-x-auto py-2 no-scrollbar">
-                    <div className="flex gap-2 min-w-max mx-auto">
+                    <div className="flex gap-2 mx-auto">
                       {blogs.map((blog) => (
                         <button
                           key={blog._id}
@@ -204,8 +212,8 @@ const Blog = () => {
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.5 }}
-                      className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-200">
-                      <div className="p-8">
+                      className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-200 max-w-4xl mx-auto">
+                      <div className="p-6 md:p-10">
                         <h2 className="text-3xl font-bold mb-4 text-gray-900">
                           {currentBlog.title}
                         </h2>
@@ -223,12 +231,17 @@ const Blog = () => {
                                   {section.content}
                                 </p>
                               ) : (
-                                <div className="relative aspect-video rounded-lg overflow-hidden">
+                                <div className="max-w-2xl mx-auto my-6 rounded-lg overflow-hidden shadow-sm">
                                   <img
                                     src={section.imageUrl}
                                     alt={section.imageAlt || "Blog image"}
-                                    className="w-full h-full object-cover"
+                                    className="w-full h-auto max-h-96 object-contain"
                                   />
+                                  {section.imageAlt && (
+                                    <p className="text-sm text-gray-500 italic mt-2 text-center">
+                                      {section.imageAlt}
+                                    </p>
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -241,6 +254,8 @@ const Blog = () => {
               </div>
             </div>
           </div>
+          {/* Add spacing before footer */}
+          <div className="h-16 md:h-24"></div>
         </div>
         <Footer />
       </div>

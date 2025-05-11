@@ -452,7 +452,7 @@ const PackageFormModal = ({
                   className="w-full p-2 border rounded-md bg-white">
                   <option value="Adventure">Adventure</option>
                   <option value="Cultural">Cultural</option>
-                  <option value="Relaxation">Relaxation</option>
+                  <option value="Leisure">Leisure</option>
                 </select>
               </div>
 

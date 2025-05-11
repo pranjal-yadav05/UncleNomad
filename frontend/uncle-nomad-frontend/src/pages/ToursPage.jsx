@@ -32,7 +32,6 @@ export default function ToursPage() {
   const API_URL = process.env.REACT_APP_API_URL;
   const [tours, setTours] = useState([]);
   const [filteredTours, setFilteredTours] = useState([]);
-  const [viewMode, setViewMode] = useState("grid");
   const [activeCategory, setActiveCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [priceRange, setPriceRange] = useState("all");
@@ -52,7 +51,7 @@ export default function ToursPage() {
 
   const navigate = useNavigate();
 
-  const categories = ["all", "Adventure", "Cultural", "Relaxation"];
+  const categories = ["all", "Adventure", "Cultural", "Leisure"];
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -347,7 +346,7 @@ export default function ToursPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-900">
+    <div className="min-h-screen flex flex-col bg-white">
       <Header />
 
       <main className="flex-grow">
@@ -401,10 +400,19 @@ export default function ToursPage() {
                   variant={activeCategory === category ? "default" : "outline"}
                   className={`px-4 py-2 text-sm capitalize cursor-pointer transition-all ${
                     activeCategory === category
-                      ? "bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700"
-                      : "hover:bg-slate-800 text-white"
+                      ? "bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white"
+                      : "hover:bg-slate-100 text-gray-700 border-gray-300"
                   }`}
-                  onClick={() => setActiveCategory(category)}>
+                  onClick={() => {
+                    setActiveCategory(category);
+                    // For "all" category, reset to original tour data
+                    if (category.toLowerCase() === "all") {
+                      setFilteredTours(tours);
+                    } else {
+                      // Apply filters immediately when category is changed
+                      setTimeout(() => applyFilters(), 0);
+                    }
+                  }}>
                   {category}
                 </Badge>
               ))}
@@ -414,51 +422,23 @@ export default function ToursPage() {
               <Button
                 size="sm"
                 variant="outline"
-                className="text-white border-white/20 hover:bg-white/10"
+                className="text-gray-700 border-gray-300 hover:bg-slate-100"
                 onClick={() => setShowFilters(!showFilters)}>
                 <SlidersHorizontal className="w-4 h-4 mr-2" />
                 Filters
               </Button>
-
-              <div className="flex items-center bg-white/10 rounded-lg p-1">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setViewMode("grid")}
-                  className={`rounded-md px-3 py-1 flex items-center transition-colors ${
-                    viewMode === "grid"
-                      ? "bg-white/20 text-white"
-                      : "text-white/70 hover:text-white hover:bg-white/10"
-                  }`}>
-                  <Grid3X3 className="w-4 h-4 mr-2" />
-                  Grid
-                </Button>
-
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setViewMode("list")}
-                  className={`rounded-md px-3 py-1 flex items-center transition-colors ${
-                    viewMode === "list"
-                      ? "bg-white/20 text-white"
-                      : "text-white/70 hover:text-white hover:bg-white/10"
-                  }`}>
-                  <List className="w-4 h-4 mr-2" />
-                  List
-                </Button>
-              </div>
             </div>
           </div>
 
           {/* Advanced filters */}
           {showFilters && (
-            <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 mb-8 border border-white/10 grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-gray-50 rounded-xl p-6 mb-8 border border-gray-200 shadow-sm grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
-                <label className="text-white text-sm mb-2 block">
+                <label className="text-gray-700 text-sm mb-2 block">
                   Price Range
                 </label>
                 <Select value={priceRange} onValueChange={setPriceRange}>
-                  <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                  <SelectTrigger className="bg-white border-gray-300 text-gray-700">
                     <SelectValue placeholder="Select price range" />
                   </SelectTrigger>
                   <SelectContent>
@@ -476,11 +456,11 @@ export default function ToursPage() {
               </div>
 
               <div>
-                <label className="text-white text-sm mb-2 block">
+                <label className="text-gray-700 text-sm mb-2 block">
                   Duration
                 </label>
                 <Select value={durationRange} onValueChange={setDurationRange}>
-                  <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                  <SelectTrigger className="bg-white border-gray-300 text-gray-700">
                     <SelectValue placeholder="Select duration" />
                   </SelectTrigger>
                   <SelectContent>
@@ -494,9 +474,11 @@ export default function ToursPage() {
               </div>
 
               <div>
-                <label className="text-white text-sm mb-2 block">Sort By</label>
+                <label className="text-gray-700 text-sm mb-2 block">
+                  Sort By
+                </label>
                 <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                  <SelectTrigger className="bg-white border-gray-300 text-gray-700">
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
                   <SelectContent>
@@ -518,7 +500,7 @@ export default function ToursPage() {
               <div className="flex items-end">
                 <Button
                   onClick={handleSearch}
-                  className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700">
+                  className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white">
                   Apply Filters
                 </Button>
               </div>
@@ -526,7 +508,7 @@ export default function ToursPage() {
           )}
 
           {/* Results count */}
-          <div className="text-white/80 mb-6">
+          <div className="text-gray-600 mb-6">
             Showing {filteredTours.length}{" "}
             {filteredTours.length === 1 ? "tour" : "tours"}
             {filteredTours.length > 0 && (
@@ -545,169 +527,92 @@ export default function ToursPage() {
           ) : (
             <>
               {/* Tours grid */}
-              {viewMode === "grid" ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
-                  {filteredTours.map((tour) => (
-                    <div
-                      key={tour._id}
-                      className="bg-white/5 backdrop-blur-md rounded-xl overflow-hidden border border-white/10 h-full flex flex-col hover:bg-white/10 transition-colors cursor-pointer transform transition-transform duration-300 hover:-translate-y-2"
-                      onClick={() => handleTourClick(tour)}>
-                      <div className="relative w-full h-48">
-                        <img
-                          src={
-                            tour.images[0] ||
-                            "/placeholder.svg?height=400&width=600"
-                          }
-                          alt={tour.title}
-                          fill
-                          className="object-cover object-center w-full h-full"
-                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                        />
-                        <div className="absolute top-3 right-3">
-                          <Badge className="bg-indigo-600">
-                            {tour.category}
-                          </Badge>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
+                {filteredTours.map((tour) => (
+                  <div
+                    key={tour._id}
+                    className="bg-white rounded-xl overflow-hidden border border-gray-200 shadow-md h-full flex flex-col hover:shadow-lg transition-all cursor-pointer transform transition-transform duration-300 hover:-translate-y-2"
+                    onClick={() => handleTourClick(tour)}>
+                    <div className="relative w-full h-48">
+                      <img
+                        src={
+                          tour.images[0] ||
+                          "/placeholder.svg?height=400&width=600"
+                        }
+                        alt={tour.title}
+                        fill
+                        className="object-cover object-center w-full h-full"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      />
+                      <div className="absolute top-3 right-3">
+                        <Badge className="bg-indigo-600 text-white">
+                          {tour.category}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    <div className="p-5 flex-grow flex flex-col">
+                      <div className="flex items-start justify-between mb-2">
+                        <h3 className="text-xl font-bold text-gray-800 line-clamp-1">
+                          {tour.title}
+                        </h3>
+                      </div>
+
+                      <div className="flex items-center text-gray-600 mb-2">
+                        <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
+                        <span className="truncate">{tour.location}</span>
+                      </div>
+
+                      <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                        {tour.description}
+                      </p>
+
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        <div className="flex items-center bg-gray-100 rounded-full px-3 py-1 text-xs text-gray-700">
+                          <Calendar className="w-3 h-3 mr-1 flex-shrink-0" />
+                          {tour.duration}
+                        </div>
+                        <div className="flex items-center bg-gray-100 rounded-full px-3 py-1 text-xs text-gray-700">
+                          <Users className="w-3 h-3 mr-1 flex-shrink-0" />
+                          {getAvailableSlots(tour)} slots left
+                        </div>
+                        <div className="flex items-center bg-gray-100 rounded-full px-3 py-1 text-sm text-gray-700">
+                          {tour.category}
                         </div>
                       </div>
 
-                      <div className="p-5 flex-grow flex flex-col">
-                        <div className="flex items-start justify-between mb-2">
-                          <h3 className="text-xl font-bold text-white line-clamp-1">
-                            {tour.title}
-                          </h3>
+                      <div className="mt-auto flex justify-between items-center">
+                        <div className="text-xs text-gray-500">
+                          {tour.availableDates && tour.availableDates.length > 0
+                            ? formatDate(tour.availableDates[0].startDate)
+                            : tour.startDate
+                            ? formatDate(tour.startDate)
+                            : "Contact for dates"}
                         </div>
-
-                        <div className="flex items-center text-white/70 mb-2">
-                          <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
-                          <span className="truncate">{tour.location}</span>
-                        </div>
-
-                        <p className="text-white/80 text-sm mb-4 line-clamp-2">
-                          {tour.description}
-                        </p>
-
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          <div className="flex items-center bg-white/10 rounded-full px-3 py-1 text-xs text-white/90">
-                            <Calendar className="w-3 h-3 mr-1 flex-shrink-0" />
-                            {tour.duration}
-                          </div>
-                          <div className="flex items-center bg-white/10 rounded-full px-3 py-1 text-xs text-white/90">
-                            <Users className="w-3 h-3 mr-1 flex-shrink-0" />
-                            {getAvailableSlots(tour)} slots left
-                          </div>
-                          <div className="flex items-center bg-white/10 rounded-full px-3 py-1 text-sm text-white/90">
-                            {tour.category}
-                          </div>
-                        </div>
-
-                        <div className="mt-auto flex justify-between items-center">
-                          <div className="text-xs text-white/70">
-                            {tour.availableDates &&
-                            tour.availableDates.length > 0
-                              ? formatDate(tour.availableDates[0].startDate)
-                              : tour.startDate
-                              ? formatDate(tour.startDate)
-                              : "Contact for dates"}
-                          </div>
-                          <div className="text-xl font-bold text-white">
-                            ₹{getLowestPrice(tour).toLocaleString()}
-                          </div>
+                        <div className="text-xl font-bold text-indigo-600">
+                          ₹{getLowestPrice(tour).toLocaleString()}
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {filteredTours.map((tour) => (
-                    <div
-                      key={tour._id}
-                      className="bg-white/5 backdrop-blur-md rounded-xl overflow-hidden border border-white/10 flex flex-col md:flex-row hover:bg-white/10 transition-colors cursor-pointer"
-                      onClick={() => handleTourClick(tour)}>
-                      <div className="md:w-1/3 h-48 relative">
-                        <img
-                          src={
-                            tour.images[0] ||
-                            "/placeholder.svg?height=400&width=600"
-                          }
-                          alt={tour.title}
-                          fill
-                          className="object-cover object-center w-full h-full"
-                        />
-                      </div>
-                      <div className="p-6 flex-1 flex flex-col">
-                        <div className="flex justify-between items-start mb-2">
-                          <h3 className="text-xl font-bold text-white">
-                            {tour.title}
-                          </h3>
-                          <div className="text-xl font-bold text-white">
-                            ₹{getLowestPrice(tour).toLocaleString()}
-                          </div>
-                        </div>
-
-                        <div className="flex items-center text-white/70 mb-3">
-                          <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
-                          <span>{tour.location}</span>
-                        </div>
-
-                        <p className="text-white/80 mb-4 line-clamp-3">
-                          {tour.description}
-                        </p>
-
-                        <div className="flex flex-wrap gap-3 mb-4">
-                          <div className="flex items-center bg-white/10 rounded-full px-3 py-1 text-sm text-white/90">
-                            <Calendar className="w-4 h-4 mr-1 flex-shrink-0" />
-                            {tour.duration}
-                          </div>
-                          <div className="flex items-center bg-white/10 rounded-full px-3 py-1 text-sm text-white/90">
-                            <Users className="w-4 h-4 mr-1 flex-shrink-0" />
-                            {getAvailableSlots(tour)} slots left
-                          </div>
-                          <div className="flex items-center bg-white/10 rounded-full px-3 py-1 text-sm text-white/90">
-                            {tour.category}
-                          </div>
-                          <div className="flex items-center bg-white/10 rounded-full px-3 py-1 text-sm text-white/90">
-                            {tour.availableDates &&
-                            tour.availableDates.length > 0
-                              ? `${formatDate(
-                                  tour.availableDates[0].startDate
-                                )} - ${formatDate(
-                                  tour.availableDates[0].endDate
-                                )}`
-                              : tour.startDate && tour.endDate
-                              ? `${formatDate(tour.startDate)} - ${formatDate(
-                                  tour.endDate
-                                )}`
-                              : "Contact for dates"}
-                          </div>
-                        </div>
-
-                        <div className="mt-auto flex justify-end">
-                          <Button className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700">
-                            View Details
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                  </div>
+                ))}
+              </div>
             </>
           )}
 
           {/* No results */}
           {!isLoading && filteredTours.length === 0 && (
             <div className="text-center py-16">
-              <div className="text-white/50 text-6xl mb-4">🔍</div>
-              <h3 className="text-2xl font-bold text-white mb-2">
+              <div className="text-gray-400 text-6xl mb-4">🔍</div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-2">
                 No tours found
               </h3>
-              <p className="text-white/70 mb-6">
+              <p className="text-gray-600 mb-6">
                 Try adjusting your filters or search criteria
               </p>
               <Button
                 onClick={resetAllFilters}
-                className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700">
+                className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white">
                 Reset Filters
               </Button>
             </div>
@@ -719,7 +624,7 @@ export default function ToursPage() {
               <div className="flex items-center space-x-2">
                 <Button
                   variant="outline"
-                  className="text-white border-white/20 hover:bg-white/10"
+                  className="text-gray-700 border-gray-300 hover:bg-gray-100"
                   onClick={() => goToPage(currentPage - 1)}
                   disabled={currentPage === 1}>
                   <ChevronLeft className="w-4 h-4 mr-1" />
@@ -730,7 +635,7 @@ export default function ToursPage() {
                   page === "..." ? (
                     <span
                       key={`ellipsis-${index}`}
-                      className="text-white/50 px-2">
+                      className="font-medium px-2 text-black">
                       ...
                     </span>
                   ) : (
@@ -738,8 +643,8 @@ export default function ToursPage() {
                       key={`page-${page}`}
                       className={
                         currentPage === page
-                          ? "bg-white/20 hover:bg-white/30 text-white"
-                          : "bg-transparent text-white hover:bg-white/10"
+                          ? "bg-indigo-600 hover:bg-indigo-700 font-medium border-0 text-black"
+                          : "bg-white hover:bg-gray-100 border border-gray-300 font-medium text-black"
                       }
                       onClick={() => goToPage(page)}>
                       {page}
@@ -749,7 +654,7 @@ export default function ToursPage() {
 
                 <Button
                   variant="outline"
-                  className="text-white border-white/20 hover:bg-white/10"
+                  className="text-gray-700 border-gray-300 hover:bg-gray-100"
                   onClick={() => goToPage(currentPage + 1)}
                   disabled={currentPage === totalPages}>
                   Next
@@ -762,12 +667,12 @@ export default function ToursPage() {
 
         {/* Newsletter section */}
         <div className="container mx-auto px-4 py-16">
-          <div className="bg-gradient-to-r from-purple-900/40 to-indigo-900/40 backdrop-blur-sm rounded-2xl p-8 md:p-12 border border-indigo-500/20">
+          <div className="bg-indigo-50 rounded-2xl p-8 md:p-12 border border-indigo-100 shadow-sm">
             <div className="max-w-3xl mx-auto text-center">
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
                 Stay Updated on New Adventures
               </h2>
-              <p className="text-indigo-200 mb-8">
+              <p className="text-indigo-700 mb-8">
                 Subscribe to our newsletter and be the first to know about
                 exclusive deals and upcoming expeditions
               </p>
@@ -777,17 +682,17 @@ export default function ToursPage() {
                   placeholder="Enter your email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="bg-white/10 border-white/20 text-white placeholder:text-white/70"
+                  className="bg-white border-gray-300 text-gray-700 placeholder:text-gray-400"
                 />
                 <Button
                   disabled={subscribing}
                   onClick={handleSubscribe}
-                  className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700">
+                  className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white">
                   {subscribing ? "Subscribing..." : "Subscribe"}
                 </Button>
               </div>
               {showConfirm && (
-                <i className="text-green-500 mt-5">Thanks for Subscribing...</i>
+                <i className="text-green-600 mt-5">Thanks for Subscribing...</i>
               )}
             </div>
           </div>
