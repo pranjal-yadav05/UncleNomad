@@ -160,13 +160,13 @@ export default function HomePage() {
     fetchStats();
   }, []);
 
-  // const categories = ["all", "adventure", "cultural", "beach", "mountain", "city"]
   const fetchStats = async () => {
     const res = await fetch(
       `${process.env.REACT_APP_API_URL}/api/tours/stats`,
       { headers: { "x-api-key": process.env.REACT_APP_API_KEY } }
     );
     const data = await res.json();
+    console.log(data);
     setStats(data);
   };
 

@@ -335,10 +335,10 @@ const TourSection = ({
                 {isLoading ? (
                   <div className="h-10 bg-gray-200 rounded w-16 mx-auto animate-pulse"></div>
                 ) : (
-                  formatNumber(stats.guides)
+                  stats.ratings
                 )}
               </div>
-              <div className="text-gray-600">Guides</div>
+              <div className="text-gray-600">Ratings</div>
             </div>
           </div>
         </div>

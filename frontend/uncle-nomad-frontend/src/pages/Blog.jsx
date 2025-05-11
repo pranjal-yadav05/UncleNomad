@@ -239,7 +239,10 @@ const Blog = () => {
                                   />
                                   {section.imageAlt && (
                                     <p className="text-sm text-gray-500 italic mt-2 text-center">
-                                      {section.imageAlt}
+                                      {section.imageAlt.replace(
+                                        /\.jpg$|\.jpeg$|\.png$|\.gif$/i,
+                                        ""
+                                      )}
                                     </p>
                                   )}
                                 </div>
