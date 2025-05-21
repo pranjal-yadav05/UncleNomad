@@ -10,5 +10,3 @@ backend/.env
 frontend/uncle-nomad-frontend/.env
 backend/.env
 frontend/uncle-nomad-frontend/.env
-frontend/uncle-nomad-frontend/src/firebaseConfig.js
-frontend/uncle-nomad-frontend/src/firebaseConfig.js
