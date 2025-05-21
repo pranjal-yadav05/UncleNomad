@@ -10,6 +10,7 @@ import Razorpay from "razorpay";
 import Review from "../models/UserReview.js";
 import Stats from "../models/Stats.js";
 import ExcelJS from "exceljs";
+import User from "../models/User.js";
 
 // Configure Cloudinary
 cloudinaryV2.config({
@@ -601,15 +602,42 @@ export const deleteTourBooking = async (req, res) => {
       return res.status(404).json({ message: "Associated tour not found" });
     }
 
-    // Deduct bookedSlots only if the booking was confirmed
+    // For CONFIRMED bookings, restore available spots and update bookedSlots
     if (booking.status === "CONFIRMED") {
+      // First, update the bookedSlots count
       tour.bookedSlots = Math.max(0, tour.bookedSlots - booking.groupSize);
+
+      // Find the date period that matches the booking's selected date
+      const datePeriodIndex = tour.availableDates.findIndex(
+        (date) =>
+          date.startDate.getTime() ===
+            new Date(booking.selectedDate.startDate).getTime() &&
+          date.endDate.getTime() ===
+            new Date(booking.selectedDate.endDate).getTime()
+      );
+
+      if (datePeriodIndex !== -1) {
+        // Increase available spots for the date period
+        tour.availableDates[datePeriodIndex].availableSpots +=
+          booking.groupSize;
+        console.log(
+          `Restored ${booking.groupSize} spots to date period. New available spots: ${tour.availableDates[datePeriodIndex].availableSpots}`
+        );
+      } else {
+        console.warn(`Date period for booking ${id} not found in tour dates`);
+      }
+
+      // Save the tour with updated spots
       await tour.save();
     }
 
     await TourBooking.findByIdAndDelete(id);
 
-    res.json({ message: "Booking deleted successfully", updatedTour: tour });
+    res.json({
+      message: "Booking deleted successfully",
+      updatedTour: tour,
+      restoredSpots: booking.status === "CONFIRMED" ? booking.groupSize : 0,
+    });
   } catch (error) {
     console.error("Error deleting tour booking:", error);
     res.status(500).json({ message: "Server error" });
@@ -817,9 +845,35 @@ export const verifyTourPayment = async (req, res) => {
         throw new Error("Booking not found during update");
       }
 
+      // Find the tour to update available spots
+      const tour = await Tour.findById(tourId);
+      if (!tour) {
+        throw new Error("Tour not found");
+      }
+
+      // Find the selected date period in the tour
+      const datePeriodIndex = tour.availableDates.findIndex(
+        (date) =>
+          date.startDate.getTime() ===
+            new Date(booking.selectedDate.startDate).getTime() &&
+          date.endDate.getTime() ===
+            new Date(booking.selectedDate.endDate).getTime()
+      );
+
+      if (datePeriodIndex === -1) {
+        throw new Error("Selected date period not found in tour");
+      }
+
+      // Update available spots for the date period
+      tour.availableDates[datePeriodIndex].availableSpots -= booking.groupSize;
+
+      // Also update tour bookedSlots if needed
       const updatedTour = await Tour.findByIdAndUpdate(
         tourId,
-        { $inc: { bookedSlots: updatedBooking.groupSize } }, // Increase booked slots
+        {
+          $inc: { bookedSlots: updatedBooking.groupSize },
+          availableDates: tour.availableDates,
+        },
         { new: true, session }
       );
 
@@ -894,7 +948,6 @@ export const createTourBooking = async (req, res) => {
       !selectedDate ||
       !selectedPackage ||
       !guestName ||
-      !email ||
       !phone
     ) {
       return res.status(400).json({ message: "Missing required fields" });
@@ -943,7 +996,7 @@ export const createTourBooking = async (req, res) => {
       groupSize,
       bookingDate: new Date(),
       guestName,
-      email,
+      email: email || null, // Make email optional
       phone,
       specialRequests,
       totalPrice: calculatedTotal,
@@ -957,9 +1010,8 @@ export const createTourBooking = async (req, res) => {
       booking.paymentDate = new Date();
     }
 
-    // Update available spots in the tour's date period
-    tour.availableDates[datePeriodIndex].availableSpots -= groupSize;
-    await tour.save();
+    // DON'T update available spots yet - only after payment confirmation
+    // We'll update spots in the confirmTourBooking or verifyTourPayment endpoints
 
     // Save the booking
     const savedBooking = await booking.save();
@@ -1021,7 +1073,7 @@ export const confirmTourBooking = async (req, res) => {
 
     const datePeriod = tour.availableDates[datePeriodIndex];
 
-    // Only update bookedSlots and availableSpots if status is changing to CONFIRMED
+    // Only update bookedSlots and availableSpots if status is changing to CONFIRMED from a non-CONFIRMED state
     if (status === "CONFIRMED" && booking.status !== "CONFIRMED") {
       // Check if there are enough available slots
       if (datePeriod.availableSpots < booking.groupSize) {
@@ -1171,31 +1223,64 @@ export const deleteTourImage = async (req, res) => {
 
 export const getUserTourBooking = async (req, res) => {
   try {
-    if (!req.user || !req.user.email) {
-      return res.status(400).json({ message: "User email not found" });
+
+    // Handle phone authentication
+    if (!req.user) {
+      return res.status(400).json({ message: "User data not found in token" });
     }
 
-    // Find only CONFIRMED and PAID bookings for the user
-    const bookings = await TourBooking.find({
-      email: new RegExp(`^${req.user.email}$`, "i"),
+    // Create base query
+    let query = {
       status: "CONFIRMED",
       paymentStatus: "PAID",
-    })
+    };
+
+    // Get phone number from token or user record
+    if (req.user.phone) {
+      // Process phone number to handle different formats
+      const phoneDigits = req.user.phone.replace(/\D/g, "");
+      // Match the last digits of the phone number to handle different country code formats
+      const lastDigits = phoneDigits.slice(-10);
+      query.phone = { $regex: lastDigits + "$" };
+
+    } else if (req.user.id) {
+      // Fallback to finding by user ID if no phone in token
+      const user = await User.findById(req.user.id);
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (user.phone) {
+        // Handle phone number with regex for flexible matching
+        const phoneDigits = user.phone.replace(/\D/g, "");
+        const lastDigits = phoneDigits.slice(-10);
+        query.phone = { $regex: lastDigits + "$" };
+      } else {
+        return res.status(400).json({ message: "User has no phone number" });
+      }
+    } else {
+      return res.status(400).json({ message: "User has no phone number" });
+    }
+
+    // First, count all bookings to see if there are any
+    const totalBookingsCount = await TourBooking.countDocuments();
+
+    // Find phone-matching bookings
+    const bookings = await TourBooking.find(query)
       .populate({
         path: "tour",
-        select:
-          "title location images startDate endDate duration price itinerary",
+        select: "title location images duration price itinerary",
       })
       .select(
-        "_id status bookingDate guestName email phone specialRequests groupSize totalPrice paymentReference paymentStatus selectedDate selectedPackage"
+        "_id status bookingDate guestName phone specialRequests groupSize totalPrice paymentReference paymentStatus selectedDate selectedPackage"
       )
       .sort({ bookingDate: -1 })
-      .lean(); // Use lean() to remove Mongoose metadata
+      .lean();
 
+    // If no bookings found, return an empty array
     if (!bookings.length) {
-      return res
-        .status(404)
-        .json({ message: "No bookings found for this user" });
+      return res.status(200).json([]);
     }
 
     // Fetch any reviews the user has submitted for these bookings
@@ -1221,7 +1306,6 @@ export const getUserTourBooking = async (req, res) => {
         status: booking.status,
         bookingDate: booking.bookingDate,
         guestName: booking.guestName,
-        email: booking.email,
         phone: booking.phone,
         specialRequests: booking.specialRequests,
         participants: booking.groupSize,
@@ -1250,6 +1334,7 @@ export const getUserTourBooking = async (req, res) => {
         reviewId: review ? review._id : null,
       };
     });
+
 
     res.status(200).json(formattedBookings);
   } catch (error) {
@@ -1381,7 +1466,6 @@ const generateTourBookingsExcel = (bookings) => {
     { header: "Tour ID", key: "tourId", width: 30 },
     { header: "Tour Name", key: "tourName", width: 25 },
     { header: "Guest Name", key: "guestName", width: 20 },
-    { header: "Email", key: "email", width: 30 },
     { header: "Phone", key: "phone", width: 15 },
     { header: "Booking Date", key: "bookingDate", width: 15 },
     { header: "Start Date", key: "startDate", width: 15 },
@@ -1456,7 +1540,6 @@ const generateTourBookingsExcel = (bookings) => {
       tourId: tourId,
       tourName: tourTitle,
       guestName: booking.guestName,
-      email: booking.email,
       phone: booking.phone,
       bookingDate: formatDateDDMMYYYY(booking.bookingDate),
       startDate: startDate,
@@ -1503,11 +1586,7 @@ export const exportAllTourBookings = async (req, res) => {
     // Add search functionality (search by guest name, email, or phone)
     if (req.query.search) {
       const searchRegex = new RegExp(req.query.search, "i");
-      filter.$or = [
-        { guestName: searchRegex },
-        { email: searchRegex },
-        { phone: searchRegex },
-      ];
+      filter.$or = [{ guestName: searchRegex }, { phone: searchRegex }];
     }
 
     // Extract sort parameter from query params
@@ -1886,23 +1965,23 @@ export const generateTourBookingReceipt = async (req, res) => {
     // Check if user is authorized to access this receipt
     // First check if req.user exists
     if (req.user) {
-      // Get user email and compare with booking email
-      const userEmail = req.user.email;
-      const bookingEmail = booking.email;
+      // Get user phone and compare with booking phone
+      const userPhone = req.user.phone;
+      const bookingPhone = booking.phone;
 
       console.log(
-        "Authorization check - User Email:",
-        userEmail,
-        "Booking Email:",
-        bookingEmail,
+        "Authorization check - User Phone:",
+        userPhone,
+        "Booking Phone:",
+        bookingPhone,
         "User Role:",
         req.user.role
       );
 
-      // Allow access if user is admin or if this is their booking (matching email)
-      if (userEmail !== bookingEmail && req.user.role !== "admin") {
+      // Allow access if user is admin or if this is their booking (matching phone)
+      if (userPhone !== bookingPhone && req.user.role !== "admin") {
         console.log(
-          "Authorization failed: emails don't match and user is not admin"
+          "Authorization failed: phones don't match and user is not admin"
         );
         return res.status(403).json({
           status: "ERROR",
@@ -1940,7 +2019,6 @@ export const generateTourBookingReceipt = async (req, res) => {
       },
       customer: {
         name: booking.guestName,
-        email: booking.email,
         phone: booking.phone,
       },
       bookingDetails: {

@@ -451,7 +451,8 @@ export const createBooking = async (req, res) => {
       });
     }
 
-    if (!guestName || !email || !phone || !numberOfGuests) {
+    // Make email optional but phone required
+    if (!guestName || !phone || !numberOfGuests) {
       return res.status(400).json({
         message: "Missing required guest information",
       });
@@ -550,15 +551,18 @@ export const createBooking = async (req, res) => {
       checkIn: new Date(checkIn),
       checkOut: new Date(checkOut),
       guestName,
-      email,
+      // Include email only if provided
+      ...(email && { email }),
       phone,
       numberOfGuests,
       numberOfChildren: numberOfChildren || 0,
       mealIncluded: mealIncluded || false,
       specialRequests,
       totalPrice: calculatedTotalPrice,
-      status: status || "PENDING",
-      paymentStatus: paymentStatus || "PENDING",
+      // If paymentReference is provided, set status to CONFIRMED, otherwise use status or default to PENDING
+      status: paymentReference ? "CONFIRMED" : status || "PENDING",
+      // If paymentReference is provided, set paymentStatus to PAID, otherwise use paymentStatus or default to PENDING
+      paymentStatus: paymentReference ? "PAID" : paymentStatus || "PENDING",
       paymentReference: paymentReference || null,
     });
 
@@ -597,22 +601,132 @@ function isValidPhone(phone) {
 
 export const getUserBooking = async (req, res) => {
   try {
-    if (!req.user || !req.user.email) {
-      return res.status(400).json({ message: "User email not found" });
+    console.log("=== getUserBooking Debug Logs ===");
+    console.log("1. Request received with user data:", {
+      userId: req.user?.id,
+      email: req.user?.email,
+      phone: req.user?.phone,
+      role: req.user?.role,
+    });
+
+    if (!req.user) {
+      console.log("2. Error: No user data found in request");
+      return res.status(400).json({ message: "User data not found in token" });
     }
 
-    // Fetch user bookings
-    const bookings = await Booking.find({
-      email: new RegExp(`^${req.user.email}$`, "i"),
-      status: "CONFIRMED",
-    })
-      .sort({ checkIn: -1 })
-      .lean(); // Use lean() for better performance
+    // Process phone number at the start if available
+    let lastDigits = null;
+    if (req.user.phone) {
+      const phoneDigits = req.user.phone.replace(/\D/g, "");
+      lastDigits = phoneDigits.slice(-10);
+      console.log("2.1 Phone number processing:", {
+        originalPhone: req.user.phone,
+        processedDigits: phoneDigits,
+        lastDigits: lastDigits,
+      });
+    }
 
-    if (!bookings.length) {
+    // Create a query based on available user data
+    // Base filter - Include both CONFIRMED bookings and bookings with PAID payment status
+    let statusFilter = {
+      $or: [{ status: "CONFIRMED" }, { paymentStatus: "PAID" }],
+    };
+
+    // User identification filter
+    let userFilter = {};
+
+    if (req.user.email && !req.user.email.includes("@phone-auth.user")) {
+      // For email-authenticated users (excluding phone auth generated emails)
+      userFilter.email = new RegExp(`^${req.user.email}$`, "i");
+      console.log("3. Searching by email:", userFilter.email);
+    } else if (req.user.phone) {
+      // Create a more flexible phone number matching pattern
+      userFilter.$or = [
+        { phone: { $regex: lastDigits + "$" } },
+        { phone: { $regex: "^\\+?" + lastDigits + "$" } },
+        { phone: { $regex: "^91" + lastDigits + "$" } },
+        { phone: { $regex: "^\\+91" + lastDigits + "$" } },
+      ];
+
+      console.log("4. Phone number search patterns:", userFilter.$or);
+    } else if (req.user.id) {
+      console.log("5. Searching by user ID:", req.user.id);
+      // Fallback to finding by user ID
+      // First find the user to get their email or phone
+      const User = mongoose.model("User");
+      const user = await User.findById(req.user.id);
+
+      if (!user) {
+        console.log("6. Error: User not found by ID");
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      console.log("7. Found user by ID:", {
+        userId: user._id,
+        email: user.email,
+        phone: user.phone,
+      });
+
+      // If user has email, search by email, otherwise search by phone
+      if (user.email) {
+        userFilter.email = new RegExp(`^${user.email}$`, "i");
+        console.log("8. Searching by user ID -> email:", userFilter.email);
+      } else if (user.phone) {
+        // Process phone for consistent matching
+        const phoneDigits = user.phone.replace(/\D/g, "");
+        const lastDigits = phoneDigits.slice(-10);
+        userFilter.phone = { $regex: lastDigits + "$" };
+        console.log("9. Searching by user ID -> phone:", {
+          originalPhone: user.phone,
+          processedDigits: phoneDigits,
+          lastDigits: lastDigits,
+          finalRegex: lastDigits + "$",
+        });
+      } else {
+        console.log("10. Error: User has no email or phone");
+        return res.status(400).json({ message: "User has no email or phone" });
+      }
+    } else {
+      console.log("11. Error: No identifying information found");
       return res
-        .status(404)
-        .json({ message: "No bookings found for this user" });
+        .status(400)
+        .json({ message: "User has no identifying information" });
+    }
+
+    // Combine status and user filters
+    const filter = {
+      $and: [statusFilter, userFilter],
+    };
+
+    console.log("12. Final booking filter:", JSON.stringify(filter, null, 2));
+    console.log("12.1 Status filter:", JSON.stringify(statusFilter, null, 2));
+    console.log("12.2 User filter:", JSON.stringify(userFilter, null, 2));
+
+    // Fetch user bookings
+    const bookings = await Booking.find(filter).sort({ checkIn: -1 }).lean();
+
+    console.log("13. Found bookings count:", bookings.length);
+
+    // Debug - check all bookings in the system
+    const allBookings = await Booking.find({}).lean();
+    console.log("14. Total bookings in system:", allBookings.length);
+
+    // Print all booking phone numbers to debug
+    if (allBookings.length > 0) {
+      console.log("15. All booking phone numbers in the system:");
+      allBookings.forEach((booking, index) => {
+        console.log(
+          `Booking ${index + 1}: Phone: ${booking.phone}, Status: ${
+            booking.status
+          }, Payment Status: ${booking.paymentStatus}`
+        );
+      });
+    }
+
+    // If no bookings found, return an empty array instead of an error
+    if (!bookings.length) {
+      console.log("16. No bookings found for user, returning empty array");
+      return res.json([]);
     }
 
     // Extract unique room IDs from bookings
@@ -623,11 +737,18 @@ export const getUserBooking = async (req, res) => {
     ];
     const bookingIds = bookings.map((booking) => booking._id);
 
-    // Fetch detailed room information with all relevant fields for ticket
+    console.log("17. Processing room and review data:", {
+      uniqueRoomIds: roomIds.length,
+      bookingIds: bookingIds.length,
+    });
+
+    // Fetch detailed room information
     const rooms = await Room.find(
       { _id: { $in: roomIds } },
       "_id name type imageUrls price capacity amenities mealIncluded mealPrice beds extraBedPrice smokingAllowed alcoholAllowed childrenAllowed childrenPolicy"
     ).lean();
+
+    console.log("18. Found rooms count:", rooms.length);
 
     // Create a detailed room map
     const roomMap = rooms.reduce((acc, room) => {
@@ -653,14 +774,25 @@ export const getUserBooking = async (req, res) => {
 
     // Fetch user reviews
     const reviews = await Review.find({
-      bookingId: { $in: bookingIds },
+      $or: [
+        { bookingId: { $in: bookingIds } },
+        ...(lastDigits ? [{ phone: { $regex: lastDigits + "$" } }] : []),
+      ],
       bookingType: "room",
     }).lean();
+
+    console.log("19. Found reviews count:", reviews.length);
+    console.log("19.1 Review search criteria:", {
+      bookingIds: bookingIds,
+      phonePattern: lastDigits ? lastDigits + "$" : null,
+    });
 
     // Create a map of booking IDs to reviews
     const reviewMap = {};
     reviews.forEach((review) => {
-      reviewMap[review.bookingId.toString()] = review;
+      if (review.bookingId) {
+        reviewMap[review.bookingId.toString()] = review;
+      }
     });
 
     // Calculate duration for each booking
@@ -694,19 +826,27 @@ export const getUserBooking = async (req, res) => {
           : booking.status
         : "N/A";
 
+      // Check if review exists for this booking's phone number
+      const phoneReview = reviews.find(
+        (r) =>
+          r.phone &&
+          r.phone.replace(/\D/g, "").slice(-10) ===
+            booking.phone.replace(/\D/g, "").slice(-10)
+      );
+
       return {
         ...booking,
         duration: durationInDays,
         status: formattedBookingStatus,
         paymentStatus: formattedPaymentStatus,
-        totalAmount: booking.totalPrice, // For consistency with naming in frontend
+        totalAmount: booking.totalPrice,
         rooms: booking.rooms.map((room, index) => {
           const roomDetails = roomMap[room.roomId.toString()] || {};
           return {
             ...room,
             roomId: room.roomId,
             roomType: room.roomType || roomDetails.roomType || "Standard Room",
-            roomNumber: `Room ${index + 1}`, // Placeholder - could be replaced with actual room numbers if available
+            roomNumber: `Room ${index + 1}`,
             images: roomDetails.images || [],
             pricePerNight: room.price || roomDetails.pricePerNight,
             maxOccupancy: room.capacity || roomDetails.maxOccupancy || 2,
@@ -718,16 +858,19 @@ export const getUserBooking = async (req, res) => {
             numberOfNights: room.numberOfNights || durationInDays,
           };
         }),
-        userRating: review ? review.rating : 0,
-        userReview: review ? review.comment : "",
-        reviewId: review ? review._id : null,
-        location: "Uncle Nomad Stays", // Default location - replace with actual property location if available
+        userRating: review || phoneReview ? (review || phoneReview).rating : 0,
+        userReview:
+          review || phoneReview ? (review || phoneReview).comment : "",
+        reviewId: review || phoneReview ? (review || phoneReview)._id : null,
+        location: "Uncle Nomad Stays",
       };
     });
 
+    console.log("20. Successfully processed and enriched bookings");
     res.json(enrichedBookings);
   } catch (error) {
-    console.error("Error fetching bookings:", error);
+    console.error("Error in getUserBooking:", error);
+    console.error("Error stack:", error.stack);
     res.status(500).json({ message: "Failed to fetch bookings" });
   }
 };

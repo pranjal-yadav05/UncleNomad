@@ -1,12 +1,12 @@
-"use client"
+"use client";
 
-import { useEffect, useState, useCallback } from "react"
-import axios from "axios"
-import { Button } from "./ui/button"
-import BookingConfirmationDialog from "../modals/BookingConfirmationDialog"
-import { useRef } from "react"
-import FailedTransactionModal from "../modals/FailedTransactionModal"
-import { loadScript } from "../utils/razorpay-utils"
+import { useEffect, useState, useCallback } from "react";
+import axios from "axios";
+import { Button } from "./ui/button";
+import BookingConfirmationDialog from "../modals/BookingConfirmationDialog";
+import { useRef } from "react";
+import FailedTransactionModal from "../modals/FailedTransactionModal";
+import { loadScript } from "../utils/razorpay-utils";
 
 const RazorpayPaymentForm = ({
   paymentData,
@@ -23,60 +23,64 @@ const RazorpayPaymentForm = ({
   setChecking,
   setIsLoading,
 }) => {
-  const [error, setError] = useState(null)
-  const [showConfirmation, setShowConfirmation] = useState(false)
-  const [isFailedModalOpen, setIsFailedModalOpen] = useState(false)
-  const [paymentStatus, setPaymentStatus] = useState("initializing")
+  const [error, setError] = useState(null);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [isFailedModalOpen, setIsFailedModalOpen] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState("initializing");
   // Prevent multiple initializations
-  const isInitialized = useRef(false)
-  const paymentProcessed = useRef(false)
+  const isInitialized = useRef(false);
+  const paymentProcessed = useRef(false);
 
   const handleCloseConfirmation = useCallback(() => {
-    setShowConfirmation(false)
-    setIsBookingConfirmed(false)
-    onClose?.()
-  }, [onClose, setIsBookingConfirmed])
+    setShowConfirmation(false);
+    setIsBookingConfirmed(false);
+    onClose?.();
+  }, [onClose, setIsBookingConfirmed]);
 
   const handlePaymentFailure = useCallback(
     (errorMsg) => {
       // Only handle failure if we haven't already processed a successful payment
       if (!paymentProcessed.current) {
-        setError(errorMsg)
-        setIsFailedModalOpen(true)
-        onPaymentFailure?.(errorMsg)
+        setError(errorMsg);
+        setIsFailedModalOpen(true);
+        onPaymentFailure?.(errorMsg);
       }
     },
-    [onPaymentFailure],
-  )
+    [onPaymentFailure]
+  );
 
   useEffect(() => {
     if (!paymentData || !paymentData.orderId) {
-      handlePaymentFailure("Payment initialization failed: Missing payment details")
-      return
+      handlePaymentFailure(
+        "Payment initialization failed: Missing payment details"
+      );
+      return;
     }
 
     // Prevent multiple initializations
     if (isInitialized.current) {
-      console.warn("Razorpay already initialized, skipping...")
-      return
+      console.warn("Razorpay already initialized, skipping...");
+      return;
     }
-    isInitialized.current = true
+    isInitialized.current = true;
 
-    setIsLoading(true)
-    setPaymentStatus("initializing_payment")
+    setIsLoading(true);
+    setPaymentStatus("initializing_payment");
 
     const initializeRazorpay = async () => {
       try {
         // Load Razorpay script
-        const res = await loadScript("https://checkout.razorpay.com/v1/checkout.js")
+        const res = await loadScript(
+          "https://checkout.razorpay.com/v1/checkout.js"
+        );
         if (!res) {
-          throw new Error("Razorpay SDK failed to load")
+          throw new Error("Razorpay SDK failed to load");
         }
 
-        setIsLoading(false)
-        closeModal?.()
-        setIsModalOpen?.(false)
-        setPaymentStatus("idle")
+        setIsLoading(false);
+        closeModal?.();
+        setIsModalOpen?.(false);
+        setPaymentStatus("idle");
 
         // Configure Razorpay options
         const options = {
@@ -89,11 +93,11 @@ const RazorpayPaymentForm = ({
           handler: async (response) => {
             try {
               // Mark as processed to prevent duplicate handling
-              paymentProcessed.current = true
+              paymentProcessed.current = true;
 
               // Show checking payment modal
-              setChecking(true)
-              setPaymentStatus("processing")
+              setChecking(true);
+              setPaymentStatus("processing");
 
               const selectedRooms = Object.entries(bookingForm.selectedRooms)
                 .filter(([roomId, quantity]) => quantity > 0)
@@ -102,12 +106,12 @@ const RazorpayPaymentForm = ({
                   quantity,
                   checkIn: bookingForm.checkIn,
                   checkOut: bookingForm.checkOut,
-                }))
+                }));
 
               const bookingData = {
                 rooms: selectedRooms,
                 guestName: bookingForm.guestName,
-                email: bookingForm.email,
+                ...(bookingForm.email && { email: bookingForm.email }),
                 phone: bookingForm.phone,
                 numberOfGuests: bookingForm.numberOfGuests,
                 numberOfChildren: bookingForm.numberOfChildren,
@@ -118,27 +122,30 @@ const RazorpayPaymentForm = ({
                 checkOut: bookingForm.checkOut,
                 totalPrice: bookingForm.totalPrice,
                 paymentReference: response.razorpay_payment_id,
-              }
+              };
 
-              setBookingDetails(bookingData)
+              setBookingDetails(bookingData);
 
-              const authToken = localStorage.getItem("authToken")
+              const authToken = localStorage.getItem("authToken");
 
-              const bookingResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/bookings/book`, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "x-api-key": process.env.REACT_APP_API_KEY,
-                  Authorization: `Bearer ${authToken}`,
-                },
-                body: JSON.stringify(bookingData),
-              })
+              const bookingResponse = await fetch(
+                `${process.env.REACT_APP_API_URL}/api/bookings/book`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    "x-api-key": process.env.REACT_APP_API_KEY,
+                    Authorization: `Bearer ${authToken}`,
+                  },
+                  body: JSON.stringify(bookingData),
+                }
+              );
 
               if (!bookingResponse.ok) {
-                throw new Error("Failed to create booking")
+                throw new Error("Failed to create booking");
               }
 
-              const bookingResult = await bookingResponse.json()
+              const bookingResult = await bookingResponse.json();
 
               const bookingUpdate = await axios.post(
                 `${process.env.REACT_APP_API_URL}/api/payments/verify`,
@@ -148,25 +155,32 @@ const RazorpayPaymentForm = ({
                   razorpay_order_id: response.razorpay_order_id,
                   razorpay_signature: response.razorpay_signature,
                 },
-                { headers: { "x-api-key": process.env.REACT_APP_API_KEY, Authorization: `Bearer ${authToken}` } },
-              )
+                {
+                  headers: {
+                    "x-api-key": process.env.REACT_APP_API_KEY,
+                    Authorization: `Bearer ${authToken}`,
+                  },
+                }
+              );
 
-              setBookingDetails(bookingUpdate.data.data.bookingUpdate)
+              setBookingDetails(bookingUpdate.data.data.bookingUpdate);
 
               // Hide checking modal
-              setChecking(false)
+              setChecking(false);
 
-              setShowConfirmation(true)
-              setIsBookingConfirmed(true)
+              setShowConfirmation(true);
+              setIsBookingConfirmed(true);
             } catch (error) {
               // Hide checking modal in case of error
-              setChecking(false)
-              handlePaymentFailure(error.message || "Payment verification failed")
+              setChecking(false);
+              handlePaymentFailure(
+                error.message || "Payment verification failed"
+              );
             }
           },
           prefill: {
             name: bookingForm.guestName,
-            email: bookingForm.email,
+            ...(bookingForm.email && { email: bookingForm.email }),
             contact: bookingForm.phone,
           },
           notes: {
@@ -179,24 +193,24 @@ const RazorpayPaymentForm = ({
             ondismiss: () => {
               // Only handle if we haven't already processed a success
               if (!paymentProcessed.current) {
-                handlePaymentFailure("Payment window closed")
+                handlePaymentFailure("Payment window closed");
               }
             },
           },
-        }
+        };
 
         // Create Razorpay instance and open payment form
-        const razorpay = new window.Razorpay(options)
-        razorpay.open()
+        const razorpay = new window.Razorpay(options);
+        razorpay.open();
       } catch (error) {
-        setIsLoading(false)
-        handlePaymentFailure(error.message || "Failed to initialize payment")
+        setIsLoading(false);
+        handlePaymentFailure(error.message || "Failed to initialize payment");
       }
-    }
+    };
 
-    initializeRazorpay()
+    initializeRazorpay();
 
-    return () => {}
+    return () => {};
   }, [
     paymentData,
     bookingForm,
@@ -207,7 +221,7 @@ const RazorpayPaymentForm = ({
     setChecking,
     setBookingDetails,
     setIsBookingConfirmed,
-  ])
+  ]);
 
   if (error) {
     return (
@@ -215,8 +229,7 @@ const RazorpayPaymentForm = ({
         <p className="font-medium">{error}</p>
         <Button
           onClick={() => window.location.reload()}
-          className="mt-4 bg-brand-purple hover:bg-brand-purple/90 text-white"
-        >
+          className="mt-4 bg-brand-purple hover:bg-brand-purple/90 text-white">
           Try Again
         </Button>
         <FailedTransactionModal
@@ -225,11 +238,16 @@ const RazorpayPaymentForm = ({
           errorMessage={error}
         />
       </div>
-    )
+    );
   }
 
   if (showConfirmation && bookingDetails) {
-    return <BookingConfirmationDialog booking={bookingDetails} onClose={handleCloseConfirmation} />
+    return (
+      <BookingConfirmationDialog
+        booking={bookingDetails}
+        onClose={handleCloseConfirmation}
+      />
+    );
   }
 
   if (paymentStatus === "initializing") {
@@ -237,21 +255,26 @@ const RazorpayPaymentForm = ({
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white p-6 rounded-lg shadow-xl text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-purple mx-auto mb-4"></div>
-          <p className="text-lg font-semibold">Initializing Payment Gateway...</p>
-          <p className="text-sm text-gray-500 mt-2">Please wait, this may take a moment.</p>
+          <p className="text-lg font-semibold">
+            Initializing Payment Gateway...
+          </p>
+          <p className="text-sm text-gray-500 mt-2">
+            Please wait, this may take a moment.
+          </p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
     <div className="text-center w-full">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-purple mx-auto"></div>
       <p className="mt-4 font-medium">Loading payment gateway...</p>
-      <p className="text-sm text-gray-500 mt-2">Please do not refresh the page.</p>
+      <p className="text-sm text-gray-500 mt-2">
+        Please do not refresh the page.
+      </p>
     </div>
-  )
-}
+  );
+};
 
-export default RazorpayPaymentForm
-
+export default RazorpayPaymentForm;

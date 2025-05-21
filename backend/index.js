@@ -22,6 +22,7 @@ import tokenValidationRoutes from "./routes/tokenValidationRoutes.js";
 import subscribeRoutes from "./routes/subscribeRoutes.js";
 import reviewsRoutes from "./routes/reviewRoutes.js";
 import userReviewRoutes from "./routes/userReviewRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
 
 dotenv.config();
 
@@ -50,7 +51,6 @@ app.use(
       }
 
       if (allowedOrigins.includes(origin)) {
-        console.log("Origin allowed:", origin);
         return callback(null, true);
       }
 
@@ -112,7 +112,14 @@ app.use(
 );
 app.use((req, res, next) => {
   const apiKey = req.headers["x-api-key"];
+  console.log(
+    `API Key check: ${req.method} ${req.path} - Key ${
+      apiKey ? "provided" : "missing"
+    }`
+  );
+
   if (!apiKey || apiKey !== process.env.API_KEY) {
+    console.log(`API Key validation failed: ${req.method} ${req.path}`);
     return res.status(401).json({ message: "Unauthorized access" });
   }
   next();
@@ -136,6 +143,8 @@ app.use("/api/token", tokenValidationRoutes);
 app.use("/api/media", mediaRoutes);
 app.use("/api/subscribe", subscribeRoutes);
 app.use("/api/blogs", blogRoutes);
+app.use("/api/users", userRoutes);
+
 // Error handling middleware
 
 app.use((req, res, next) => {

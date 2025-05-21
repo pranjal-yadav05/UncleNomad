@@ -18,7 +18,16 @@ import {
 } from "../components/ui/tabs";
 import { Skeleton } from "../components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
-import { CalendarDays, LogOut, MapPin, User, Compass } from "lucide-react";
+import {
+  CalendarDays,
+  LogOut,
+  MapPin,
+  User,
+  Compass,
+  Edit2,
+  Check,
+  X,
+} from "lucide-react";
 import TourBookingCard from "../components/TourBookingCard";
 import Footer from "../components/Footer";
 import RoomBookingCard from "../components/RoomBookingCard";
@@ -26,6 +35,8 @@ import Header from "../components/Header";
 import { Star } from "lucide-react";
 import RatingDialog from "../modals/RatingDialog";
 import { formatDate, formatDateWithOptions } from "../utils/dateUtils";
+import { Input } from "../components/ui/input";
+import { toast } from "react-hot-toast";
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -35,6 +46,8 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [ratingDialogOpen, setRatingDialogOpen] = useState(false);
   const [userReviews, setUserReviews] = useState([]);
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState("");
   const [currentBookingToRate, setCurrentBookingToRate] = useState({
     bookingId: "",
     roomId: "",
@@ -49,12 +62,13 @@ export default function ProfilePage() {
   useEffect(() => {
     const authToken = localStorage.getItem("authToken");
     const userName = localStorage.getItem("userName");
-    const userEmail = localStorage.getItem("userEmail");
+    const userPhone = localStorage.getItem("userPhone");
 
     if (!authToken) {
       navigate("/login"); // Redirect if not authenticated
     } else {
-      setUser({ name: userName || "", email: userEmail || "" });
+      setUser({ name: userName || "", phone: userPhone || "" });
+      setNameInput(userName || "");
       fetchRoomBookings(authToken);
       fetchTourBookings(authToken);
       fetchUserReviews(authToken);
@@ -63,58 +77,98 @@ export default function ProfilePage() {
 
   const fetchUserReviews = async (authToken) => {
     try {
+      console.log(
+        "Fetching user reviews with auth token:",
+        authToken ? "Token exists" : "Token missing"
+      );
+      const apiKey = process.env.REACT_APP_API_KEY || "";
+      console.log(
+        "Using API key for user reviews:",
+        apiKey ? "API key is set" : "API key is missing"
+      );
+
       const response = await fetch(
         `${process.env.REACT_APP_API_URL}/api/userreviews/user`,
         {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            "x-api-key": process.env.REACT_APP_API_KEY || "",
+            "x-api-key": apiKey,
             Authorization: `Bearer ${authToken}`,
           },
         }
       );
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch user reviews");
+      // Handle both successful responses and graceful empty results
+      let data = [];
+      if (response.ok) {
+        data = await response.json();
+        console.log("User reviews response received");
+      } else {
+        console.log("User reviews response not OK:", response.status);
+        // Don't throw an error, just use empty array
       }
 
-      const data = await response.json();
-      setUserReviews(data);
+      // Ensure we always set a valid array
+      setUserReviews(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error fetching user reviews:", error);
+      // Set empty array on error
+      setUserReviews([]);
     }
   };
 
   const fetchRoomBookings = async (authToken) => {
     try {
+      console.log(
+        "Fetching room bookings with auth token:",
+        authToken ? "Token exists" : "Token missing"
+      );
+      const apiKey = process.env.REACT_APP_API_KEY || "";
+      console.log(
+        "Using API key for room bookings:",
+        apiKey ? "API key is set" : "API key is missing"
+      );
+
       const response = await fetch(
         `${process.env.REACT_APP_API_URL}/api/bookings/user-bookings`,
         {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            "x-api-key": process.env.REACT_APP_API_KEY || "",
+            "x-api-key": apiKey,
             Authorization: `Bearer ${authToken}`,
           },
         }
       );
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch room bookings");
+      // Handle both successful responses and graceful empty results
+      let data = [];
+      if (response.ok) {
+        data = await response.json();
+      } else {
+        console.log("Room bookings response not OK:", response.status);
+        // Don't throw an error, just use empty array
       }
 
-      const data = await response.json();
-      // Sort bookings with newest creation date first
-      const sortedBookings = data.sort((a, b) => {
-        // Use createdAt or bookingDate, falling back to checkIn date if neither exists
-        const dateA = a.createdAt || a.bookingDate || a.checkIn;
-        const dateB = b.createdAt || b.bookingDate || b.checkIn;
-        return new Date(dateB) - new Date(dateA);
-      });
-      setRoomBookings(sortedBookings);
+      // If we have data and it's an array with items, sort it
+      if (Array.isArray(data) && data.length > 0) {
+        // Sort bookings with newest creation date first
+        const sortedBookings = data.sort((a, b) => {
+          // Use createdAt or bookingDate, falling back to checkIn date if neither exists
+          const dateA = a.createdAt || a.bookingDate || a.checkIn;
+          const dateB = b.createdAt || b.bookingDate || b.checkIn;
+          return new Date(dateB) - new Date(dateA);
+        });
+        setRoomBookings(sortedBookings);
+      } else {
+        // Set empty array if no data
+        setRoomBookings([]);
+      }
     } catch (error) {
       console.error("Error fetching room bookings:", error);
+      // Set empty array on error
+      setRoomBookings([]);
     } finally {
       setLoading(false);
     }
@@ -122,65 +176,86 @@ export default function ProfilePage() {
 
   const fetchTourBookings = async (authToken) => {
     try {
+      console.log(
+        "Fetching tour bookings with auth token:",
+        authToken ? "Token exists" : "Token missing"
+      );
+      const apiKey = process.env.REACT_APP_API_KEY || "";
+      console.log(
+        "Using API key for tour bookings:",
+        apiKey ? "API key is set" : "API key is missing"
+      );
+
       const response = await fetch(
         `${process.env.REACT_APP_API_URL}/api/tours/user-tour-booking`,
         {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            "x-api-key": process.env.REACT_APP_API_KEY || "",
+            "x-api-key": apiKey,
             Authorization: `Bearer ${authToken}`,
           },
         }
       );
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch tour bookings");
+      // Handle both successful responses and graceful empty results
+      let data = [];
+      if (response.ok) {
+        data = await response.json();
+        console.log("Tour bookings API response:", data);
+      } else {
+        console.log("Tour bookings response not OK:", response.status);
+        // Don't throw an error, just use empty array
       }
 
-      const data = await response.json();
-      console.log("Tour bookings API response:", data);
+      // If we have data and it's an array with items, process it
+      if (Array.isArray(data) && data.length > 0) {
+        // Ensure we properly process the selectedDate and selectedPackage
+        const processedBookings = data.map((booking) => {
+          // Normalize status case (API might return uppercase)
+          if (booking.status) {
+            booking.status =
+              booking.status.charAt(0).toUpperCase() +
+              booking.status.slice(1).toLowerCase();
+          }
 
-      // Ensure we properly process the selectedDate and selectedPackage
-      const processedBookings = data.map((booking) => {
-        // Normalize status case (API might return uppercase)
-        if (booking.status) {
-          booking.status =
-            booking.status.charAt(0).toUpperCase() +
-            booking.status.slice(1).toLowerCase();
-        }
+          // Normalize payment status case
+          if (booking.paymentStatus) {
+            booking.paymentStatus =
+              booking.paymentStatus.charAt(0).toUpperCase() +
+              booking.paymentStatus.slice(1).toLowerCase();
+          }
 
-        // Normalize payment status case
-        if (booking.paymentStatus) {
-          booking.paymentStatus =
-            booking.paymentStatus.charAt(0).toUpperCase() +
-            booking.paymentStatus.slice(1).toLowerCase();
-        }
+          // Calculate total amount if not present
+          if (!booking.totalAmount && booking.totalPrice) {
+            booking.totalAmount = booking.totalPrice;
+          }
 
-        // Calculate total amount if not present
-        if (!booking.totalAmount && booking.totalPrice) {
-          booking.totalAmount = booking.totalPrice;
-        }
+          // Set groupSize from participants if it doesn't exist
+          if (!booking.groupSize && booking.participants) {
+            booking.groupSize = booking.participants;
+          }
 
-        // Set groupSize from participants if it doesn't exist
-        if (!booking.groupSize && booking.participants) {
-          booking.groupSize = booking.participants;
-        }
+          return booking;
+        });
 
-        return booking;
-      });
-
-      // Sort bookings with newest creation date first
-      const sortedBookings = processedBookings.sort((a, b) => {
-        // Use createdAt or bookingDate, falling back to tourDate if neither exists
-        const dateA = a.createdAt || a.bookingDate || a.tourDate;
-        const dateB = b.createdAt || b.bookingDate || b.tourDate;
-        return new Date(dateB) - new Date(dateA);
-      });
-      console.log("Processed tour bookings:", sortedBookings);
-      setTourBookings(sortedBookings);
+        // Sort bookings with newest creation date first
+        const sortedBookings = processedBookings.sort((a, b) => {
+          // Use createdAt or bookingDate, falling back to tourDate if neither exists
+          const dateA = a.createdAt || a.bookingDate || a.tourDate;
+          const dateB = b.createdAt || b.bookingDate || b.tourDate;
+          return new Date(dateB) - new Date(dateA);
+        });
+        console.log("Processed tour bookings:", sortedBookings);
+        setTourBookings(sortedBookings);
+      } else {
+        // Set empty array if no data
+        setTourBookings([]);
+      }
     } catch (error) {
       console.error("Error fetching tour bookings:", error);
+      // Set empty array on error
+      setTourBookings([]);
     } finally {
       setLoading(false);
     }
@@ -189,9 +264,68 @@ export default function ProfilePage() {
   const handleLogout = () => {
     localStorage.removeItem("authToken");
     localStorage.removeItem("userName");
-    localStorage.removeItem("userEmail");
+    localStorage.removeItem("userPhone");
     localStorage.removeItem("token");
     navigate("/"); // Redirect to homepage
+  };
+
+  const handleEditName = () => {
+    setEditingName(true);
+  };
+
+  const handleSaveName = async () => {
+    if (!nameInput.trim()) {
+      toast.error("Name cannot be empty");
+      return;
+    }
+
+    const authToken = localStorage.getItem("authToken");
+
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL}/api/users/update-name`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": process.env.REACT_APP_API_KEY || "",
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: JSON.stringify({ name: nameInput }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to update name");
+      }
+
+      const data = await response.json();
+
+      // Update user state
+      setUser({
+        ...user,
+        name: nameInput,
+      });
+
+      // Save updated user info to localStorage
+      localStorage.setItem("userName", nameInput);
+
+      // If the API returned a new token, update it in localStorage
+      if (data.token) {
+        localStorage.setItem("authToken", data.token);
+      }
+
+      setEditingName(false);
+      toast.success("Name updated successfully");
+    } catch (error) {
+      console.error("Error updating name:", error);
+      toast.error("Failed to update name. Please try again.");
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setNameInput(user.name || "");
+    setEditingName(false);
   };
 
   // Get status badge color
@@ -367,20 +501,62 @@ export default function ProfilePage() {
                   }`}
                   alt={user.name}
                 />
-                <div className="text-center">
-                  <h3 className="text-xl font-semibold">{user.name}</h3>
-                  <p className="text-sm text-muted-foreground">{user.email}</p>
+                <div className="text-center w-full">
+                  {editingName ? (
+                    <div className="flex flex-col gap-2">
+                      <Input
+                        value={nameInput}
+                        onChange={(e) => setNameInput(e.target.value)}
+                        className="text-center"
+                        placeholder="Enter your name"
+                      />
+                      <div className="flex justify-center gap-2 mt-1">
+                        <Button
+                          onClick={handleSaveName}
+                          size="sm"
+                          className="bg-green-500 hover:bg-green-600">
+                          <Check className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          onClick={handleCancelEdit}
+                          size="sm"
+                          variant="outline"
+                          className="text-red-500 hover:text-red-600">
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center gap-2">
+                      <h3 className="text-xl font-semibold">{user.name}</h3>
+                      <Button
+                        onClick={handleEditName}
+                        size="sm"
+                        variant="ghost"
+                        className="p-1 h-auto">
+                        <Edit2 className="h-4 w-4 text-gray-500" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <Button
-                  variant="destructive"
-                  className="w-full justify-start"
-                  onClick={handleLogout}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Logout
-                </Button>
+              <div className="border-t pt-4 mt-4">
+                <div className="space-y-4">
+                  {user.phone && (
+                    <div className="flex items-center">
+                      <User className="h-4 w-4 mr-2 text-gray-500" />
+                      <span className="text-sm">{user.phone}</span>
+                    </div>
+                  )}
+                  <Button
+                    onClick={handleLogout}
+                    variant="destructive"
+                    className="w-full">
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Logout
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

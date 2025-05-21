@@ -141,11 +141,8 @@ const TourDetailsPage = () => {
 
   // Calculate tour ratings (sample implementation)
   const ratings = {
-    overall: 4.8,
-    accommodation: 4.6,
-    transportation: 4.7,
-    activities: 4.9,
-    valueForMoney: 4.5,
+    overall: tour.averageRating || 0,
+    reviewCount: tour.reviewCount || 0,
   };
 
   const handleImageClick = (image) => {
@@ -205,7 +202,14 @@ const TourDetailsPage = () => {
                 </div>
                 <div className="flex items-center text-yellow-400">
                   <Star className="w-4 h-4 mr-1 fill-current" />
-                  <span>{ratings.overall}</span>
+                  <span>
+                    {tour.averageRating ? tour.averageRating.toFixed(1) : "N/A"}
+                  </span>
+                  {tour.reviewCount > 0 && (
+                    <span className="text-white text-xs ml-1">
+                      ({tour.reviewCount})
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -536,8 +540,7 @@ const TourDetailsPage = () => {
                       </li>
                     ))
                   ) : (
-                    <>
-                    </>
+                    <></>
                   )}
                 </ul>
               </div>
@@ -549,7 +552,8 @@ const TourDetailsPage = () => {
             <div>
               <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
                 <h2 className="text-3xl font-bold text-gray-800">
-                  Guest Reviews
+                  Guest Reviews{" "}
+                  {tour.reviewCount > 0 && `(${tour.reviewCount})`}
                 </h2>
                 <div className="flex items-center mt-4 md:mt-0">
                   <div className="flex">
@@ -557,7 +561,7 @@ const TourDetailsPage = () => {
                       <Star
                         key={star}
                         className={`w-5 h-5 ${
-                          star <= Math.round(tour?.ratings?.overall || 0)
+                          star <= Math.round(tour.averageRating || 0)
                             ? "text-yellow-400 fill-current"
                             : "text-gray-300"
                         }`}
@@ -565,7 +569,10 @@ const TourDetailsPage = () => {
                     ))}
                   </div>
                   <span className="ml-2 text-gray-700 font-medium">
-                    {tour?.ratings?.overall || "No Ratings"} out of 5
+                    {tour.averageRating
+                      ? tour.averageRating.toFixed(1)
+                      : "No Ratings"}{" "}
+                    out of 5
                   </span>
                 </div>
               </div>

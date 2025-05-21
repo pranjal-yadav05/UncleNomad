@@ -26,7 +26,7 @@ import {
   exportToursToExcel,
   generateTourBookingReceipt,
 } from "../controllers/tourController.js";
-import { authenticateToken } from "../middleware/auth.js";
+import { authenticateToken, validateApiKey } from "../middleware/auth.js";
 import { auth } from "googleapis/build/src/apis/abusiveexperiencereport/index.js";
 
 const router = express.Router();

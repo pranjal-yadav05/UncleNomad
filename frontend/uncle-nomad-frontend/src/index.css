@@ -3,51 +3,51 @@
 @tailwind utilities;
 
 @font-face {
-  font-family: 'SeaGardens';
-  src: url('../public/fonts/SeaGardens3D-Italic.otf') format('opentype');
+  font-family: "SeaGardens";
+  src: url("../public/fonts/SeaGardens3D-Italic.otf") format("opentype");
   font-weight: normal;
   font-style: italic;
 }
 
 @font-face {
-  font-family: 'SeaGardens';
-  src: url('../public/fonts/SeaGardens-Regular.otf') format('opentype');
+  font-family: "SeaGardens";
+  src: url("../public/fonts/SeaGardens-Regular.otf") format("opentype");
   font-weight: normal;
   font-style: normal;
 }
 
 @font-face {
-  font-family: 'SeaGardens3DFilledItalic';
-  src: url('../public/fonts/SeaGardens3DFilled-Italic.otf') format('opentype');
+  font-family: "SeaGardens3DFilledItalic";
+  src: url("../public/fonts/SeaGardens3DFilled-Italic.otf") format("opentype");
   font-weight: bold;
   font-style: normal;
 }
 
 @font-face {
-  font-family: 'SeaGardens3dItalic';
-  src: url('../public/fonts/SeaGardens3D-Italic.otf') format('opentype');
+  font-family: "SeaGardens3dItalic";
+  src: url("../public/fonts/SeaGardens3D-Italic.otf") format("opentype");
   font-weight: normal;
   font-style: italic;
 }
 
 @font-face {
-  font-family: 'SeaGardensRegular';
-  src: url('../public/fonts/SeaGardens-Regular.otf') format('opentype');
+  font-family: "SeaGardensRegular";
+  src: url("../public/fonts/SeaGardens-Regular.otf") format("opentype");
   font-weight: normal;
   font-style: normal;
 }
 
 @font-face {
-  font-family: 'SeaGardens3DRegular';
-  src: url('../public/fonts/SeaGardens3D-Regular.otf') format('opentype');
+  font-family: "SeaGardens3DRegular";
+  src: url("../public/fonts/SeaGardens3D-Regular.otf") format("opentype");
   font-weight: normal;
   font-style: normal;
 }
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -55,7 +55,7 @@ body {
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
 }
 
@@ -63,7 +63,7 @@ code {
 ::-webkit-scrollbar {
   width: 12px;
   height: 12px;
-  background-color: rgba(241, 245, 249, 0.8);  /* Subtle light background */
+  background-color: rgba(241, 245, 249, 0.8); /* Subtle light background */
 }
 
 ::-webkit-scrollbar-track {
@@ -80,8 +80,9 @@ code {
 ::-webkit-scrollbar-thumb {
   background: linear-gradient(
     135deg,
-    #2A4365,  /* Deep blue like mountain shadows */
-    #4A5568    /* Slate gray like mountain rocks */
+    #2a4365,
+    /* Deep blue like mountain shadows */ #4a5568
+      /* Slate gray like mountain rocks */
   );
   border-radius: 8px;
   border: 3px solid rgba(241, 245, 249, 0.8);
@@ -93,35 +94,31 @@ code {
 ::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(
     135deg,
-    #1A365D,  /* Darker blue on hover */
-    #2D3748    /* Darker slate on hover */
+    #1a365d,
+    /* Darker blue on hover */ #2d3748 /* Darker slate on hover */
   );
   border: 2px solid rgba(241, 245, 249, 0.8);
 }
 
 /* Subtle transition when scrolling */
 ::-webkit-scrollbar-thumb:active {
-  background: linear-gradient(
-    135deg,
-    #2A4365,
-    #1A365D
-  );
+  background: linear-gradient(135deg, #2a4365, #1a365d);
   border: 2px solid rgba(241, 245, 249, 0.8);
 }
 
 /* For Firefox */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #2A4365 rgba(241, 245, 249, 0.8);
+  scrollbar-color: #2a4365 rgba(241, 245, 249, 0.8);
 }
 
 /* Dark theme version for darker sections */
 .dark-theme {
-  scrollbar-color: #4A5568 #1A202C;
+  scrollbar-color: #4a5568 #1a202c;
 }
 
 .dark-theme::-webkit-scrollbar {
-  background-color: rgba(26, 32, 44, 0.8);  /* Dark background */
+  background-color: rgba(26, 32, 44, 0.8); /* Dark background */
 }
 
 .dark-theme::-webkit-scrollbar-track {
@@ -134,20 +131,12 @@ code {
 }
 
 .dark-theme::-webkit-scrollbar-thumb {
-  background: linear-gradient(
-    135deg,
-    #4A5568,
-    #718096
-  );
+  background: linear-gradient(135deg, #4a5568, #718096);
   border: 3px solid rgba(26, 32, 44, 0.8);
 }
 
 .dark-theme::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(
-    135deg,
-    #718096,
-    #A0AEC0
-  );
+  background: linear-gradient(135deg, #718096, #a0aec0);
   border: 2px solid rgba(26, 32, 44, 0.8);
 }
 
@@ -177,9 +166,47 @@ html {
     width: 6px;
     height: 6px;
   }
-  
+
   ::-webkit-scrollbar-thumb {
     border: 2px solid rgba(241, 245, 249, 0.8);
   }
 }
 
+/* Ensure firebase recaptcha shows above other content */
+.firebase-emulator-warning {
+  display: none !important;
+}
+
+/* Make sure reCAPTCHA appears on top of all other content */
+.grecaptcha-badge,
+.grecaptcha-logo,
+div[style*="z-index: 2000000000"] {
+  z-index: 10000000 !important;
+  pointer-events: auto !important;
+}
+
+iframe[src*="recaptcha"] {
+  z-index: 10000000 !important;
+  pointer-events: auto !important;
+}
+
+/* Force reCAPTCHA popup to have highest z-index */
+.recaptcha-container iframe,
+.recaptcha-container div,
+.recaptcha-container {
+  position: relative;
+  z-index: 10000000 !important;
+  pointer-events: auto !important;
+}
+
+/* Additional fix for Google reCAPTCHA modal */
+body > div:last-of-type[style*="z-index: 2000000000"] {
+  z-index: 10000000 !important;
+}
+
+/* Fix for reCAPTCHA iframe focus */
+body > div:has(iframe[src*="recaptcha"]) {
+  position: relative;
+  z-index: 10000000 !important;
+  pointer-events: auto !important;
+}

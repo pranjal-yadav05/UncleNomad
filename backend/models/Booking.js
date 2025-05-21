@@ -40,7 +40,6 @@ const bookingSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      required: true,
     },
     phone: {
       type: String,

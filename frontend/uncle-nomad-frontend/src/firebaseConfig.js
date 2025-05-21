@@ -1,22 +1,28 @@
-// Import Firebase SDK
+// Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
 import { getAnalytics } from "firebase/analytics";
+import { getAuth } from "firebase/auth";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
-// Firebase configuration
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyAyHX_UJC3Ml_6xAWCirNCWpangGpRN8e0",
-  authDomain: "unclenomad-5acf1.firebaseapp.com",
-  projectId: "unclenomad-5acf1",
-  storageBucket: "unclenomad-5acf1.appspot.com",  // 🔹 Fixed storage bucket URL
-  messagingSenderId: "693368534135",
-  appId: "1:693368534135:web:a5f5c01b6d8c8fdfba8272",
-  measurementId: "G-6GBMXL818E"
+  apiKey: "AIzaSyDcnEPDVy1u_hD-zI-DzXX7xtcA3f232bE",
+  authDomain: "uncle-nomad-c5f9a.firebaseapp.com",
+  projectId: "uncle-nomad-c5f9a",
+  storageBucket: "uncle-nomad-c5f9a.firebasestorage.app",
+  messagingSenderId: "189010268588",
+  appId: "1:189010268588:web:c850b687fd729d6ec1aa09",
+  measurementId: "G-VB6029FQXS"
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
 const analytics = getAnalytics(app);
 
-export { auth };  // ✅ Export auth for authentication
+// Initialize Auth with proper settings
+const auth = getAuth(app);
+
+// Export auth instance
+export { auth }; // ✅ Export auth for authentication

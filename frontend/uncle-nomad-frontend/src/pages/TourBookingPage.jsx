@@ -27,6 +27,15 @@ import AnimatedSection from "../components/AnimatedSection";
 import { formatDate } from "../utils/dateUtils";
 import TourDatePackageSelector from "../components/TourDatePackageSelector";
 import { toast } from "react-hot-toast";
+import { auth } from "../firebaseConfig";
+import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
 
 const TourBookingPage = () => {
   const location = useLocation();
@@ -75,6 +84,10 @@ const TourBookingPage = () => {
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [otpResendTimer, setOtpResendTimer] = useState(0);
 
+  // Phone verification related states
+  const [countryCode, setCountryCode] = useState("+91");
+  const [confirmationResultRef, setConfirmationResultRef] = useState(null);
+
   // Refs for scrolling
   const guestDetailsRef = useRef(null);
   const tourSummaryRef = useRef(null);
@@ -102,19 +115,70 @@ const TourBookingPage = () => {
     }
   }, [isBookingConfirmed, navigate]);
 
+  // Set up reCAPTCHA
+  useEffect(() => {
+    let recaptchaVerifier = null;
+
+    const setupRecaptcha = () => {
+      try {
+        // Clean up any existing reCAPTCHA instances
+        if (window.recaptchaVerifier) {
+          try {
+            window.recaptchaVerifier.clear();
+          } catch (e) {
+            console.log("Error clearing recaptcha:", e);
+          }
+          window.recaptchaVerifier = null;
+        }
+
+        // Create new invisible reCAPTCHA instance
+        recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
+          size: "invisible",
+          callback: () => {
+            console.log("reCAPTCHA verified");
+          },
+          "expired-callback": () => {
+            console.log("reCAPTCHA expired");
+            toast.error("CAPTCHA verification expired. Please try again.");
+          },
+        });
+
+        window.recaptchaVerifier = recaptchaVerifier;
+      } catch (error) {
+        console.error("Error setting up reCAPTCHA:", error);
+      }
+    };
+
+    // Only set up reCAPTCHA when on step 2 and not verified
+    if (step === 2 && !isOtpVerified) {
+      setupRecaptcha();
+    }
+
+    return () => {
+      // Clean up on unmount
+      if (recaptchaVerifier) {
+        try {
+          recaptchaVerifier.clear();
+        } catch (e) {
+          console.log("Error clearing recaptcha on unmount:", e);
+        }
+      }
+    };
+  }, [step, isOtpVerified]);
+
   // Scroll to top on page load
   useEffect(() => {
     window.scrollTo(0, 0);
 
     const authToken = localStorage.getItem("authToken");
     const storedUserName = localStorage.getItem("userName");
-    const storedUserEmail = localStorage.getItem("userEmail");
+    const storedUserPhone = localStorage.getItem("userPhone");
 
     if (authToken) {
       setBookingDetails((prev) => ({
         ...prev,
         guestName: storedUserName || "",
-        email: storedUserEmail || "",
+        phone: storedUserPhone || "",
       }));
 
       // Skip OTP verification for logged-in users
@@ -140,6 +204,18 @@ const TourBookingPage = () => {
       // Convert to number but don't restrict yet
       const numValue = Number.parseInt(value, 10) || "";
       setBookingDetails((prev) => ({ ...prev, [id]: numValue }));
+    } else if (id === "phone") {
+      // Format phone number to only allow digits and limit to 10 digits
+      const formattedPhone = value.replace(/\D/g, "").slice(0, 10);
+      setBookingDetails((prev) => ({ ...prev, [id]: formattedPhone }));
+
+      // Reset OTP verification when phone changes
+      if (isOtpSent || isOtpVerified) {
+        setIsOtpSent(false);
+        setIsOtpVerified(false);
+        setOtp("");
+        setOtpError(null);
+      }
     } else {
       setBookingDetails((prev) => ({ ...prev, [id]: value }));
     }
@@ -149,28 +225,12 @@ const TourBookingPage = () => {
     }
   };
 
-  const handleEmailChange = (e) => {
-    // Reset OTP verification when email changes
-    if (isOtpSent || isOtpVerified) {
-      setIsOtpSent(false);
-      setIsOtpVerified(false);
-      setOtp("");
-      setOtpError(null);
-    }
-
-    setBookingDetails((prev) => ({ ...prev, email: e.target.value }));
-
-    if (validationErrors.email) {
-      setValidationErrors((prev) => ({ ...prev, email: "" }));
-    }
-  };
-
   const sendOtp = async (e) => {
     e.preventDefault();
 
-    // Validate email before sending OTP
-    if (!validateEmail(bookingDetails.email)) {
-      setOtpError("Please enter a valid email address");
+    // Validate phone before sending OTP
+    if (!validatePhone(bookingDetails.phone)) {
+      setOtpError("Please enter a valid 10-digit phone number");
       return;
     }
 
@@ -178,27 +238,40 @@ const TourBookingPage = () => {
     setOtpError(null);
 
     try {
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/api/auth/send-otp`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": process.env.REACT_APP_API_KEY,
-          },
-          body: JSON.stringify({ email: bookingDetails.email }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to send OTP");
+      if (!window.recaptchaVerifier) {
+        throw new Error("reCAPTCHA not initialized. Please reload the page.");
       }
 
+      const phoneNumber = `${countryCode}${bookingDetails.phone}`;
+      const appVerifier = window.recaptchaVerifier;
+
+      // Request OTP via Firebase phone authentication
+      const confirmationResult = await signInWithPhoneNumber(
+        auth,
+        phoneNumber,
+        appVerifier
+      );
+      setConfirmationResultRef(confirmationResult);
       setIsOtpSent(true);
       setOtpResendTimer(60); // 60 seconds countdown for resend
+      toast.success("OTP sent successfully. Please check your phone.");
     } catch (error) {
-      setOtpError(error.message || "Failed to send OTP. Please try again.");
+      console.error("Error sending OTP:", error);
+
+      // Handle specific error types
+      if (error.code === "auth/invalid-phone-number") {
+        setOtpError("The phone number format is incorrect. Please try again.");
+      } else if (error.code === "auth/captcha-check-failed") {
+        setOtpError("CAPTCHA verification failed. Please try again.");
+      } else if (error.code === "auth/quota-exceeded") {
+        setOtpError("SMS quota exceeded. Please try again later.");
+      } else if (error.code === "auth/too-many-requests") {
+        setOtpError("Too many requests. Please try again later.");
+      } else {
+        setOtpError(`Error: ${error.message}`);
+      }
+
+      toast.error("Failed to send OTP. Please try again.");
     } finally {
       setIsSendingOtp(false);
     }
@@ -207,8 +280,9 @@ const TourBookingPage = () => {
   const verifyOtp = async (e) => {
     e.preventDefault();
 
-    if (!otp.trim()) {
-      setOtpError("Please enter the OTP");
+    if (!otp || otp.length < 4) {
+      setOtpError("Please enter a valid OTP");
+      toast.error("Please enter a valid OTP");
       return;
     }
 
@@ -216,108 +290,106 @@ const TourBookingPage = () => {
     setOtpError(null);
 
     try {
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/api/auth/verify-otp`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": process.env.REACT_APP_API_KEY,
-          },
-          body: JSON.stringify({
-            email: bookingDetails.email,
-            otp,
-            name: bookingDetails.guestName,
-            phone: bookingDetails.phone,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Invalid OTP");
+      // Check if we have a confirmation result
+      if (!confirmationResultRef) {
+        setOtpError(
+          "Verification session expired. Please restart the process."
+        );
+        setIsOtpSent(false);
+        return;
       }
 
-      const data = await response.json();
+      // Create a promise race with a timeout to handle stuck verification
+      const confirmPromise = confirmationResultRef.confirm(otp);
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Verification timed out")), 15000)
+      );
 
-      // Store the auth token in localStorage
-      localStorage.setItem("authToken", data.token);
-      localStorage.setItem("userName", data.user.name);
-      localStorage.setItem("userEmail", data.user.email);
+      // Race between confirmation and timeout
+      const result = await Promise.race([confirmPromise, timeoutPromise]);
 
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      toast.success("Phone verified successfully!");
 
-      window.dispatchEvent(new Event("storage"));
+      // Get user details from Firebase
+      const user = result.user;
+      const phoneNumber = user.phoneNumber;
+      const displayName =
+        user.displayName || bookingDetails.guestName || "User";
 
-      setIsOtpVerified(true);
+      // Store user info
+      localStorage.setItem("userPhone", phoneNumber);
+      localStorage.setItem("userName", displayName);
+
+      // Register/update the user in our backend
+      try {
+        const response = await fetch(
+          `${process.env.REACT_APP_API_URL}/api/users/create-phone-user`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-api-key": process.env.REACT_APP_API_KEY || "",
+            },
+            body: JSON.stringify({
+              phone: phoneNumber,
+              name: displayName,
+              firebaseUid: user.uid,
+            }),
+          }
+        );
+
+        const data = await response.json();
+
+        if (data.success && data.token) {
+          // Store the auth token in localStorage
+          localStorage.setItem("authToken", data.token);
+          localStorage.setItem("userName", data.user.name);
+          localStorage.setItem("userPhone", data.user.phone);
+
+          await new Promise((resolve) => setTimeout(resolve, 100));
+
+          window.dispatchEvent(new Event("storage"));
+          setIsOtpVerified(true);
+        } else {
+          throw new Error("Failed to complete registration");
+        }
+      } catch (error) {
+        throw new Error("Server error: " + error.message);
+      }
     } catch (error) {
-      setOtpError(error.message || "Invalid OTP. Please try again.");
+      console.error("Error verifying OTP:", error);
+
+      if (error.message === "Verification timed out") {
+        setOtpError("Verification timed out. Please try again.");
+      } else if (error.code === "auth/invalid-verification-code") {
+        setOtpError("Invalid verification code. Please try again.");
+      } else if (error.code === "auth/code-expired") {
+        setOtpError("Verification code expired. Please request a new code.");
+        setIsOtpSent(false);
+      } else if (error.code === "auth/too-many-requests") {
+        setOtpError("Too many verification attempts. Please try again later.");
+      } else {
+        setOtpError(error.message || "Failed to verify OTP. Please try again.");
+      }
+
+      toast.error("Verification failed. Please try again.");
     } finally {
       setIsVerifyingOtp(false);
     }
   };
 
-  const handleLogout = () => {
-    // Remove authentication data
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("userName");
-    localStorage.removeItem("userEmail");
-
-    // Dispatch storage event to sync across tabs
-    window.dispatchEvent(new Event("storage"));
-
-    // Redirect user (optional)
-    navigate("/"); // Redirect to home (change if needed)
-
-    // Update UI state
-    setIsOtpVerified(false);
-    setBookingDetails((prev) => ({
-      ...prev,
-      guestName: "",
-      email: "",
-      phone: "",
-    }));
-  };
-
-  const validateToken = async () => {
-    const authToken = localStorage.getItem("authToken");
-
-    if (!authToken) return;
-
-    try {
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/api/token/validate-token`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (!response.ok) {
-        console.warn("Token validation failed");
-        handleLogout();
-      }
-    } catch (error) {
-      console.error("Error validating token:", error);
-      handleLogout();
-    }
-  };
-
-  // Generate summary text for verification status
+  // Generate status text for verification status
   const getVerificationStatus = () => {
     if (isOtpVerified)
       return (
         <span className="text-green-500 flex items-center text-sm">
-          ✓ Email verified
+          ✓ Phone verified
         </span>
       );
     if (isOtpSent)
       return (
         <span className="text-amber-500 flex items-center text-sm">
-          OTP sent to your email
+          OTP sent to your phone
         </span>
       );
     return null;
@@ -329,14 +401,11 @@ const TourBookingPage = () => {
     if (!bookingDetails.guestName.trim()) {
       errors.guestName = "Full name is required";
     }
-    if (!validateEmail(bookingDetails.email)) {
-      errors.email = "Please enter a valid email address";
-    }
     if (!validatePhone(bookingDetails.phone)) {
       errors.phone = "Please enter a valid 10-digit phone number";
     }
     if (!isOtpVerified) {
-      errors.otp = "Email verification is required before proceeding";
+      errors.otp = "Phone verification is required before proceeding";
     }
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
@@ -344,6 +413,7 @@ const TourBookingPage = () => {
 
   const validateStep2 = () => {
     const errors = {};
+    const isLoggedIn = !!localStorage.getItem("authToken");
 
     // Check if group size is within limits
     if (!bookingDetails.groupSize || bookingDetails.groupSize < 1) {
@@ -364,10 +434,9 @@ const TourBookingPage = () => {
     if (!bookingDetails.guestName) {
       errors.guestName = "Guest name is required";
     }
-    if (!validateEmail(bookingDetails.email)) {
-      errors.email = "Valid email is required";
-    }
-    if (!validatePhone(bookingDetails.phone)) {
+
+    // Only validate phone if user is not logged in
+    if (!isLoggedIn && !validatePhone(bookingDetails.phone)) {
       errors.phone = "Valid phone number is required";
     }
 
@@ -484,91 +553,100 @@ const TourBookingPage = () => {
         throw new Error("Please select a date and package before proceeding");
       }
 
-      // Use cloned booking details to avoid state update issues
-      const processingBookingDetails = JSON.parse(
-        JSON.stringify(bookingDetails)
-      );
-      console.log("Using booking details:", processingBookingDetails);
+      // Check authentication
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        throw new Error(
+          "You must verify your phone before proceeding to payment"
+        );
+      }
 
-      // Calculate correct total amount based on selected package price
-      const totalAmount =
-        processingBookingDetails.selectedPackage.price *
-        processingBookingDetails.groupSize;
-
-      // Format dates correctly to ensure they're properly sent to the backend
-      const formattedSelectedDate = {
-        startDate: new Date(
-          processingBookingDetails.selectedDate.startDate
-        ).toISOString(),
-        endDate: new Date(
-          processingBookingDetails.selectedDate.endDate
-        ).toISOString(),
-        maxGroupSize: processingBookingDetails.selectedDate.maxGroupSize,
-        availableSpots: processingBookingDetails.selectedDate.availableSpots,
-      };
+      // Calculate total amount
+      const totalAmount = calculateTotalAmount();
 
       const bookingData = {
         tourId: selectedTour._id,
-        guestName: processingBookingDetails.guestName,
-        email: processingBookingDetails.email,
-        phone: processingBookingDetails.phone,
-        groupSize: processingBookingDetails.groupSize,
-        specialRequests: processingBookingDetails.specialRequests,
-        totalAmount: totalAmount,
-        selectedDate: formattedSelectedDate,
-        selectedPackage: processingBookingDetails.selectedPackage,
-        bookingDate: new Date().toISOString(),
+        groupSize: bookingDetails.groupSize,
+        selectedDate: {
+          startDate: bookingDetails.selectedDate.startDate,
+          endDate: bookingDetails.selectedDate.endDate,
+          availableSpots: bookingDetails.selectedDate.availableSpots,
+        },
+        selectedPackage: bookingDetails.selectedPackage,
+        guestName: bookingDetails.guestName,
+        phone: bookingDetails.phone, // Make sure phone is included
+        specialRequests: bookingDetails.specialRequests || "",
+        totalAmount,
+        paymentStatus: "PENDING",
       };
 
-      console.log("Sending booking data:", bookingData);
-
-      const token = localStorage.getItem("authToken");
-      if (!token) {
-        throw new Error("You must verify your email before proceeding");
-      }
-
-      const response = await fetch(
+      // Create booking
+      const bookingResponse = await fetch(
         `${process.env.REACT_APP_API_URL}/api/tours/${selectedTour._id}/book`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "x-api-key": process.env.REACT_APP_API_KEY,
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
           },
           body: JSON.stringify(bookingData),
         }
       );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Booking error response:", errorData);
-        throw new Error(errorData.message || "Failed to create booking");
+      if (!bookingResponse.ok) {
+        const errorData = await bookingResponse.json();
+        console.error("Booking creation failed:", errorData);
+        throw new Error(
+          errorData.message || "Failed to create booking. Please try again."
+        );
       }
 
-      const result = await response.json();
-      setBookingData(result.booking);
+      const bookingResult = await bookingResponse.json();
+      console.log("Booking created:", bookingResult);
 
-      // Prepare payment data
-      setPaymentData({
-        amount: totalAmount,
+      // Store booking data for payment
+      setBookingData(bookingResult.booking);
+
+      // Create payment data and start payment process
+      const paymentPayload = {
         tourId: selectedTour._id,
-        bookingId: result.booking._id,
-      });
+        bookingId: bookingResult.booking._id,
+        amount: bookingResult.booking.totalPrice,
+        guestName: bookingDetails.guestName,
+        // Format phone number - remove country code prefix if present
+        phone: bookingDetails.phone
+          ? bookingDetails.phone.replace(/^\+\d+/, "").replace(/\D/g, "")
+          : "",
+        email:
+          bookingDetails.email ||
+          `${bookingDetails.phone.replace(/\D/g, "")}@phone-auth.user`,
+        groupSize: bookingDetails.groupSize,
+        specialRequests: bookingDetails.specialRequests || "",
+        tourName: selectedTour.title,
+      };
 
+      // Start payment process
+      setPaymentData(paymentPayload);
+
+      // Close disclaimer dialog and show payment form
+      setIsDisclaimerOpen(false);
       setIsPaymentActive(true);
-      setStep(3);
 
-      // Scroll to payment section
-      if (paymentSectionRef.current) {
-        setTimeout(() => {
-          paymentSectionRef.current.scrollIntoView({ behavior: "smooth" });
-        }, 100);
-      }
+      // Wait a moment for the UI to update
+      setTimeout(() => {
+        if (paymentSectionRef.current) {
+          window.scrollTo({
+            top: paymentSectionRef.current.offsetTop - 100,
+            behavior: "smooth",
+          });
+        }
+      }, 500);
     } catch (error) {
-      console.error("Booking Error:", error);
-      setPaymentErrorMessage(error.message || "Failed to create booking");
-      setIsPaymentFailedOpen(true);
+      console.error("Error in proceedToPayment:", error);
+      setPaymentErrorMessage(error.message);
+      setIsDisclaimerOpen(false);
+      toast.error(error.message);
     } finally {
       setIsLoading(false);
     }
@@ -677,36 +755,47 @@ const TourBookingPage = () => {
 
   // Handle payment form submission
   const handlePaymentSubmit = (paymentData) => {
-    // Validate payment information
-    if (
-      !paymentData.cardNumber ||
-      !paymentData.expiryDate ||
-      !paymentData.cvv
-    ) {
-      toast.error("Please provide all required payment information.");
-      return;
+    try {
+      console.log("Payment form submitted with data:", paymentData);
+
+      if (!bookingData || !bookingData._id) {
+        throw new Error("Booking data not found. Please try again.");
+      }
+
+      // Create the payment payload
+      const paymentPayload = {
+        tourId: selectedTour._id,
+        bookingId: bookingData._id,
+        amount: bookingData.totalPrice,
+        guestName: bookingDetails.guestName,
+        phone: bookingDetails.phone,
+        email:
+          bookingDetails.email ||
+          `${bookingDetails.phone.replace(/\D/g, "")}@phone-auth.user`, // Add a fallback email
+        groupSize: bookingDetails.groupSize,
+        specialRequests: bookingDetails.specialRequests,
+        tourName: selectedTour.title, // Add tour name for display in payment form
+      };
+
+      console.log("Payment payload:", paymentPayload);
+
+      // Start payment process
+      setPaymentData(paymentPayload);
+
+      // Run the actual payment in the <TourPaymentForm> component
+      setChecking(true);
+    } catch (error) {
+      console.error("Error preparing payment:", error);
+      toast.error(error.message);
     }
+  };
 
-    // Update booking with payment information (in a real app, you'd process this securely)
-    setBookingDetails((prev) => ({
-      ...prev,
-      paymentMethod: paymentData.paymentMethod || "Credit Card",
-      cardDetails: {
-        last4: paymentData.cardNumber.slice(-4),
-        // In a production environment, never store complete card details
-      },
-    }));
-
-    // In a real application, you would:
-    // 1. Send the booking data to your backend API
-    // 2. Process the payment securely
-    // 3. Store the booking in your database
-
-    console.log("Final booking details:", bookingDetails);
-
-    // Show success message and reset or redirect
-    toast.success("Booking completed successfully!");
-    setStep(4); // Move to confirmation step
+  // Function to calculate total amount
+  const calculateTotalAmount = () => {
+    if (!bookingDetails.selectedPackage || !bookingDetails.groupSize) {
+      return 0;
+    }
+    return bookingDetails.selectedPackage.price * bookingDetails.groupSize;
   };
 
   if (!selectedTour) {
@@ -716,764 +805,841 @@ const TourBookingPage = () => {
   return (
     <AnimatedSection animation="fade-in" duration={800}>
       <Header />
+      {/* Invisible reCAPTCHA container */}
+      <div id="recaptcha-container"></div>
 
-      {/* Hero Section */}
-      <div className="relative bg-blue-900 py-12">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-800 to-indigo-900 opacity-90"></div>
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="text-center text-white">
-            <h1 className="text-3xl md:text-4xl font-bold mb-3">
-              Book Your Tour
-            </h1>
-            <p className="text-lg opacity-80 max-w-2xl mx-auto">
-              Complete your booking for the {selectedTour.title} tour
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Booking Progress */}
-      <div className="bg-gray-50 py-4 border-b">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between max-w-3xl mx-auto">
-            <button
+      <div className="bg-gray-50 min-h-screen">
+        {/* Page content */}
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-6xl mx-auto">
+            {/* Back button */}
+            <Button
               onClick={handleBackToTourDetails}
-              className="flex items-center text-blue-600 hover:text-blue-800 transition-colors">
-              <ArrowLeftIcon className="w-4 h-4 mr-1" />
-              <span>Back to Tour Details</span>
-            </button>
+              variant="outline"
+              className="mb-6 flex items-center gap-1">
+              <ArrowLeftIcon className="h-4 w-4" />
+              Back to Tour
+            </Button>
 
-            <div className="hidden md:flex items-center">
-              <div
-                className={`flex flex-col items-center ${
-                  step >= 1 ? "text-blue-600" : "text-gray-400"
-                }`}>
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${
-                    step >= 1 ? "bg-blue-600 text-white" : "bg-gray-200"
-                  }`}>
-                  <CalendarIcon className="w-4 h-4" />
+            {/* Hero Section */}
+            <div className="relative bg-blue-900 py-12">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-800 to-indigo-900 opacity-90"></div>
+              <div className="container mx-auto px-4 relative z-10">
+                <div className="text-center text-white">
+                  <h1 className="text-3xl md:text-4xl font-bold mb-3">
+                    Book Your Tour
+                  </h1>
+                  <p className="text-lg opacity-80 max-w-2xl mx-auto">
+                    Complete your booking for the {selectedTour.title} tour
+                  </p>
                 </div>
-                <span className="text-xs">Select Date & Package</span>
-              </div>
-
-              <div
-                className={`w-12 h-0.5 ${
-                  step >= 2 ? "bg-blue-600" : "bg-gray-200"
-                }`}></div>
-
-              <div
-                className={`flex flex-col items-center ${
-                  step >= 2 ? "text-blue-600" : "text-gray-400"
-                }`}>
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${
-                    step >= 2 ? "bg-blue-600 text-white" : "bg-gray-200"
-                  }`}>
-                  <UserCircleIcon className="w-4 h-4" />
-                </div>
-                <span className="text-xs">Guest Details</span>
-              </div>
-
-              <div
-                className={`w-12 h-0.5 ${
-                  step >= 3 ? "bg-blue-600" : "bg-gray-200"
-                }`}></div>
-
-              <div
-                className={`flex flex-col items-center ${
-                  step >= 3 ? "text-blue-600" : "text-gray-400"
-                }`}>
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${
-                    step >= 3 ? "bg-blue-600 text-white" : "bg-gray-200"
-                  }`}>
-                  <CreditCardIcon className="w-4 h-4" />
-                </div>
-                <span className="text-xs">Payment</span>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col lg:flex-row gap-8">
-            {/* Main Content */}
-            <div className="w-full lg:w-2/3 order-2 lg:order-1">
-              {/* Date & Package Selection Section - Always visible but shows as completed after step 1 */}
-              <div
-                className={`bg-white rounded-lg shadow-md p-6 mb-6 ${
-                  step !== 1 ? "opacity-70" : ""
-                }`}>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold">Date & Package</h2>
-                  {step !== 1 && (
-                    <Button
-                      onClick={() => handleEditStep(1)}
-                      variant="outline"
-                      size="sm">
-                      Edit
-                    </Button>
-                  )}
-                </div>
+            {/* Booking Progress */}
+            <div className="bg-gray-50 py-4 border-b">
+              <div className="container mx-auto px-4">
+                <div className="flex items-center justify-between max-w-3xl mx-auto">
+                  <button
+                    onClick={handleBackToTourDetails}
+                    className="flex items-center text-blue-600 hover:text-blue-800 transition-colors">
+                    <ArrowLeftIcon className="w-4 h-4 mr-1" />
+                    <span>Back to Tour Details</span>
+                  </button>
 
-                {step !== 1 &&
-                bookingDetails.selectedDate &&
-                bookingDetails.selectedPackage ? (
-                  <div className="space-y-2">
-                    <div className="flex items-center">
-                      <CheckCircle className="text-green-500 w-5 h-5 mr-2" />
-                      <div>
-                        <p className="font-medium">
-                          {formatDate(
-                            new Date(bookingDetails.selectedDate.startDate)
-                          )}{" "}
-                          -{" "}
-                          {formatDate(
-                            new Date(bookingDetails.selectedDate.endDate)
-                          )}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          Package: {bookingDetails.selectedPackage.name} (₹
-                          {Number(
-                            bookingDetails.selectedPackage.price
-                          ).toLocaleString()}{" "}
-                          per person)
-                        </p>
+                  <div className="hidden md:flex items-center">
+                    <div
+                      className={`flex flex-col items-center ${
+                        step >= 1 ? "text-blue-600" : "text-gray-400"
+                      }`}>
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${
+                          step >= 1 ? "bg-blue-600 text-white" : "bg-gray-200"
+                        }`}>
+                        <CalendarIcon className="w-4 h-4" />
                       </div>
+                      <span className="text-xs">Select Date & Package</span>
+                    </div>
+
+                    <div
+                      className={`w-12 h-0.5 ${
+                        step >= 2 ? "bg-blue-600" : "bg-gray-200"
+                      }`}></div>
+
+                    <div
+                      className={`flex flex-col items-center ${
+                        step >= 2 ? "text-blue-600" : "text-gray-400"
+                      }`}>
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${
+                          step >= 2 ? "bg-blue-600 text-white" : "bg-gray-200"
+                        }`}>
+                        <UserCircleIcon className="w-4 h-4" />
+                      </div>
+                      <span className="text-xs">Guest Details</span>
+                    </div>
+
+                    <div
+                      className={`w-12 h-0.5 ${
+                        step >= 3 ? "bg-blue-600" : "bg-gray-200"
+                      }`}></div>
+
+                    <div
+                      className={`flex flex-col items-center ${
+                        step >= 3 ? "text-blue-600" : "text-gray-400"
+                      }`}>
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${
+                          step >= 3 ? "bg-blue-600 text-white" : "bg-gray-200"
+                        }`}>
+                        <CreditCardIcon className="w-4 h-4" />
+                      </div>
+                      <span className="text-xs">Payment</span>
                     </div>
                   </div>
-                ) : null}
-
-                {step === 1 && (
-                  <TourDatePackageSelector
-                    tour={selectedTour}
-                    onSelectionComplete={handleDatePackageSelection}
-                    initialDate={bookingDetails.selectedDate}
-                    initialPackage={bookingDetails.selectedPackage}
-                  />
-                )}
-              </div>
-
-              {/* Guest Details Section */}
-              <div
-                ref={guestDetailsRef}
-                className={`bg-white rounded-lg shadow-md p-6 mb-6 ${
-                  step !== 2 ? "opacity-70" : ""
-                }`}>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold">Guest Details</h2>
-                  {step !== 2 && (
-                    <Button
-                      onClick={() => handleEditStep(2)}
-                      variant="outline"
-                      size="sm">
-                      Edit
-                    </Button>
-                  )}
                 </div>
+              </div>
+            </div>
 
-                {step === 2 ? (
-                  <div className="space-y-4">
-                    {localStorage.getItem("authToken") && (
-                      <div className="p-3 mb-4 text-sm text-green-700 bg-green-100 rounded-md border border-green-300">
-                        <p>
-                          ✅ Your details are pre-filled from your profile. Only
-                          phone number can be updated.
-                        </p>
+            <div className="container mx-auto px-4 py-8">
+              <div className="max-w-6xl mx-auto">
+                <div className="flex flex-col lg:flex-row gap-8">
+                  {/* Main Content */}
+                  <div className="w-full lg:w-2/3 order-2 lg:order-1">
+                    {/* Date & Package Selection Section - Always visible but shows as completed after step 1 */}
+                    <div
+                      className={`bg-white rounded-lg shadow-md p-6 mb-6 ${
+                        step !== 1 ? "opacity-70" : ""
+                      }`}>
+                      <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-xl font-bold">Date & Package</h2>
+                        {step !== 1 && (
+                          <Button
+                            onClick={() => handleEditStep(1)}
+                            variant="outline"
+                            size="sm">
+                            Edit
+                          </Button>
+                        )}
                       </div>
-                    )}
 
-                    <div className="space-y-2">
-                      <Label htmlFor="guestName">Full Name</Label>
-                      <Input
-                        id="guestName"
-                        value={bookingDetails.guestName}
-                        onChange={handleInputChange}
-                        required
-                        readOnly={!!localStorage.getItem("authToken")}
-                        className={
-                          validationErrors.guestName ? "border-red-500" : ""
-                        }
-                      />
-                      {validationErrors.guestName && (
-                        <p className="text-sm text-red-500">
-                          {validationErrors.guestName}
-                        </p>
+                      {step !== 1 &&
+                      bookingDetails.selectedDate &&
+                      bookingDetails.selectedPackage ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center">
+                            <CheckCircle className="text-green-500 w-5 h-5 mr-2" />
+                            <div>
+                              <p className="font-medium">
+                                {formatDate(
+                                  new Date(
+                                    bookingDetails.selectedDate.startDate
+                                  )
+                                )}{" "}
+                                -{" "}
+                                {formatDate(
+                                  new Date(bookingDetails.selectedDate.endDate)
+                                )}
+                              </p>
+                              <p className="text-sm text-gray-500">
+                                Package: {bookingDetails.selectedPackage.name}{" "}
+                                (₹
+                                {Number(
+                                  bookingDetails.selectedPackage.price
+                                ).toLocaleString()}{" "}
+                                per person)
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {step === 1 && (
+                        <TourDatePackageSelector
+                          tour={selectedTour}
+                          onSelectionComplete={handleDatePackageSelection}
+                          initialDate={bookingDetails.selectedDate}
+                          initialPackage={bookingDetails.selectedPackage}
+                        />
                       )}
                     </div>
 
-                    <div className="space-y-3">
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <div className="flex gap-2">
-                          <Input
-                            id="email"
-                            type="email"
-                            value={bookingDetails.email}
-                            onChange={handleEmailChange}
-                            required
-                            readOnly={!!localStorage.getItem("authToken")}
-                            disabled={isOtpVerified || isSendingOtp}
-                            className={
-                              validationErrors.email ? "border-red-500" : ""
-                            }
-                          />
-                          {!localStorage.getItem("authToken") && (
-                            <Button
-                              type="button"
-                              onClick={sendOtp}
-                              disabled={
-                                !validateEmail(bookingDetails.email) ||
-                                isSendingOtp ||
-                                isOtpVerified ||
-                                otpResendTimer > 0
-                              }
-                              className="whitespace-nowrap">
-                              {isSendingOtp ? (
-                                <div className="flex items-center">
-                                  <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                                  <span className="text-xs">Sending...</span>
-                                </div>
-                              ) : isOtpVerified ? (
-                                "Verified"
-                              ) : isOtpSent && otpResendTimer > 0 ? (
-                                `Resend (${otpResendTimer}s)`
-                              ) : isOtpSent ? (
-                                "Resend OTP"
-                              ) : (
-                                "Send OTP"
-                              )}
-                            </Button>
-                          )}
-                        </div>
-                        {validationErrors.email && (
-                          <p className="text-sm text-red-500">
-                            {validationErrors.email}
-                          </p>
+                    {/* Guest Details Section */}
+                    <div
+                      ref={guestDetailsRef}
+                      className={`bg-white rounded-lg shadow-md p-6 mb-6 ${
+                        step !== 2 ? "opacity-70" : ""
+                      }`}>
+                      <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-xl font-bold">Guest Details</h2>
+                        {step !== 2 && (
+                          <Button
+                            onClick={() => handleEditStep(2)}
+                            variant="outline"
+                            size="sm">
+                            Edit
+                          </Button>
                         )}
-                        {getVerificationStatus()}
                       </div>
 
-                      {/* OTP field */}
-                      {!localStorage.getItem("authToken") &&
-                        isOtpSent &&
-                        !isOtpVerified && (
-                          <div className="bg-gray-50 p-3 rounded-lg space-y-3">
-                            <div className="text-sm text-gray-700">
-                              Enter the verification code sent to{" "}
-                              <span className="font-medium">
-                                {bookingDetails.email}
-                              </span>
+                      {step === 2 ? (
+                        <div className="space-y-4">
+                          {localStorage.getItem("authToken") && (
+                            <div className="p-3 mb-4 text-sm text-green-700 bg-green-100 rounded-md border border-green-300">
+                              <p>
+                                ✅ Your details are pre-filled from your
+                                profile. Only phone number can be updated.
+                              </p>
                             </div>
-                            <div className="flex gap-2">
-                              <Input
-                                id="otp"
-                                type="text"
-                                required
-                                value={otp}
-                                onChange={(e) => setOtp(e.target.value)}
-                                className="w-full focus:ring-2 focus:ring-blue-600"
-                                placeholder="Enter OTP"
-                                maxLength={6}
-                                disabled={isVerifyingOtp}
-                              />
-                              <Button
-                                type="button"
-                                onClick={verifyOtp}
-                                disabled={!otp.trim() || isVerifyingOtp}>
-                                {isVerifyingOtp ? (
-                                  <div className="flex items-center">
-                                    <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                                    <span>Verifying...</span>
-                                  </div>
-                                ) : (
-                                  "Verify"
-                                )}
-                              </Button>
-                            </div>
-                            {otpError && (
-                              <p className="text-red-500 text-sm">{otpError}</p>
+                          )}
+
+                          <div className="space-y-2">
+                            <Label htmlFor="guestName">Full Name</Label>
+                            <Input
+                              id="guestName"
+                              value={bookingDetails.guestName}
+                              onChange={handleInputChange}
+                              required
+                              readOnly={!!localStorage.getItem("authToken")}
+                              className={
+                                validationErrors.guestName
+                                  ? "border-red-500"
+                                  : ""
+                              }
+                            />
+                            {validationErrors.guestName && (
+                              <p className="text-sm text-red-500">
+                                {validationErrors.guestName}
+                              </p>
                             )}
                           </div>
-                        )}
-                    </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone Number</Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        value={bookingDetails.phone}
-                        onChange={handleInputChange}
-                        required
-                        className={
-                          validationErrors.phone ? "border-red-500" : ""
-                        }
-                      />
-                      {validationErrors.phone && (
-                        <p className="text-sm text-red-500">
-                          {validationErrors.phone}
-                        </p>
+                          <div className="space-y-3">
+                            <div className="space-y-2">
+                              <Label htmlFor="phone">Phone Number</Label>
+                              <div className="flex gap-2">
+                                <div className="flex-shrink-0 w-24">
+                                  <Select
+                                    value={countryCode}
+                                    onValueChange={setCountryCode}>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="+91" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="+91">
+                                        +91 (IN)
+                                      </SelectItem>
+                                      <SelectItem value="+1">
+                                        +1 (US)
+                                      </SelectItem>
+                                      <SelectItem value="+44">
+                                        +44 (UK)
+                                      </SelectItem>
+                                      <SelectItem value="+61">
+                                        +61 (AU)
+                                      </SelectItem>
+                                      <SelectItem value="+65">
+                                        +65 (SG)
+                                      </SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <Input
+                                  id="phone"
+                                  type="tel"
+                                  value={bookingDetails.phone}
+                                  onChange={handleInputChange}
+                                  required
+                                  readOnly={!!localStorage.getItem("authToken")}
+                                  disabled={isOtpVerified || isSendingOtp}
+                                  className={
+                                    validationErrors.phone
+                                      ? "border-red-500"
+                                      : ""
+                                  }
+                                />
+                                {!localStorage.getItem("authToken") && (
+                                  <Button
+                                    type="button"
+                                    onClick={sendOtp}
+                                    disabled={
+                                      !validatePhone(bookingDetails.phone) ||
+                                      isSendingOtp ||
+                                      isOtpVerified ||
+                                      otpResendTimer > 0
+                                    }
+                                    className="whitespace-nowrap">
+                                    {isSendingOtp ? (
+                                      <div className="flex items-center">
+                                        <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                                        <span className="text-xs">
+                                          Sending...
+                                        </span>
+                                      </div>
+                                    ) : isOtpVerified ? (
+                                      "Verified"
+                                    ) : isOtpSent && otpResendTimer > 0 ? (
+                                      `Resend (${otpResendTimer}s)`
+                                    ) : isOtpSent ? (
+                                      "Resend OTP"
+                                    ) : (
+                                      "Send OTP"
+                                    )}
+                                  </Button>
+                                )}
+                              </div>
+                              {validationErrors.phone && (
+                                <p className="text-sm text-red-500">
+                                  {validationErrors.phone}
+                                </p>
+                              )}
+                              {getVerificationStatus()}
+                            </div>
+
+                            {/* OTP field */}
+                            {!localStorage.getItem("authToken") &&
+                              isOtpSent &&
+                              !isOtpVerified && (
+                                <div className="bg-gray-50 p-3 rounded-lg space-y-3">
+                                  <div className="text-sm text-gray-700">
+                                    Enter the verification code sent to{" "}
+                                    <span className="font-medium">
+                                      {countryCode + bookingDetails.phone}
+                                    </span>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <Input
+                                      id="otp"
+                                      type="text"
+                                      required
+                                      value={otp}
+                                      onChange={(e) => setOtp(e.target.value)}
+                                      className="w-full focus:ring-2 focus:ring-blue-600"
+                                      placeholder="Enter OTP"
+                                      maxLength={6}
+                                      disabled={isVerifyingOtp}
+                                    />
+                                    <Button
+                                      type="button"
+                                      onClick={verifyOtp}
+                                      disabled={!otp.trim() || isVerifyingOtp}>
+                                      {isVerifyingOtp ? (
+                                        <div className="flex items-center">
+                                          <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                                          <span>Verifying...</span>
+                                        </div>
+                                      ) : (
+                                        "Verify"
+                                      )}
+                                    </Button>
+                                  </div>
+                                  {otpError && (
+                                    <p className="text-red-500 text-sm">
+                                      {otpError}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                          </div>
+
+                          <div className="pt-4">
+                            <div className="flex gap-2">
+                              <Button
+                                onClick={handlePreviousStep}
+                                variant="outline"
+                                className="w-full">
+                                Back to Date & Package
+                              </Button>
+                              <Button
+                                onClick={() => {
+                                  if (validateStep2()) {
+                                    handleNextStep(); // Move to step 3
+                                  }
+                                }}
+                                variant="nomad"
+                                className="w-full"
+                                disabled={
+                                  !bookingDetails.guestName ||
+                                  (!isOtpVerified &&
+                                    !localStorage.getItem("authToken")) ||
+                                  (!localStorage.getItem("authToken") &&
+                                    !validatePhone(bookingDetails.phone))
+                                }>
+                                Continue to Tour Details
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="flex items-center">
+                            <CheckCircle className="text-green-500 w-5 h-5 mr-2" />
+                            <div>
+                              <p className="font-medium">
+                                {bookingDetails.guestName}
+                              </p>
+                              <p className="text-sm text-gray-500">
+                                {bookingDetails.phone}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
                       )}
                     </div>
 
-                    <div className="pt-4">
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={handlePreviousStep}
-                          variant="outline"
-                          className="w-full">
-                          Back to Date & Package
-                        </Button>
-                        <Button
-                          onClick={() => {
-                            if (validateStep2()) {
-                              handleNextStep(); // Move to step 3
+                    {/* Tour Details Section */}
+                    <div
+                      id="tourDetails"
+                      ref={tourSummaryRef}
+                      className={`bg-white rounded-lg shadow-md p-6 mb-6 ${
+                        step !== 3 ? "opacity-70" : ""
+                      }`}>
+                      <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-xl font-bold">Tour Details</h2>
+                        {step !== 3 && (
+                          <Button
+                            onClick={() => handleEditStep(3)}
+                            variant="outline"
+                            size="sm">
+                            Edit
+                          </Button>
+                        )}
+                      </div>
+
+                      {step === 3 ? (
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="groupSize">
+                              Number of Participants *
+                            </Label>
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center border rounded-md overflow-hidden">
+                                <button
+                                  type="button"
+                                  className="px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-500"
+                                  onClick={() => {
+                                    if (bookingDetails.groupSize > 1) {
+                                      setBookingDetails((prev) => {
+                                        const newGroupSize = prev.groupSize - 1;
+                                        return {
+                                          ...prev,
+                                          groupSize: newGroupSize,
+                                          totalAmount: prev.selectedPackage
+                                            ? prev.selectedPackage.price *
+                                              newGroupSize
+                                            : prev.totalAmount,
+                                        };
+                                      });
+                                    }
+                                  }}
+                                  disabled={bookingDetails.groupSize <= 1}>
+                                  -
+                                </button>
+                                <span className="px-4 py-2 min-w-[40px] text-center border-l border-r">
+                                  {bookingDetails.groupSize}
+                                </span>
+                                <button
+                                  type="button"
+                                  className="px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-500"
+                                  onClick={() => {
+                                    // Get max available spots
+                                    const maxAvailable =
+                                      bookingDetails.selectedDate
+                                        ? bookingDetails.selectedDate
+                                            .availableSpots
+                                        : selectedTour.groupSize -
+                                          selectedTour.bookedSlots;
+
+                                    if (
+                                      bookingDetails.groupSize < maxAvailable
+                                    ) {
+                                      setBookingDetails((prev) => {
+                                        const newGroupSize = prev.groupSize + 1;
+                                        return {
+                                          ...prev,
+                                          groupSize: newGroupSize,
+                                          totalAmount: prev.selectedPackage
+                                            ? prev.selectedPackage.price *
+                                              newGroupSize
+                                            : prev.totalAmount,
+                                        };
+                                      });
+                                    }
+                                  }}
+                                  disabled={
+                                    bookingDetails.groupSize >=
+                                    (bookingDetails.selectedDate
+                                      ? bookingDetails.selectedDate
+                                          .availableSpots
+                                      : selectedTour.groupSize -
+                                        selectedTour.bookedSlots)
+                                  }>
+                                  +
+                                </button>
+                              </div>
+                              <span className="text-sm text-gray-500">
+                                Available spots:{" "}
+                                {bookingDetails.selectedDate
+                                  ? bookingDetails.selectedDate.availableSpots
+                                  : selectedTour.groupSize -
+                                    selectedTour.bookedSlots}
+                              </span>
+                            </div>
+                            {validationErrors.groupSize && (
+                              <p className="text-sm text-red-500 mt-1">
+                                {validationErrors.groupSize}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="specialRequests">
+                              Special Requests (Optional)
+                            </Label>
+                            <textarea
+                              id="specialRequests"
+                              value={bookingDetails.specialRequests}
+                              onChange={handleInputChange}
+                              className="w-full p-2 border rounded-md"
+                              rows={3}
+                            />
+                          </div>
+
+                          {validationErrors.otp && (
+                            <div className="p-3 mb-4 text-sm text-red-500 bg-red-50 rounded-md border border-red-200">
+                              <div>{validationErrors.otp}</div>
+                            </div>
+                          )}
+
+                          {paymentErrorMessage && showError && (
+                            <div className="p-3 mb-4 text-sm text-red-500 bg-red-50 rounded-md border border-red-200">
+                              <div className="font-medium">Booking Error</div>
+                              <div>{paymentErrorMessage}</div>
+                              <button
+                                onClick={() => setShowError(false)}
+                                className="mt-2 text-sm text-red-600 underline hover:text-red-700">
+                                Dismiss
+                              </button>
+                            </div>
+                          )}
+
+                          <div className="flex gap-2 pt-4">
+                            <Button
+                              onClick={handlePreviousStep}
+                              variant="outline"
+                              className="w-full">
+                              Back
+                            </Button>
+                            <Button
+                              onClick={handleDisclaimer}
+                              variant="nomad"
+                              className="w-full"
+                              disabled={isLoading || !isOtpVerified}>
+                              {isLoading ? (
+                                <div className="flex items-center justify-center">
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  <span>Processing...</span>
+                                </div>
+                              ) : (
+                                "Proceed to Payment"
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      ) : step > 3 ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center">
+                            <CheckCircle className="text-green-500 w-5 h-5 mr-2" />
+                            <div>
+                              <p className="font-medium">
+                                {bookingDetails.groupSize}{" "}
+                                {bookingDetails.groupSize === 1
+                                  ? "participant"
+                                  : "participants"}
+                              </p>
+                              {bookingDetails.specialRequests && (
+                                <p className="text-sm text-gray-500">
+                                  Special requests:{" "}
+                                  {bookingDetails.specialRequests}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+
+                    {/* Payment Section - Embedded directly in the page */}
+                    {step === 3 && (
+                      <div
+                        ref={paymentSectionRef}
+                        className="bg-white rounded-lg shadow-md p-6 mb-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <h2 className="text-xl font-bold">Payment</h2>
+                        </div>
+
+                        {isPaymentActive && paymentData ? (
+                          <div className="w-full">
+                            <p className="text-sm mb-4 text-blue-600">
+                              Payment gateway loading... If it doesn't appear
+                              shortly, please check your internet connection.
+                            </p>
+                            <div className="mb-4 p-3 bg-gray-50 rounded-md">
+                              <h3 className="text-sm font-semibold">
+                                Payment details:
+                              </h3>
+                              <pre className="text-xs overflow-auto bg-gray-100 p-2 rounded mt-1">
+                                {JSON.stringify(
+                                  {
+                                    bookingId: paymentData.bookingId,
+                                    amount: paymentData.amount,
+                                    guestName: paymentData.guestName,
+                                  },
+                                  null,
+                                  2
+                                )}
+                              </pre>
+                            </div>
+                            <TourPaymentForm
+                              paymentData={paymentData}
+                              bookingForm={bookingDetails}
+                              onPaymentSuccess={handlePaymentSuccess}
+                              onPaymentFailure={handlePaymentFailure}
+                              onClose={() => setIsPaymentActive(false)}
+                              setIsCheckingOpen={setChecking}
+                            />
+                          </div>
+                        ) : (
+                          <div className="text-center py-8">
+                            <p className="text-gray-500 mb-4">
+                              Ready to complete your booking?
+                            </p>
+                            <Button
+                              onClick={handlePreviousStep}
+                              variant="outline"
+                              className="mr-2">
+                              Back to Tour Details
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Booking Summary Section */}
+                  <div
+                    ref={tourSummaryRef}
+                    className="w-full lg:w-1/3 order-1 lg:order-2">
+                    <div className="bg-white rounded-lg shadow-md p-6 sticky top-8 space-y-5">
+                      <h3 className="text-lg font-bold border-b pb-3">
+                        Booking Summary
+                      </h3>
+
+                      <div className="flex items-start gap-4">
+                        <div className="w-20 h-20 flex-shrink-0 overflow-hidden rounded-md">
+                          <img
+                            src={
+                              selectedTour.images && selectedTour.images[0]
+                                ? selectedTour.images[0]
+                                : "/placeholder.svg?height=80&width=80"
                             }
-                          }}
-                          variant="nomad"
-                          className="w-full"
-                          disabled={
-                            !bookingDetails.guestName ||
-                            !bookingDetails.email ||
-                            !bookingDetails.phone ||
-                            !isOtpVerified
-                          }>
-                          Continue to Tour Details
-                        </Button>
+                            alt={selectedTour.title}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-900">
+                            {selectedTour.title}
+                          </h4>
+                          <div className="text-sm text-gray-600 mt-1 flex items-center">
+                            <MapPinIcon className="w-4 h-4 mr-1" />
+                            {selectedTour.location}
+                          </div>
+                          <div className="text-sm text-gray-600 mt-1 flex items-center">
+                            <ClockIcon className="w-4 h-4 mr-1" />
+                            {selectedTour.duration}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <div className="flex items-center">
-                      <CheckCircle className="text-green-500 w-5 h-5 mr-2" />
-                      <div>
-                        <p className="font-medium">
-                          {bookingDetails.guestName}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {bookingDetails.email} • {bookingDetails.phone}
-                        </p>
+
+                      {bookingDetails.selectedDate && (
+                        <div className="py-3 border-t border-gray-200">
+                          <h4 className="font-medium text-gray-900 mb-2">
+                            Selected Date
+                          </h4>
+                          <div className="p-3 bg-blue-50 rounded text-sm">
+                            <div className="font-medium text-blue-800">
+                              {formatDate(
+                                new Date(bookingDetails.selectedDate.startDate)
+                              )}{" "}
+                              -{" "}
+                              {formatDate(
+                                new Date(bookingDetails.selectedDate.endDate)
+                              )}
+                            </div>
+                            <div className="text-blue-600 mt-1">
+                              {bookingDetails.selectedDate.availableSpots} spots
+                              available
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {bookingDetails.selectedPackage && (
+                        <div className="py-3 border-t border-gray-200">
+                          <h4 className="font-medium text-gray-900 mb-2">
+                            Selected Package
+                          </h4>
+                          <div className="p-3 bg-green-50 rounded text-sm">
+                            <div className="font-medium text-green-800">
+                              {bookingDetails.selectedPackage.name}
+                            </div>
+                            {bookingDetails.selectedPackage.description && (
+                              <div className="text-green-600 mt-1">
+                                {bookingDetails.selectedPackage.description}
+                              </div>
+                            )}
+                            <div className="font-medium text-green-800 mt-2">
+                              ₹
+                              {Number(
+                                bookingDetails.selectedPackage.price
+                              ).toLocaleString()}{" "}
+                              per person
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="py-3 border-t border-gray-200">
+                        <div className="space-y-2">
+                          <div className="font-medium">Number of Travelers</div>
+                          <div className="flex items-center border rounded-md overflow-hidden">
+                            <button
+                              className="px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-500"
+                              onClick={() => {
+                                if (bookingDetails.groupSize > 1) {
+                                  setBookingDetails((prev) => {
+                                    const newGroupSize = prev.groupSize - 1;
+                                    return {
+                                      ...prev,
+                                      groupSize: newGroupSize,
+                                      totalAmount: prev.selectedPackage
+                                        ? prev.selectedPackage.price *
+                                          newGroupSize
+                                        : prev.totalAmount,
+                                    };
+                                  });
+                                }
+                              }}
+                              disabled={bookingDetails.groupSize <= 1}>
+                              -
+                            </button>
+                            <span className="px-4 py-2 min-w-[40px] text-center border-l border-r">
+                              {bookingDetails.groupSize}
+                            </span>
+                            <button
+                              className="px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-500"
+                              onClick={() => {
+                                // Get max available spots
+                                const maxAvailable = bookingDetails.selectedDate
+                                  ? bookingDetails.selectedDate.availableSpots
+                                  : selectedTour.groupSize -
+                                    selectedTour.bookedSlots;
+
+                                if (bookingDetails.groupSize < maxAvailable) {
+                                  setBookingDetails((prev) => {
+                                    const newGroupSize = prev.groupSize + 1;
+                                    return {
+                                      ...prev,
+                                      groupSize: newGroupSize,
+                                      totalAmount: prev.selectedPackage
+                                        ? prev.selectedPackage.price *
+                                          newGroupSize
+                                        : prev.totalAmount,
+                                    };
+                                  });
+                                }
+                              }}
+                              disabled={
+                                bookingDetails.groupSize >=
+                                (bookingDetails.selectedDate
+                                  ? bookingDetails.selectedDate.availableSpots
+                                  : selectedTour.groupSize -
+                                    selectedTour.bookedSlots)
+                              }>
+                              +
+                            </button>
+                          </div>
+                          {!bookingDetails.selectedDate && (
+                            <p className="text-xs text-amber-600">
+                              Select a date and package first
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                )}
-              </div>
 
-              {/* Tour Details Section */}
-              <div
-                id="tourDetails"
-                ref={tourSummaryRef}
-                className={`bg-white rounded-lg shadow-md p-6 mb-6 ${
-                  step !== 3 ? "opacity-70" : ""
-                }`}>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold">Tour Details</h2>
-                  {step !== 3 && (
-                    <Button
-                      onClick={() => handleEditStep(3)}
-                      variant="outline"
-                      size="sm">
-                      Edit
-                    </Button>
-                  )}
-                </div>
-
-                {step === 3 ? (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="groupSize">
-                        Number of Participants *
-                      </Label>
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center border rounded-md overflow-hidden">
-                          <button
-                            type="button"
-                            className="px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-500"
-                            onClick={() => {
-                              if (bookingDetails.groupSize > 1) {
-                                setBookingDetails((prev) => {
-                                  const newGroupSize = prev.groupSize - 1;
-                                  return {
-                                    ...prev,
-                                    groupSize: newGroupSize,
-                                    totalAmount: prev.selectedPackage
-                                      ? prev.selectedPackage.price *
-                                        newGroupSize
-                                      : prev.totalAmount,
-                                  };
-                                });
-                              }
-                            }}
-                            disabled={bookingDetails.groupSize <= 1}>
-                            -
-                          </button>
-                          <span className="px-4 py-2 min-w-[40px] text-center border-l border-r">
-                            {bookingDetails.groupSize}
+                      <div className="pt-4 border-t border-gray-200">
+                        <div className="flex justify-between mb-2">
+                          <span className="text-gray-600">
+                            Price per person
                           </span>
-                          <button
-                            type="button"
-                            className="px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-500"
-                            onClick={() => {
-                              // Get max available spots
-                              const maxAvailable = bookingDetails.selectedDate
-                                ? bookingDetails.selectedDate.availableSpots
-                                : selectedTour.groupSize -
-                                  selectedTour.bookedSlots;
+                          <span className="font-medium">
+                            {bookingDetails.selectedPackage
+                              ? `₹${Number(
+                                  bookingDetails.selectedPackage.price
+                                ).toLocaleString()}`
+                              : "Select a package"}
+                          </span>
+                        </div>
+                        <div className="flex justify-between mb-2">
+                          <span className="text-gray-600">
+                            Number of travelers
+                          </span>
+                          <span>{bookingDetails.groupSize}</span>
+                        </div>
+                        <div className="flex justify-between pt-3 border-t border-dashed mt-3">
+                          <span className="font-semibold">Total Amount</span>
+                          <span className="font-bold text-lg">
+                            {bookingDetails.selectedPackage
+                              ? `₹${Number(
+                                  bookingDetails.selectedPackage.price *
+                                    bookingDetails.groupSize
+                                ).toLocaleString()}`
+                              : "Pending selection"}
+                          </span>
+                        </div>
+                      </div>
 
-                              if (bookingDetails.groupSize < maxAvailable) {
-                                setBookingDetails((prev) => {
-                                  const newGroupSize = prev.groupSize + 1;
-                                  return {
-                                    ...prev,
-                                    groupSize: newGroupSize,
-                                    totalAmount: prev.selectedPackage
-                                      ? prev.selectedPackage.price *
-                                        newGroupSize
-                                      : prev.totalAmount,
-                                  };
-                                });
+                      {step === 2 && (
+                        <div className="pt-4">
+                          <Button
+                            variant="custom"
+                            className="w-full py-3"
+                            onClick={() => {
+                              if (validateStep2()) {
+                                handleNextStep(); // Move to step 3
                               }
                             }}
                             disabled={
-                              bookingDetails.groupSize >=
-                              (bookingDetails.selectedDate
-                                ? bookingDetails.selectedDate.availableSpots
-                                : selectedTour.groupSize -
-                                  selectedTour.bookedSlots)
+                              !bookingDetails.guestName ||
+                              (!isOtpVerified &&
+                                !localStorage.getItem("authToken")) ||
+                              (!localStorage.getItem("authToken") &&
+                                !validatePhone(bookingDetails.phone))
                             }>
-                            +
-                          </button>
-                        </div>
-                        <span className="text-sm text-gray-500">
-                          Available spots:{" "}
-                          {bookingDetails.selectedDate
-                            ? bookingDetails.selectedDate.availableSpots
-                            : selectedTour.groupSize - selectedTour.bookedSlots}
-                        </span>
-                      </div>
-                      {validationErrors.groupSize && (
-                        <p className="text-sm text-red-500 mt-1">
-                          {validationErrors.groupSize}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="specialRequests">
-                        Special Requests (Optional)
-                      </Label>
-                      <textarea
-                        id="specialRequests"
-                        value={bookingDetails.specialRequests}
-                        onChange={handleInputChange}
-                        className="w-full p-2 border rounded-md"
-                        rows={3}
-                      />
-                    </div>
-
-                    {validationErrors.otp && (
-                      <div className="p-3 mb-4 text-sm text-red-500 bg-red-50 rounded-md border border-red-200">
-                        <div>{validationErrors.otp}</div>
-                      </div>
-                    )}
-
-                    {paymentErrorMessage && showError && (
-                      <div className="p-3 mb-4 text-sm text-red-500 bg-red-50 rounded-md border border-red-200">
-                        <div className="font-medium">Booking Error</div>
-                        <div>{paymentErrorMessage}</div>
-                        <button
-                          onClick={() => setShowError(false)}
-                          className="mt-2 text-sm text-red-600 underline hover:text-red-700">
-                          Dismiss
-                        </button>
-                      </div>
-                    )}
-
-                    <div className="flex gap-2 pt-4">
-                      <Button
-                        onClick={handlePreviousStep}
-                        variant="outline"
-                        className="w-full">
-                        Back
-                      </Button>
-                      <Button
-                        onClick={handleDisclaimer}
-                        variant="nomad"
-                        className="w-full"
-                        disabled={isLoading || !isOtpVerified}>
-                        {isLoading ? (
-                          <div className="flex items-center justify-center">
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            <span>Processing...</span>
-                          </div>
-                        ) : (
-                          "Proceed to Payment"
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                ) : step > 3 ? (
-                  <div className="space-y-2">
-                    <div className="flex items-center">
-                      <CheckCircle className="text-green-500 w-5 h-5 mr-2" />
-                      <div>
-                        <p className="font-medium">
-                          {bookingDetails.groupSize}{" "}
-                          {bookingDetails.groupSize === 1
-                            ? "participant"
-                            : "participants"}
-                        </p>
-                        {bookingDetails.specialRequests && (
-                          <p className="text-sm text-gray-500">
-                            Special requests: {bookingDetails.specialRequests}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-
-              {/* Payment Section - Embedded directly in the page */}
-              {step === 3 && (
-                <div
-                  ref={paymentSectionRef}
-                  className="bg-white rounded-lg shadow-md p-6 mb-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-bold">Payment</h2>
-                  </div>
-
-                  {isPaymentActive && paymentData ? (
-                    <div className="w-full">
-                      <TourPaymentForm
-                        paymentData={paymentData}
-                        bookingForm={bookingDetails}
-                        onPaymentSuccess={handlePaymentSuccess}
-                        onPaymentFailure={handlePaymentFailure}
-                        onClose={() => setIsPaymentActive(false)}
-                        setIsCheckingOpen={setChecking}
-                      />
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <p className="text-gray-500 mb-4">
-                        Ready to complete your booking?
-                      </p>
-                      <Button
-                        onClick={handlePreviousStep}
-                        variant="outline"
-                        className="mr-2">
-                        Back to Tour Details
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Booking Summary Section */}
-            <div
-              ref={tourSummaryRef}
-              className="w-full lg:w-1/3 order-1 lg:order-2">
-              <div className="bg-white rounded-lg shadow-md p-6 sticky top-8 space-y-5">
-                <h3 className="text-lg font-bold border-b pb-3">
-                  Booking Summary
-                </h3>
-
-                <div className="flex items-start gap-4">
-                  <div className="w-20 h-20 flex-shrink-0 overflow-hidden rounded-md">
-                    <img
-                      src={
-                        selectedTour.images && selectedTour.images[0]
-                          ? selectedTour.images[0]
-                          : "/placeholder.svg?height=80&width=80"
-                      }
-                      alt={selectedTour.title}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-900">
-                      {selectedTour.title}
-                    </h4>
-                    <div className="text-sm text-gray-600 mt-1 flex items-center">
-                      <MapPinIcon className="w-4 h-4 mr-1" />
-                      {selectedTour.location}
-                    </div>
-                    <div className="text-sm text-gray-600 mt-1 flex items-center">
-                      <ClockIcon className="w-4 h-4 mr-1" />
-                      {selectedTour.duration}
-                    </div>
-                  </div>
-                </div>
-
-                {bookingDetails.selectedDate && (
-                  <div className="py-3 border-t border-gray-200">
-                    <h4 className="font-medium text-gray-900 mb-2">
-                      Selected Date
-                    </h4>
-                    <div className="p-3 bg-blue-50 rounded text-sm">
-                      <div className="font-medium text-blue-800">
-                        {formatDate(
-                          new Date(bookingDetails.selectedDate.startDate)
-                        )}{" "}
-                        -{" "}
-                        {formatDate(
-                          new Date(bookingDetails.selectedDate.endDate)
-                        )}
-                      </div>
-                      <div className="text-blue-600 mt-1">
-                        {bookingDetails.selectedDate.availableSpots} spots
-                        available
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {bookingDetails.selectedPackage && (
-                  <div className="py-3 border-t border-gray-200">
-                    <h4 className="font-medium text-gray-900 mb-2">
-                      Selected Package
-                    </h4>
-                    <div className="p-3 bg-green-50 rounded text-sm">
-                      <div className="font-medium text-green-800">
-                        {bookingDetails.selectedPackage.name}
-                      </div>
-                      {bookingDetails.selectedPackage.description && (
-                        <div className="text-green-600 mt-1">
-                          {bookingDetails.selectedPackage.description}
+                            Continue to Tour Details
+                          </Button>
+                          {!isOtpVerified &&
+                            !localStorage.getItem("authToken") && (
+                              <p className="text-xs text-center mt-2 text-red-500">
+                                Please verify your phone to continue
+                              </p>
+                            )}
                         </div>
                       )}
-                      <div className="font-medium text-green-800 mt-2">
-                        ₹
-                        {Number(
-                          bookingDetails.selectedPackage.price
-                        ).toLocaleString()}{" "}
-                        per person
-                      </div>
                     </div>
                   </div>
-                )}
-
-                <div className="py-3 border-t border-gray-200">
-                  <div className="space-y-2">
-                    <div className="font-medium">Number of Travelers</div>
-                    <div className="flex items-center border rounded-md overflow-hidden">
-                      <button
-                        className="px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-500"
-                        onClick={() => {
-                          if (bookingDetails.groupSize > 1) {
-                            setBookingDetails((prev) => {
-                              const newGroupSize = prev.groupSize - 1;
-                              return {
-                                ...prev,
-                                groupSize: newGroupSize,
-                                totalAmount: prev.selectedPackage
-                                  ? prev.selectedPackage.price * newGroupSize
-                                  : prev.totalAmount,
-                              };
-                            });
-                          }
-                        }}
-                        disabled={bookingDetails.groupSize <= 1}>
-                        -
-                      </button>
-                      <span className="px-4 py-2 min-w-[40px] text-center border-l border-r">
-                        {bookingDetails.groupSize}
-                      </span>
-                      <button
-                        className="px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-500"
-                        onClick={() => {
-                          // Get max available spots
-                          const maxAvailable = bookingDetails.selectedDate
-                            ? bookingDetails.selectedDate.availableSpots
-                            : selectedTour.groupSize - selectedTour.bookedSlots;
-
-                          if (bookingDetails.groupSize < maxAvailable) {
-                            setBookingDetails((prev) => {
-                              const newGroupSize = prev.groupSize + 1;
-                              return {
-                                ...prev,
-                                groupSize: newGroupSize,
-                                totalAmount: prev.selectedPackage
-                                  ? prev.selectedPackage.price * newGroupSize
-                                  : prev.totalAmount,
-                              };
-                            });
-                          }
-                        }}
-                        disabled={
-                          bookingDetails.groupSize >=
-                          (bookingDetails.selectedDate
-                            ? bookingDetails.selectedDate.availableSpots
-                            : selectedTour.groupSize - selectedTour.bookedSlots)
-                        }>
-                        +
-                      </button>
-                    </div>
-                    {!bookingDetails.selectedDate && (
-                      <p className="text-xs text-amber-600">
-                        Select a date and package first
-                      </p>
-                    )}
-                  </div>
                 </div>
-
-                <div className="pt-4 border-t border-gray-200">
-                  <div className="flex justify-between mb-2">
-                    <span className="text-gray-600">Price per person</span>
-                    <span className="font-medium">
-                      {bookingDetails.selectedPackage
-                        ? `₹${Number(
-                            bookingDetails.selectedPackage.price
-                          ).toLocaleString()}`
-                        : "Select a package"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-gray-600">Number of travelers</span>
-                    <span>{bookingDetails.groupSize}</span>
-                  </div>
-                  <div className="flex justify-between pt-3 border-t border-dashed mt-3">
-                    <span className="font-semibold">Total Amount</span>
-                    <span className="font-bold text-lg">
-                      {bookingDetails.selectedPackage
-                        ? `₹${Number(
-                            bookingDetails.selectedPackage.price *
-                              bookingDetails.groupSize
-                          ).toLocaleString()}`
-                        : "Pending selection"}
-                    </span>
-                  </div>
-                </div>
-
-                {step === 2 && (
-                  <div className="pt-4">
-                    <Button
-                      variant="custom"
-                      className="w-full py-3"
-                      onClick={() => {
-                        if (validateStep2()) {
-                          handleNextStep(); // Move to step 3
-                        }
-                      }}
-                      disabled={
-                        !isOtpVerified && !localStorage.getItem("authToken")
-                      }>
-                      Continue to Tour Details
-                    </Button>
-                    {!isOtpVerified && !localStorage.getItem("authToken") && (
-                      <p className="text-xs text-center mt-2 text-red-500">
-                        Please verify your email to continue
-                      </p>
-                    )}
-                  </div>
-                )}
               </div>
             </div>
           </div>

@@ -32,7 +32,8 @@ router.post("/send-otp", async (req, res) => {
     );
 
     // Uncle Nomad Logo URL (Replace with actual image link if hosted)
-    const logoUrl = "https://res.cloudinary.com/dzr2pobts/image/upload/v1742561753/logo2_lgqlkm.png"; 
+    const logoUrl =
+      "https://res.cloudinary.com/dzr2pobts/image/upload/v1742561753/logo2_lgqlkm.png";
 
     // Email HTML Template
     const emailHtml = `
@@ -68,16 +69,18 @@ router.post("/send-otp", async (req, res) => {
   }
 });
 
-
 router.post("/verify-otp", async (req, res) => {
   const { email, otp, name, phone } = req.body;
-  if (!email || !otp) return res.status(400).json({ message: "Email and OTP are required" });
+  if (!email || !otp)
+    return res.status(400).json({ message: "Email and OTP are required" });
 
   try {
     const storedOtp = await Otp.findOne({ email });
 
-    if (!storedOtp) return res.status(400).json({ message: "OTP expired or invalid" });
-    if (storedOtp.otp !== otp) return res.status(400).json({ message: "Incorrect OTP" });
+    if (!storedOtp)
+      return res.status(400).json({ message: "OTP expired or invalid" });
+    if (storedOtp.otp !== otp)
+      return res.status(400).json({ message: "Incorrect OTP" });
 
     // OTP is valid, create or login user
     let user = await User.findOne({ email });
@@ -85,17 +88,16 @@ router.post("/verify-otp", async (req, res) => {
 
     if (!user) {
       // Create new user if doesn't exist
-      const randomPassword = crypto.randomBytes(16).toString('hex');
+      const randomPassword = crypto.randomBytes(16).toString("hex");
       const hashedPassword = await bcrypt.hash(randomPassword, 10);
-      
+
       user = new User({
         email,
-        name: name || email.split('@')[0], // Use part of email as name if not provided
-        phone: phone || '',
+        name: name || email.split("@")[0], // Use part of email as name if not provided
+        phone: phone || "",
         hashedPassword,
-        isEmailVerified: true
       });
-      
+
       await user.save();
       statusMessage = "Account created and logged in successfully";
     } else {
@@ -109,23 +111,26 @@ router.post("/verify-otp", async (req, res) => {
 
     // Generate authentication token
     const token = jwt.sign(
-      { id: user._id, email: user.email, name:user.name, isVerified: user.isEmailVerified },
+      { id: user._id, email: user.email, name: user.name },
       process.env.JWT_SECRET,
-      { expiresIn: '24h' }
+      {
+        expiresIn: "24h",
+        algorithm: "HS256",
+      }
     );
 
     // Remove OTP after successful verification
     await Otp.deleteOne({ email });
-    
+
     // Return token in response
-    res.json({ 
+    res.json({
       message: statusMessage,
       token,
       user: {
         id: user._id,
         email: user.email,
-        name: user.name
-      }
+        name: user.name,
+      },
     });
   } catch (error) {
     console.error("OTP verification failed:", error);
@@ -135,28 +140,38 @@ router.post("/verify-otp", async (req, res) => {
 
 // Create authentication middleware
 export const authenticateToken = async (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN format
-  
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1]; // Bearer TOKEN format
+
   if (!token) {
-    return res.status(401).json({ message: 'Access denied. No token provided.' });
+    return res
+      .status(401)
+      .json({ message: "Access denied. No token provided." });
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
+    // Decode the token first to check the algorithm
+    const decodedWithoutVerify = jwt.decode(token, { complete: true });
+    const algorithm = decodedWithoutVerify?.header?.alg || "HS256";
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, {
+      algorithms: [algorithm],
+    });
+
     // Check if user still exists in database
     const user = await User.findById(decoded.id);
     if (!user) {
-      return res.status(401).json({ message: 'Invalid token. User not found.' });
+      return res
+        .status(401)
+        .json({ message: "Invalid token. User not found." });
     }
-    
+
     // Attach user to request
     req.user = decoded;
     next();
   } catch (error) {
-    console.error('Token verification failed:', error);
-    res.status(401).json({ message: 'Invalid token' });
+    console.error("Token verification failed:", error);
+    res.status(401).json({ message: "Invalid token" });
   }
 };
 

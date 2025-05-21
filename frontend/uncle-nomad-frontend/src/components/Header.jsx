@@ -42,6 +42,15 @@ const Header = () => {
 
         try {
           // Validate token with the backend
+          console.log("Validating token with backend...");
+
+          // Get API key from environment or use fallback
+          const apiKey = process.env.REACT_APP_API_KEY || "";
+          console.log(
+            "Using API key:",
+            apiKey ? "API key is set" : "API key is missing"
+          );
+
           const response = await fetch(
             `${process.env.REACT_APP_API_URL}/api/token/validate-token`,
             {
@@ -49,10 +58,22 @@ const Header = () => {
               headers: {
                 Authorization: `Bearer ${authToken}`,
                 "Content-Type": "application/json",
-                "x-api-key": process.env.REACT_APP_API_KEY,
+                "x-api-key": apiKey,
               },
             }
           );
+
+          if (response.status === 403) {
+            console.warn(
+              "API key validation failed. Please check your environment configuration."
+            );
+            // Continue with local token validation instead of logging out
+            if (!checkTokenExpiration(authToken)) {
+              setIsAuthenticated(true);
+              setUserName(storedUserName || "");
+              return;
+            }
+          }
 
           const data = await response.json();
 
@@ -60,12 +81,20 @@ const Header = () => {
             console.warn("Token invalid, logging out:", data.message);
             handleLogout();
           } else {
+            console.log("Token validated successfully");
             setIsAuthenticated(true);
             setUserName(storedUserName || "");
           }
         } catch (error) {
           console.error("Error validating token:", error);
-          handleLogout(); // Logout on request failure
+          // On network error, still try local validation
+          if (!checkTokenExpiration(authToken)) {
+            console.log("Using local token validation as fallback");
+            setIsAuthenticated(true);
+            setUserName(storedUserName || "");
+          } else {
+            handleLogout(); // Logout on request failure
+          }
         }
       } else {
         setIsAuthenticated(false);
@@ -356,7 +385,17 @@ const Header = () => {
       <LoginModal
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
-        onLogin={() => setIsAuthenticated(true)}
+        onLogin={(userName) => {
+          setIsAuthenticated(true);
+          if (userName) {
+            setUserName(userName);
+          } else {
+            // Fallback to localStorage if no name provided
+            setUserName(localStorage.getItem("userName") || "");
+          }
+          // Close the login modal
+          setIsLoginModalOpen(false);
+        }}
       />
     </header>
   );
