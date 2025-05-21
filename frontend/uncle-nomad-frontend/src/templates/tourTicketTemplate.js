@@ -215,9 +215,7 @@ export const generateTourTicketTemplate = (booking, formatDateDDMMYYYY) => {
                 </div>
                 <div class="info-item">
                   <span class="info-label">Duration</span>
-                  <span class="info-value">${
-                    booking.duration || "N/A"
-                  } Days</span>
+                  <span class="info-value">${booking.duration || "N/A"}</span>
                 </div>
                 <div class="info-item">
                   <span class="info-label">Participants</span>
@@ -274,9 +272,11 @@ export const generateTourTicketTemplate = (booking, formatDateDDMMYYYY) => {
                   <span class="info-label">Status</span>
                   <span class="info-value">
                     <span class="status-badge ${
+                      booking.status === "CONFIRMED" ||
                       booking.status === "Confirmed"
                         ? "status-confirmed"
-                        : booking.status === "Pending"
+                        : booking.status === "PENDING" ||
+                          booking.status === "Pending"
                         ? "status-pending"
                         : "status-cancelled"
                     }">

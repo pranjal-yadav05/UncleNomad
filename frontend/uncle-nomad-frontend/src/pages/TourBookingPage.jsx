@@ -713,7 +713,12 @@ const TourBookingPage = () => {
   };
 
   // Handle date and package selection
-  const handleDatePackageSelection = (selection) => {
+  const handleDatePackageSelection = (selection, event) => {
+    // Prevent default scroll behavior if event exists
+    if (event) {
+      event.preventDefault();
+    }
+
     // Ensure dates are properly converted to Date objects
     const selectedDate = {
       ...selection.date,
@@ -751,6 +756,14 @@ const TourBookingPage = () => {
     });
 
     setStep(2);
+
+    // Smooth scroll to the next section after a short delay
+    setTimeout(() => {
+      const nextSection = document.querySelector('[data-step="2"]');
+      if (nextSection) {
+        nextSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 100);
   };
 
   // Handle payment form submission
@@ -837,64 +850,229 @@ const TourBookingPage = () => {
             </div>
 
             {/* Booking Progress */}
-            <div className="bg-gray-50 py-4 border-b">
+            <div className="bg-white py-6 border-b shadow-sm">
               <div className="container mx-auto px-4">
-                <div className="flex items-center justify-between max-w-3xl mx-auto">
-                  <button
-                    onClick={handleBackToTourDetails}
-                    className="flex items-center text-blue-600 hover:text-blue-800 transition-colors">
-                    <ArrowLeftIcon className="w-4 h-4 mr-1" />
-                    <span>Back to Tour Details</span>
-                  </button>
+                <div className="max-w-3xl mx-auto">
+                  <div className="flex items-center justify-between mb-4">
+                    <button
+                      onClick={handleBackToTourDetails}
+                      className="flex items-center text-blue-600 hover:text-blue-800 transition-colors">
+                      <ArrowLeftIcon className="w-4 h-4 mr-1" />
+                      <span className="hidden sm:inline">
+                        Back to Tour Details
+                      </span>
+                      <span className="sm:hidden">Back</span>
+                    </button>
+                  </div>
 
-                  <div className="hidden md:flex items-center">
-                    <div
-                      className={`flex flex-col items-center ${
-                        step >= 1 ? "text-blue-600" : "text-gray-400"
-                      }`}>
-                      <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${
-                          step >= 1 ? "bg-blue-600 text-white" : "bg-gray-200"
-                        }`}>
-                        <CalendarIcon className="w-4 h-4" />
+                  {/* Mobile Progress Steps */}
+                  <div className="md:hidden">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex flex-col items-center">
+                        <div
+                          className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                            step >= 1
+                              ? "bg-blue-600 text-white"
+                              : "bg-gray-200 text-gray-500"
+                          }`}>
+                          {step > 1 ? (
+                            <CheckCircle className="w-5 h-5" />
+                          ) : (
+                            <CalendarIcon className="w-4 h-4" />
+                          )}
+                        </div>
+                        <span className="text-xs mt-1">Date</span>
                       </div>
-                      <span className="text-xs">Select Date & Package</span>
+                      <div
+                        className={`flex-1 h-0.5 mx-2 ${
+                          step >= 2 ? "bg-blue-600" : "bg-gray-200"
+                        }`}
+                      />
+                      <div className="flex flex-col items-center">
+                        <div
+                          className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                            step >= 2
+                              ? "bg-blue-600 text-white"
+                              : "bg-gray-200 text-gray-500"
+                          }`}>
+                          {step > 2 ? (
+                            <CheckCircle className="w-5 h-5" />
+                          ) : (
+                            <UserCircleIcon className="w-4 h-4" />
+                          )}
+                        </div>
+                        <span className="text-xs mt-1">Guest</span>
+                      </div>
+                      <div
+                        className={`flex-1 h-0.5 mx-2 ${
+                          step >= 3 ? "bg-blue-600" : "bg-gray-200"
+                        }`}
+                      />
+                      <div className="flex flex-col items-center">
+                        <div
+                          className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                            step >= 3
+                              ? "bg-blue-600 text-white"
+                              : "bg-gray-200 text-gray-500"
+                          }`}>
+                          {step > 3 ? (
+                            <CheckCircle className="w-5 h-5" />
+                          ) : (
+                            <CubeIcon className="w-4 h-4" />
+                          )}
+                        </div>
+                        <span className="text-xs mt-1">Tour</span>
+                      </div>
+                      <div
+                        className={`flex-1 h-0.5 mx-2 ${
+                          step >= 4 ? "bg-blue-600" : "bg-gray-200"
+                        }`}
+                      />
+                      <div className="flex flex-col items-center">
+                        <div
+                          className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                            step >= 4
+                              ? "bg-blue-600 text-white"
+                              : "bg-gray-200 text-gray-500"
+                          }`}>
+                          {step > 4 ? (
+                            <CheckCircle className="w-5 h-5" />
+                          ) : (
+                            <CreditCardIcon className="w-4 h-4" />
+                          )}
+                        </div>
+                        <span className="text-xs mt-1">Pay</span>
+                      </div>
+                    </div>
+                    <div className="text-center text-sm font-medium text-blue-600 mt-2">
+                      {step === 1 && "Select Date & Package"}
+                      {step === 2 && "Enter Guest Details"}
+                      {step === 3 && "Review Tour Details"}
+                      {step === 4 && "Complete Payment"}
+                    </div>
+                  </div>
+
+                  {/* Desktop Progress Steps */}
+                  <div className="hidden md:flex items-center justify-between">
+                    {/* Step 1 */}
+                    <div className="flex flex-col items-center relative">
+                      <div
+                        className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${
+                          step >= 1
+                            ? "bg-blue-600 text-white"
+                            : "bg-gray-200 text-gray-500"
+                        }`}>
+                        {step > 1 ? (
+                          <CheckCircle className="w-6 h-6" />
+                        ) : (
+                          <CalendarIcon className="w-5 h-5" />
+                        )}
+                      </div>
+                      <span
+                        className={`text-sm font-medium ${
+                          step >= 1 ? "text-blue-600" : "text-gray-500"
+                        }`}>
+                        Select Date & Package
+                      </span>
+                      {step === 1 && (
+                        <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
+                      )}
                     </div>
 
+                    {/* Connector Line */}
                     <div
-                      className={`w-12 h-0.5 ${
+                      className={`flex-1 h-0.5 mx-4 ${
                         step >= 2 ? "bg-blue-600" : "bg-gray-200"
-                      }`}></div>
+                      }`}
+                    />
 
-                    <div
-                      className={`flex flex-col items-center ${
-                        step >= 2 ? "text-blue-600" : "text-gray-400"
-                      }`}>
+                    {/* Step 2 */}
+                    <div className="flex flex-col items-center relative">
                       <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${
-                          step >= 2 ? "bg-blue-600 text-white" : "bg-gray-200"
+                        className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${
+                          step >= 2
+                            ? "bg-blue-600 text-white"
+                            : "bg-gray-200 text-gray-500"
                         }`}>
-                        <UserCircleIcon className="w-4 h-4" />
+                        {step > 2 ? (
+                          <CheckCircle className="w-6 h-6" />
+                        ) : (
+                          <UserCircleIcon className="w-5 h-5" />
+                        )}
                       </div>
-                      <span className="text-xs">Guest Details</span>
+                      <span
+                        className={`text-sm font-medium ${
+                          step >= 2 ? "text-blue-600" : "text-gray-500"
+                        }`}>
+                        Guest Details
+                      </span>
+                      {step === 2 && (
+                        <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
+                      )}
                     </div>
 
+                    {/* Connector Line */}
                     <div
-                      className={`w-12 h-0.5 ${
+                      className={`flex-1 h-0.5 mx-4 ${
                         step >= 3 ? "bg-blue-600" : "bg-gray-200"
-                      }`}></div>
+                      }`}
+                    />
 
-                    <div
-                      className={`flex flex-col items-center ${
-                        step >= 3 ? "text-blue-600" : "text-gray-400"
-                      }`}>
+                    {/* Step 3 */}
+                    <div className="flex flex-col items-center relative">
                       <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${
-                          step >= 3 ? "bg-blue-600 text-white" : "bg-gray-200"
+                        className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${
+                          step >= 3
+                            ? "bg-blue-600 text-white"
+                            : "bg-gray-200 text-gray-500"
                         }`}>
-                        <CreditCardIcon className="w-4 h-4" />
+                        {step > 3 ? (
+                          <CheckCircle className="w-6 h-6" />
+                        ) : (
+                          <CubeIcon className="w-5 h-5" />
+                        )}
                       </div>
-                      <span className="text-xs">Payment</span>
+                      <span
+                        className={`text-sm font-medium ${
+                          step >= 3 ? "text-blue-600" : "text-gray-500"
+                        }`}>
+                        Tour Details
+                      </span>
+                      {step === 3 && (
+                        <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
+                      )}
+                    </div>
+
+                    {/* Connector Line */}
+                    <div
+                      className={`flex-1 h-0.5 mx-4 ${
+                        step >= 4 ? "bg-blue-600" : "bg-gray-200"
+                      }`}
+                    />
+
+                    {/* Step 4 */}
+                    <div className="flex flex-col items-center relative">
+                      <div
+                        className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${
+                          step >= 4
+                            ? "bg-blue-600 text-white"
+                            : "bg-gray-200 text-gray-500"
+                        }`}>
+                        {step > 4 ? (
+                          <CheckCircle className="w-6 h-6" />
+                        ) : (
+                          <CreditCardIcon className="w-5 h-5" />
+                        )}
+                      </div>
+                      <span
+                        className={`text-sm font-medium ${
+                          step >= 4 ? "text-blue-600" : "text-gray-500"
+                        }`}>
+                        Payment
+                      </span>
+                      {step === 4 && (
+                        <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
+                      )}
                     </div>
                   </div>
                 </div>
@@ -906,14 +1084,14 @@ const TourBookingPage = () => {
                 <div className="flex flex-col lg:flex-row gap-8">
                   {/* Main Content */}
                   <div className="w-full lg:w-2/3 order-2 lg:order-1">
-                    {/* Date & Package Selection Section - Always visible but shows as completed after step 1 */}
+                    {/* Date & Package Selection Section */}
                     <div
-                      className={`bg-white rounded-lg shadow-md p-6 mb-6 ${
-                        step !== 1 ? "opacity-70" : ""
+                      className={`bg-white rounded-lg shadow-md p-6 mb-6 transition-all duration-300 ${
+                        step > 1 ? "opacity-70" : ""
                       }`}>
                       <div className="flex items-center justify-between mb-4">
                         <h2 className="text-xl font-bold">Date & Package</h2>
-                        {step !== 1 && (
+                        {step > 1 && (
                           <Button
                             onClick={() => handleEditStep(1)}
                             variant="outline"
@@ -923,7 +1101,7 @@ const TourBookingPage = () => {
                         )}
                       </div>
 
-                      {step !== 1 &&
+                      {step > 1 &&
                       bookingDetails.selectedDate &&
                       bookingDetails.selectedPackage ? (
                         <div className="space-y-2">
@@ -966,13 +1144,13 @@ const TourBookingPage = () => {
 
                     {/* Guest Details Section */}
                     <div
-                      ref={guestDetailsRef}
-                      className={`bg-white rounded-lg shadow-md p-6 mb-6 ${
-                        step !== 2 ? "opacity-70" : ""
+                      data-step="2"
+                      className={`bg-white rounded-lg shadow-sm p-6 mb-6 transition-all duration-300 ${
+                        step >= 2 ? "opacity-100" : "opacity-70"
                       }`}>
                       <div className="flex items-center justify-between mb-4">
                         <h2 className="text-xl font-bold">Guest Details</h2>
-                        {step !== 2 && (
+                        {step > 2 && (
                           <Button
                             onClick={() => handleEditStep(2)}
                             variant="outline"
@@ -1170,7 +1348,7 @@ const TourBookingPage = () => {
                             </div>
                           </div>
                         </div>
-                      ) : (
+                      ) : step > 2 ? (
                         <div className="space-y-2">
                           <div className="flex items-center">
                             <CheckCircle className="text-green-500 w-5 h-5 mr-2" />
@@ -1184,19 +1362,19 @@ const TourBookingPage = () => {
                             </div>
                           </div>
                         </div>
-                      )}
+                      ) : null}
                     </div>
 
                     {/* Tour Details Section */}
                     <div
                       id="tourDetails"
                       ref={tourSummaryRef}
-                      className={`bg-white rounded-lg shadow-md p-6 mb-6 ${
-                        step !== 3 ? "opacity-70" : ""
+                      className={`bg-white rounded-lg shadow-md p-6 mb-6 transition-all duration-300 ${
+                        step >= 3 ? "opacity-100" : "opacity-70"
                       }`}>
                       <div className="flex items-center justify-between mb-4">
                         <h2 className="text-xl font-bold">Tour Details</h2>
-                        {step !== 3 && (
+                        {step > 3 && (
                           <Button
                             onClick={() => handleEditStep(3)}
                             variant="outline"
@@ -1369,11 +1547,11 @@ const TourBookingPage = () => {
                       ) : null}
                     </div>
 
-                    {/* Payment Section - Embedded directly in the page */}
+                    {/* Payment Section */}
                     {step === 3 && (
                       <div
                         ref={paymentSectionRef}
-                        className="bg-white rounded-lg shadow-md p-6 mb-6">
+                        className="bg-white rounded-lg shadow-md p-6 mb-6 transition-all duration-300">
                         <div className="flex items-center justify-between mb-4">
                           <h2 className="text-xl font-bold">Payment</h2>
                         </div>

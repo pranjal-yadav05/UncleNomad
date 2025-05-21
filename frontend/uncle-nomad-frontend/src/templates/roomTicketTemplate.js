@@ -255,13 +255,15 @@ export const generateRoomTicketTemplate = (booking, formatDateDDMMYYYY) => {
                   <span class="info-label">Status</span>
                   <span class="info-value">
                     <span class="status-badge ${
+                      booking.status === "CONFIRMED" ||
                       booking.status === "Confirmed"
                         ? "status-confirmed"
-                        : booking.status === "Pending"
+                        : booking.status === "PENDING" ||
+                          booking.status === "Pending"
                         ? "status-pending"
                         : "status-cancelled"
                     }">
-                      ${booking.status || "Unknown"}
+                      ${booking.status || "Pending"}
                     </span>
                   </span>
                 </div>

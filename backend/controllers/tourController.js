@@ -1223,7 +1223,6 @@ export const deleteTourImage = async (req, res) => {
 
 export const getUserTourBooking = async (req, res) => {
   try {
-
     // Handle phone authentication
     if (!req.user) {
       return res.status(400).json({ message: "User data not found in token" });
@@ -1242,7 +1241,6 @@ export const getUserTourBooking = async (req, res) => {
       // Match the last digits of the phone number to handle different country code formats
       const lastDigits = phoneDigits.slice(-10);
       query.phone = { $regex: lastDigits + "$" };
-
     } else if (req.user.id) {
       // Fallback to finding by user ID if no phone in token
       const user = await User.findById(req.user.id);
@@ -1270,7 +1268,8 @@ export const getUserTourBooking = async (req, res) => {
     const bookings = await TourBooking.find(query)
       .populate({
         path: "tour",
-        select: "title location images duration price itinerary",
+        select:
+          "title location images duration price itinerary availableDates pricingPackages",
       })
       .select(
         "_id status bookingDate guestName phone specialRequests groupSize totalPrice paymentReference paymentStatus selectedDate selectedPackage"
@@ -1301,6 +1300,20 @@ export const getUserTourBooking = async (req, res) => {
     const formattedBookings = bookings.map((booking) => {
       const review = reviewMap[booking._id.toString()] || null;
 
+      // Get the selected date period from the tour's availableDates
+      const selectedDatePeriod = booking.tour?.availableDates?.find(
+        (date) =>
+          date.startDate.getTime() ===
+            new Date(booking.selectedDate.startDate).getTime() &&
+          date.endDate.getTime() ===
+            new Date(booking.selectedDate.endDate).getTime()
+      );
+
+      // Get the selected package from the tour's pricingPackages
+      const selectedPackage = booking.tour?.pricingPackages?.find(
+        (pkg) => pkg.name === booking.selectedPackage.name
+      );
+
       return {
         _id: booking._id,
         status: booking.status,
@@ -1322,10 +1335,11 @@ export const getUserTourBooking = async (req, res) => {
         tourName: booking.tour?.title || "Unknown Tour",
         location: booking.tour?.location || "Unknown Location",
         tourImage: booking.tour?.images?.[0] || null,
-        tourDate: booking.tour?.startDate || null,
-        tourEndDate: booking.tour?.endDate || null,
+        tourDate: booking.selectedDate?.startDate || null,
+        tourEndDate: booking.selectedDate?.endDate || null,
         duration: booking.tour?.duration || null,
-        pricePerPerson: booking.tour?.price || null,
+        pricePerPerson:
+          selectedPackage?.price || booking.selectedPackage?.price || null,
         itinerary: booking.tour?.itinerary || [],
 
         // Review details
@@ -1334,7 +1348,6 @@ export const getUserTourBooking = async (req, res) => {
         reviewId: review ? review._id : null,
       };
     });
-
 
     res.status(200).json(formattedBookings);
   } catch (error) {

@@ -96,9 +96,24 @@ function TourBookingCard({
         // Ensure price per person is available
         pricePerPerson:
           booking.selectedPackage?.price ||
-          (booking.totalAmount && booking.groupSize
-            ? Math.round(booking.totalAmount / booking.groupSize)
+          (booking.totalPrice && booking.groupSize
+            ? Math.round(booking.totalPrice / booking.groupSize)
             : null),
+        // Ensure tour image is available
+        tourImage: booking.tour?.images?.[0] || booking.tourImage,
+        // Ensure duration is available
+        duration:
+          booking.tour?.duration ||
+          booking.duration ||
+          (booking.selectedDate
+            ? `${Math.ceil(
+                (new Date(booking.selectedDate.endDate) -
+                  new Date(booking.selectedDate.startDate)) /
+                  (1000 * 60 * 60 * 24)
+              )} days`
+            : null),
+        // Ensure tour name is available
+        tourName: booking.tour?.name || booking.tourName,
       };
 
       // Generate the ticket HTML using the template

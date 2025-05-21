@@ -32,9 +32,30 @@ const TourBookingConfirmationDialog = ({
   // Function to download ticket
   const downloadTicket = () => {
     try {
+      // Format the booking data with all required fields
+      const ticketData = {
+        ...tourBooking,
+        // Ensure proper tour dates
+        tourDate: tourBooking.selectedDate?.startDate || tourBooking.tourDate,
+        tourEndDate:
+          tourBooking.selectedDate?.endDate || tourBooking.tourEndDate,
+        // Ensure price per person is available
+        pricePerPerson:
+          tourBooking.selectedPackage?.price ||
+          (tourBooking.totalPrice && tourBooking.groupSize
+            ? Math.round(tourBooking.totalPrice / tourBooking.groupSize)
+            : null),
+        // Ensure tour image is available
+        tourImage: tourBooking.tour?.images?.[0] || tourBooking.tourImage,
+        // Ensure duration is available
+        duration: tourBooking.tour?.duration || tourBooking.duration,
+        // Ensure tour name is available
+        tourName: tourBooking.tour?.title || tourBooking.tourName,
+      };
+
       // Generate the ticket HTML using the template
       const ticketHtml = generateTourTicketTemplate(
-        tourBooking,
+        ticketData,
         formatDateDDMMYYYY
       );
 
