@@ -108,6 +108,37 @@ const RoomDetailsPage = () => {
     }
   };
 
+  // Handle contact us click
+  const handleContactUs = () => {
+    const footer = document.getElementById("footer");
+    const getInTouchButton = document.getElementById("get-in-touch");
+
+    if (footer && getInTouchButton) {
+      // Scroll to footer
+      footer.scrollIntoView({ behavior: "smooth" });
+
+      // Add highlight effect to the button
+      getInTouchButton.classList.add(
+        "animate-pulse",
+        "bg-white/30",
+        "border-white",
+        "scale-110",
+        "transition-all",
+        "duration-300"
+      );
+
+      // Remove highlight after animation
+      setTimeout(() => {
+        getInTouchButton.classList.remove(
+          "animate-pulse",
+          "bg-white/30",
+          "border-white",
+          "scale-110"
+        );
+      }, 2000);
+    }
+  };
+
   // Handle loading and error states
   if (loading) {
     return (
@@ -312,6 +343,7 @@ const RoomDetailsPage = () => {
               }`}>
               Amenities
             </button>
+            {/* Commenting out pricing tab
             <button
               onClick={() => setActiveTab("pricing")}
               className={`pb-4 font-medium text-lg transition-colors ${
@@ -321,6 +353,7 @@ const RoomDetailsPage = () => {
               }`}>
               Pricing
             </button>
+            */}
             <button
               onClick={() => setActiveTab("reviews")}
               className={`pb-4 font-medium text-lg transition-colors ${
@@ -449,9 +482,11 @@ const RoomDetailsPage = () => {
                     <div className="mt-8 border-t pt-6">
                       <div className="flex items-center justify-center gap-2 text-gray-600">
                         <span>Questions about this room?</span>
-                        <a href="#" className="text-blue-600 hover:underline">
+                        <button
+                          onClick={handleContactUs}
+                          className="text-blue-600 hover:underline cursor-pointer">
                           Contact us
-                        </a>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -485,7 +520,7 @@ const RoomDetailsPage = () => {
             </div>
           )}
 
-          {/* Pricing Tab */}
+          {/* Commenting out Pricing Tab
           {activeTab === "pricing" && (
             <div>
               <h2 className="text-3xl font-bold text-gray-800 mb-6">
@@ -538,6 +573,7 @@ const RoomDetailsPage = () => {
               </div>
             </div>
           )}
+          */}
 
           {/* Reviews Tab */}
           {activeTab === "reviews" && (

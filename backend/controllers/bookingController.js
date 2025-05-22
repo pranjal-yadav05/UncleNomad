@@ -93,8 +93,12 @@ export const checkAvailabiltiy = async (req, res) => {
   }
 
   try {
-    // Get all rooms
-    const rooms = await Room.find();
+    // Get all rooms with reviews populated
+    const rooms = await Room.find().populate({
+      path: "reviews",
+      select: "rating comment userName createdAt",
+      match: { status: "approved" },
+    });
 
     if (!rooms || rooms.length === 0) {
       return res.status(404).json({ message: "No rooms found in the system" });
@@ -148,6 +152,8 @@ export const checkAvailabiltiy = async (req, res) => {
           return {
             ...room.toObject(),
             availability,
+            reviews: room.reviews || [], // Ensure reviews are included
+            averageRating: room.averageRating || 0, // Ensure averageRating is included
           };
         }
         return null;

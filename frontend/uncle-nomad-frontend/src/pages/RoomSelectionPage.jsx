@@ -18,6 +18,7 @@ const RoomSelectionPage = () => {
 
   // Get data from location state
   const availableRooms = location.state?.availableRooms || [];
+  console.log('availableRooms',availableRooms);
   const checkIn = location.state?.checkIn;
   const checkOut = location.state?.checkOut;
 
@@ -114,16 +115,21 @@ const RoomSelectionPage = () => {
 
   // View room details
   const handleViewRoomDetails = (room) => {
+    console.log('room',room);
     navigate(`/rooms/${room._id}`, {
       state: {
-        selectedRoom: room,
+        selectedRoom: {
+          ...room,
+          reviews: room.reviews || [],
+          averageRating: room.averageRating || 0,
+        },
         selectedRooms: bookingForm.selectedRooms,
         checkIn: bookingForm.checkIn,
         checkOut: bookingForm.checkOut,
         returnToSelection: true, // Flag to indicate we should return to selection page
         availableRooms: availableRooms,
-        imageUrl: room.imageUrl || "/placeholder.svg", // ✅ Pass imageUrl
-        imageUrls: room.imageUrls || [], // Pass all available rooms
+        imageUrl: room.imageUrl || "/placeholder.svg",
+        imageUrls: room.imageUrls || [],
         amenities: room.amenities || [],
       },
     });
