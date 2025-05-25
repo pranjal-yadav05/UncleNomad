@@ -26,7 +26,16 @@ const TourBookingConfirmationDialog = ({
 
   const handleClose = () => {
     setOpen(false);
-    onClose?.();
+    console.log("Setting hasNewBooking flag in sessionStorage");
+    sessionStorage.setItem("hasNewBooking", "true");
+    console.log(
+      "hasNewBooking flag set:",
+      sessionStorage.getItem("hasNewBooking")
+    );
+    // Add a small delay to ensure the flag is set before navigation
+    setTimeout(() => {
+      onClose?.();
+    }, 100);
   };
 
   // Function to download ticket
@@ -108,9 +117,27 @@ const TourBookingConfirmationDialog = ({
     <Dialog
       open={open}
       onOpenChange={(newOpen) => {
-        setOpen(newOpen);
         if (!newOpen) {
-          onClose?.();
+          console.log("Setting hasNewBooking flag in sessionStorage");
+          sessionStorage.setItem("hasNewBooking", "true");
+          console.log(
+            "hasNewBooking flag set:",
+            sessionStorage.getItem("hasNewBooking")
+          );
+
+          // Ensure the flag is set before any navigation
+          setOpen(false);
+
+          // Add a longer delay to ensure the flag is set and persisted
+          setTimeout(() => {
+            console.log(
+              "Final check - hasNewBooking value:",
+              sessionStorage.getItem("hasNewBooking")
+            );
+            onClose?.();
+          }, 500);
+        } else {
+          setOpen(newOpen);
         }
       }}>
       <DialogContent className="bg-white p-6 rounded-lg shadow-xl max-w-lg w-full sm:w-[500px] mx-auto">

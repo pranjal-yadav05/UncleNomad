@@ -1166,7 +1166,7 @@ const TourBookingPage = () => {
                             <div className="p-3 mb-4 text-sm text-green-700 bg-green-100 rounded-md border border-green-300">
                               <p>
                                 ✅ Your details are pre-filled from your
-                                profile. Only phone number can be updated.
+                                profile. You can update your profile from Profile page. 
                               </p>
                             </div>
                           )}
@@ -1887,9 +1887,19 @@ const TourBookingPage = () => {
         <TourBookingConfirmationDialog
           isOpen={isBookingConfirmed}
           onClose={() => {
-            setIsBookingConfirmed(false);
-            navigate("/", { replace: true }); // Replace current history entry with home page
-            window.history.pushState(null, null, "/"); // Ensure back button doesn't work
+            console.log("TourBookingPage - Setting hasNewBooking flag");
+            sessionStorage.setItem("hasNewBooking", "true");
+            console.log(
+              "TourBookingPage - hasNewBooking set:",
+              sessionStorage.getItem("hasNewBooking")
+            );
+
+            // Add a delay before navigation
+            setTimeout(() => {
+              setIsBookingConfirmed(false);
+              navigate("/", { replace: true }); // Replace current history entry with home page
+              window.history.pushState(null, null, "/"); // Ensure back button doesn't work
+            }, 500);
           }}
           tourBooking={confirmedBooking}
           tourName={selectedTour.title}

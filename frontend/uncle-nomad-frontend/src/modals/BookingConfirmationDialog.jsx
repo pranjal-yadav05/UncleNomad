@@ -58,7 +58,16 @@ const BookingConfirmationDialog = ({ booking, onClose }) => {
       open={true}
       onOpenChange={(open) => {
         if (!open) {
-          onClose();
+          console.log("Setting hasNewBooking flag in sessionStorage");
+          sessionStorage.setItem("hasNewBooking", "true");
+          console.log(
+            "hasNewBooking flag set:",
+            sessionStorage.getItem("hasNewBooking")
+          );
+          // Add a small delay to ensure the flag is set before navigation
+          setTimeout(() => {
+            onClose();
+          }, 100);
         }
       }}>
       <DialogContent className="sm:max-w-[425px]">

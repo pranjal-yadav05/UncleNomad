@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
-import { Menu } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Menu, X } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Home,
   Image,
@@ -16,13 +16,22 @@ import {
   FileText,
 } from "lucide-react";
 import LoginModal from "../modals/LoginModal";
+import { ArrowRight } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "./ui/tooltip";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userName, setUserName] = useState("");
+  const [showProfileArrow, setShowProfileArrow] = useState(false);
 
   // Check authentication status
   useEffect(() => {
@@ -136,6 +145,107 @@ const Header = () => {
     navigate("/"); // Redirect to home
   };
 
+  // Login function
+  const handleLogin = (name) => {
+    setIsAuthenticated(true);
+    setUserName(name);
+  };
+
+  // Check if we should show the profile arrow
+  useEffect(() => {
+    console.log("useEffect running, showProfileArrow:", showProfileArrow);
+
+    const checkForNewBooking = () => {
+      console.log("Checking for hasNewBooking in sessionStorage");
+      const hasNewBooking = sessionStorage.getItem("hasNewBooking");
+      console.log("hasNewBooking value:", hasNewBooking);
+      if (hasNewBooking) {
+        console.log("Setting showProfileArrow to true");
+        setShowProfileArrow(true);
+        console.log("showProfileArrow set to true");
+
+        // Open mobile menu if on mobile
+        if (window.innerWidth < 768) {
+          // 768px is the md breakpoint
+          console.log("Opening mobile menu");
+          setIsMenuOpen(true);
+        }
+
+        // Only remove the flag after the tooltip has been shown for 5 seconds
+        setTimeout(() => {
+          console.log("Hiding profile arrow after timeout");
+          setShowProfileArrow(false);
+          console.log("showProfileArrow set to false");
+          // Remove the flag after the tooltip is hidden
+          sessionStorage.removeItem("hasNewBooking");
+          console.log("hasNewBooking flag removed from sessionStorage");
+        }, 5000); // Reduced from 10000 to 5000
+      }
+    };
+
+    // Check immediately
+    checkForNewBooking();
+
+    // Set up an interval to check every 100ms for the first 2 seconds
+    const intervalId = setInterval(checkForNewBooking, 100);
+
+    // Clear the interval after 2 seconds
+    setTimeout(() => {
+      clearInterval(intervalId);
+      console.log("Interval cleared");
+    }, 2000);
+
+    // Listen for storage events
+    const handleStorageChange = (e) => {
+      if (e.key === "hasNewBooking" && e.newValue === "true") {
+        console.log("Storage event detected - hasNewBooking set to true");
+        setShowProfileArrow(true);
+        console.log("showProfileArrow set to true from storage event");
+
+        // Open mobile menu if on mobile
+        if (window.innerWidth < 768) {
+          // 768px is the md breakpoint
+          console.log("Opening mobile menu from storage event");
+          setIsMenuOpen(true);
+        }
+
+        // Only remove the flag after the tooltip has been shown for 5 seconds
+        setTimeout(() => {
+          console.log("Hiding profile arrow after timeout from storage event");
+          setShowProfileArrow(false);
+          console.log("showProfileArrow set to false from storage event");
+          // Remove the flag after the tooltip is hidden
+          sessionStorage.removeItem("hasNewBooking");
+          console.log(
+            "hasNewBooking flag removed from sessionStorage from storage event"
+          );
+        }, 5000); // Reduced from 10000 to 5000
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener("storage", handleStorageChange);
+      console.log("useEffect cleanup");
+    };
+  }, [location.pathname, showProfileArrow]); // Added showProfileArrow to dependencies
+
+  // Handle profile click
+  const handleProfileClick = () => {
+    setShowProfileArrow(false);
+    sessionStorage.removeItem("hasNewBooking");
+    navigate("/profile");
+  };
+
+  // Handle menu close
+  const handleMenuClose = () => {
+    setIsMenuOpen(false);
+    setShowProfileArrow(false);
+    sessionStorage.removeItem("hasNewBooking");
+  };
+
   return (
     <header className="bg-white/40 backdrop-blur-md shadow-sm sticky top-0 z-50 border-b border-gray-100/20">
       <div className="container mx-auto px-4 py-4">
@@ -227,15 +337,46 @@ const Header = () => {
 
             {isAuthenticated ? (
               <div className="flex items-center gap-2 lg:gap-4 ">
-                <Button
-                  onClick={() => navigate("/profile")}
-                  variant="ghost"
-                  className="text-black hover:text-yellow px-2 lg:px-4 ">
-                  <User className="h-4 w-4 mr-1 lg:mr-2" />
-                  <span className="hidden lg:inline text-black hover:bg-gradient-to-r hover:from-blue-500 hover:via-purple-500 hover:to-pink-500 hover:bg-clip-text hover:text-transparent">
-                    {userName}
-                  </span>
-                </Button>
+                <TooltipProvider delayDuration={0}>
+                  <Tooltip
+                    defaultOpen={showProfileArrow}
+                    open={showProfileArrow}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        onClick={handleProfileClick}
+                        variant="ghost"
+                        className="text-black hover:text-yellow px-2 lg:px-4 flex items-center gap-2">
+                        <img
+                          className="h-8 w-8 rounded-full object-cover"
+                          src={`https://api.dicebear.com/7.x/initials/svg?seed=${
+                            userName ? userName[0] : "U"
+                          }`}
+                          alt={userName}
+                        />
+                        <span className="hidden lg:inline text-black hover:bg-gradient-to-r hover:from-blue-500 hover:via-purple-500 hover:to-pink-500 hover:bg-clip-text hover:text-transparent">
+                          {userName}
+                        </span>
+                      </Button>
+                    </TooltipTrigger>
+                    {showProfileArrow && (
+                      <TooltipContent
+                        side="bottom"
+                        className="bg-white border border-gray-200 text-gray-900 p-4 rounded-lg shadow-xl z-50"
+                        sideOffset={5}
+                        onOpenAutoFocus={(e) => {
+                          e.preventDefault();
+                          console.log("Tooltip content focused");
+                        }}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-brand-purple rounded-full animate-pulse" />
+                          <p className="text-sm font-medium">
+                            Check your bookings here!
+                          </p>
+                        </div>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
                 <Button
                   onClick={handleLogout}
                   variant="ghost"
@@ -256,7 +397,9 @@ const Header = () => {
           </nav>
           <button
             className="md:hidden"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            onClick={() =>
+              isMenuOpen ? handleMenuClose() : setIsMenuOpen(true)
+            }
             aria-expanded={isMenuOpen}>
             <Menu className="h-6 w-6" />
           </button>
@@ -345,16 +488,41 @@ const Header = () => {
               <div className="w-full border-t border-gray-200 my-2 pt-2">
                 {isAuthenticated ? (
                   <>
-                    <a
-                      className="w-full max-w-max inline-flex my-2 items-center gap-3 text-black hover:text-brand-purple transition-colors py-2 px-4 justify-start text-black active:bg-gradient-to-r active:from-blue-500 active:via-purple-500 active:to-pink-500 active:bg-clip-text active:text-transparent"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        navigate("/profile");
-                        setIsMenuOpen(false);
-                      }}>
-                      <User className="h-6 w-6" />
-                      <span>{userName || "Profile"}</span>
-                    </a>
+                    <TooltipProvider delayDuration={0}>
+                      <Tooltip defaultOpen={showProfileArrow}>
+                        <TooltipTrigger asChild>
+                          <a
+                            className="w-full max-w-max inline-flex my-2 items-center gap-3 text-black hover:text-brand-purple transition-colors py-2 px-4 justify-start text-black active:bg-gradient-to-r active:from-blue-500 active:via-purple-500 active:to-pink-500 active:bg-clip-text active:text-transparent"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              navigate("/profile");
+                              setIsMenuOpen(false);
+                            }}>
+                            <img
+                              className="h-8 w-8 rounded-full object-cover"
+                              src={`https://api.dicebear.com/7.x/initials/svg?seed=${
+                                userName ? userName[0] : "U"
+                              }`}
+                              alt={userName}
+                            />
+                            <span>{userName || "Profile"}</span>
+                          </a>
+                        </TooltipTrigger>
+                        {showProfileArrow && (
+                          <TooltipContent
+                            side="bottom"
+                            className="bg-white border border-gray-200 text-gray-900 p-4 rounded-lg shadow-xl z-50"
+                            sideOffset={5}>
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 bg-brand-purple rounded-full animate-pulse" />
+                              <p className="text-sm font-medium">
+                                Check your bookings here!
+                              </p>
+                            </div>
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
+                    </TooltipProvider>
                     <a
                       className="w-full max-w-max inline-flex my-2 items-center gap-3 text-red-500 hover:text-red-600 transition-colors py-2 px-4 justify-start"
                       onClick={(e) => {
@@ -385,17 +553,7 @@ const Header = () => {
       <LoginModal
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
-        onLogin={(userName) => {
-          setIsAuthenticated(true);
-          if (userName) {
-            setUserName(userName);
-          } else {
-            // Fallback to localStorage if no name provided
-            setUserName(localStorage.getItem("userName") || "");
-          }
-          // Close the login modal
-          setIsLoginModalOpen(false);
-        }}
+        onLogin={handleLogin}
       />
     </header>
   );

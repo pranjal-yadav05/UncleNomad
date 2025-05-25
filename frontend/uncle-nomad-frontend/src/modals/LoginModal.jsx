@@ -574,12 +574,6 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
       // Extract user information from the Firebase user object
       const phoneNumber = user.phoneNumber;
       const uid = user.uid;
-      const displayName =
-        user.displayName || "User-" + phoneNumber.replace(/\D/g, "").slice(-10);
-
-      // Store user info from Firebase temporarily
-      localStorage.setItem("userPhone", phoneNumber);
-      localStorage.setItem("userName", displayName);
 
       // Register/update the user in our backend
       try {
@@ -597,7 +591,6 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
             },
             body: JSON.stringify({
               phone: phoneNumber,
-              name: displayName,
               firebaseUid: uid,
             }),
             signal: controller.signal,
@@ -609,6 +602,11 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
         const data = await response.json();
 
         if (data.success && data.token) {
+          // Store user info from backend response
+          localStorage.setItem("userPhone", phoneNumber);
+          localStorage.setItem("userName", data.user.name);
+          localStorage.setItem("authToken", data.token);
+
           // Clean up reCAPTCHA before proceeding
           cleanupRecaptcha();
 
@@ -620,7 +618,7 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
           window.dispatchEvent(new Event("storage"));
 
           // Show success message
-          toast.success(`Welcome, ${displayName}! You are now logged in.`);
+          toast.success(`Welcome, ${data.user.name}! You are now logged in.`);
         } else {
           toast.error("Failed to complete registration. Please try again.");
           setError("Registration failed. Please try again.");

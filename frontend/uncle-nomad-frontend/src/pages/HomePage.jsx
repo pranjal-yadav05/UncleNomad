@@ -15,6 +15,7 @@ import MouseTracker from "../components/MouseTracker";
 import ScrollProgress from "../components/ScrollProgress";
 import GoogleReviews from "../components/GoogleReviews";
 import { useLocation, useNavigate } from "react-router-dom";
+import { Button } from "../components/ui/button";
 
 // Separator component for visual distinction between white sections
 const SectionSeparator = ({ type = "gradient" }) => {
@@ -194,7 +195,7 @@ export default function HomePage() {
       .then((res) => res.json())
       .then((data) => {
         setRooms(data);
-        console.log('rooms',data);
+        console.log("rooms", data);
         setIsLoading((prev) => ({ ...prev, rooms: false }));
       })
       .catch((error) => {

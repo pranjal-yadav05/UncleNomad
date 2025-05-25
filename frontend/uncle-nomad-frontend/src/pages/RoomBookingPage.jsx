@@ -832,8 +832,8 @@ const RoomBookingPage = () => {
                     {localStorage.getItem("authToken") && (
                       <div className="p-3 mb-4 text-sm text-green-700 bg-green-100 rounded-md border border-green-300">
                         <p>
-                          ✅ Your details are pre-filled from your profile. Only
-                          phone number can be updated.
+                          ✅ Your details are pre-filled from your profile.
+                          You can update your profile from Profile page.
                         </p>
                       </div>
                     )}
