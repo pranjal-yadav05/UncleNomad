@@ -254,8 +254,11 @@ export default function HomePage() {
             duration={1400}
             threshold={0.2}
             className="relative z-20">
-            <div className="bg-white text-black relative pt-10">
-              <div id="availability" ref={roomsRef}>
+            <div className="bg-gradient-to-b from-gray-50 to-white text-black relative py-16">
+              <div
+                id="availability"
+                ref={roomsRef}
+                className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <AvailableRooms
                   availableRooms={rooms}
                   handleBookNowClick={handleBookNowClick}

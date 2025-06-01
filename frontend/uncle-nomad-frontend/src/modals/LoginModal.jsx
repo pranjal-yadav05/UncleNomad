@@ -43,9 +43,6 @@ const COUNTRY_CODES = [
   { code: "+49", country: "Germany" },
 ];
 
-// For debugging purposes
-console.log("Firebase auth object:", auth);
-
 // Rate limiting constants
 const RATE_LIMIT_TIMEOUT = 60; // seconds
 
@@ -56,6 +53,8 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [otpSendingProgress, setOtpSendingProgress] = useState(0);
+  const [isOtpVerified, setIsOtpVerified] = useState(false);
 
   // Modal states
   const [phoneModalOpen, setPhoneModalOpen] = useState(isOpen);
@@ -68,6 +67,9 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
   const cooldownTimerRef = useRef(null);
   const [verificationStatus, setVerificationStatus] = useState("not_started");
   const [developerMode, setDeveloperMode] = useState(false);
+
+  // Add a ref for timeout tracking
+  const timeoutIdRef = useRef(null);
 
   // Update phoneModalOpen when isOpen changes from parent
   useEffect(() => {
@@ -104,6 +106,12 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
         } catch (e) {
           console.log("Error during cleanup:", e);
         }
+      }
+
+      // Clear any pending timeouts
+      if (timeoutIdRef.current) {
+        clearTimeout(timeoutIdRef.current);
+        timeoutIdRef.current = null;
       }
     };
   }, []);
@@ -219,6 +227,12 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
       } catch (badgeError) {
         console.log("Error hiding reCAPTCHA badges:", badgeError);
       }
+
+      // Clear any pending timeouts
+      if (timeoutIdRef.current) {
+        clearTimeout(timeoutIdRef.current);
+        timeoutIdRef.current = null;
+      }
     } catch (e) {
       console.error("Error cleaning up reCAPTCHA:", e);
     }
@@ -300,24 +314,34 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
     }
   };
 
-  // Memoize the handlers to prevent recreating them on each render
-  const handlePhoneModalClose = useCallback(
-    (open) => {
-      setPhoneModalOpen(open);
-      if (!open) {
-        onClose();
-      }
-    },
-    [onClose]
-  );
-
+  // Update the handleOtpModalClose to prevent accidental closing
   const handleOtpModalClose = useCallback((open) => {
-    setOtpModalOpen(open);
     if (!open) {
-      // Go back to phone input
-      setPhoneModalOpen(true);
+      const shouldClose = window.confirm(
+        "Are you sure you want to cancel verification? You'll need to start over."
+      );
+      if (shouldClose) {
+        setOtpModalOpen(false);
+        setPhoneModalOpen(true);
+        cleanupRecaptcha();
+      } else {
+        // If user cancels, keep the OTP modal open
+        setOtpModalOpen(true);
+      }
     }
   }, []);
+
+  // Update the handlePhoneModalClose to prevent it from showing up after wrong OTP
+  const handlePhoneModalClose = useCallback(
+    (open) => {
+      // Only allow closing the phone modal if we're not in OTP verification
+      if (!open && !otpModalOpen) {
+        onClose();
+      }
+      setPhoneModalOpen(open);
+    },
+    [onClose, otpModalOpen]
+  );
 
   const handlePhoneChange = useCallback(
     (e) => {
@@ -333,6 +357,21 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
   const startCooldown = () => {
     setCooldownTime(RATE_LIMIT_TIMEOUT);
     setIsCooldown(true);
+  };
+
+  // Add this new function to handle the progress animation
+  const startOtpSendingAnimation = () => {
+    setOtpSendingProgress(0);
+    const interval = setInterval(() => {
+      setOtpSendingProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          return 100;
+        }
+        return prev + 2;
+      });
+    }, 30);
+    return interval;
   };
 
   // Direct send OTP function for developer mode
@@ -397,6 +436,8 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
 
     setLoading(true);
     setError(null);
+    setVerificationStatus("initializing");
+    const progressInterval = startOtpSendingAnimation();
 
     try {
       // Full phone number with country code
@@ -413,6 +454,7 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
         window.recaptchaVerifier = null;
       }
 
+      setVerificationStatus("waiting");
       // Create new reCAPTCHA verifier with minimal configuration
       window.recaptchaVerifier = new RecaptchaVerifier(
         auth,
@@ -423,6 +465,7 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
       );
 
       console.log("reCAPTCHA verifier created successfully");
+      setVerificationStatus("verified");
 
       // Attempt to send verification code
       const confirmationResult = await signInWithPhoneNumber(
@@ -463,8 +506,11 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
         setError(`Error: ${error.message}`);
       }
 
+      setVerificationStatus("error");
       toast.error("Failed to send OTP. Please try again.");
     } finally {
+      clearInterval(progressInterval);
+      setOtpSendingProgress(100);
       setLoading(false);
     }
   };
@@ -490,12 +536,20 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
 
       // Create a promise race with a timeout to handle stuck verification
       const confirmPromise = confirmationResultRef.current.confirm(otp);
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Verification timed out")), 15000)
-      );
+      const timeoutPromise = new Promise((_, reject) => {
+        timeoutIdRef.current = setTimeout(() => {
+          reject(new Error("Verification timed out"));
+        }, 30000);
+      });
 
       // Race between confirmation and timeout
       const result = await Promise.race([confirmPromise, timeoutPromise]);
+
+      // Clear the timeout if verification succeeds
+      if (timeoutIdRef.current) {
+        clearTimeout(timeoutIdRef.current);
+        timeoutIdRef.current = null;
+      }
 
       toast.success("Phone verified successfully!");
 
@@ -507,11 +561,18 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
     } catch (error) {
       console.error("Error verifying OTP:", error);
 
+      // Clear the timeout if there's an error
+      if (timeoutIdRef.current) {
+        clearTimeout(timeoutIdRef.current);
+        timeoutIdRef.current = null;
+      }
+
       if (error.message === "Verification timed out") {
         setError("Verification timed out. Please try again.");
-        cleanupRecaptcha();
+        setOtp("");
       } else if (error.code === "auth/invalid-verification-code") {
         setError("Invalid verification code. Please try again.");
+        setOtp("");
       } else if (error.code === "auth/code-expired") {
         setError("Verification code expired. Please request a new code.");
         setOtpModalOpen(false);
@@ -521,6 +582,7 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
         startCooldown();
       } else {
         setError(error.message || "Failed to verify OTP. Please try again.");
+        setOtp("");
       }
 
       toast.error("Verification failed. Please try again.");
@@ -607,6 +669,9 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
           localStorage.setItem("userName", data.user.name);
           localStorage.setItem("authToken", data.token);
 
+          // Set OTP as verified
+          setIsOtpVerified(true);
+
           // Clean up reCAPTCHA before proceeding
           cleanupRecaptcha();
 
@@ -653,7 +718,7 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
   const getStatusMessage = () => {
     switch (verificationStatus) {
       case "not_started":
-        return "Ready to start verification";
+        return "";
       case "initializing":
         return "Initializing verification...";
       case "waiting":
@@ -667,7 +732,7 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
       case "error":
         return "Verification error. Please try again.";
       default:
-        return "Unknown status";
+        return "";
     }
   };
 
@@ -688,11 +753,11 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
     }
   };
 
-  // Memoize the modals to prevent recreating them on every render
+  // Update the phoneInputModal JSX to remove development-related content
   const phoneInputModal = useMemo(
     () => (
       <Dialog
-        open={phoneModalOpen}
+        open={phoneModalOpen && !otpModalOpen}
         onOpenChange={handlePhoneModalClose}
         forceMount>
         <DialogContent className="max-w-md z-50">
@@ -735,69 +800,39 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
               id="send-otp-button"
               onClick={sendOTP}
               disabled={loading || !phoneNumber || isCooldown}
-              className="w-full mb-2">
+              className="w-full mb-2 relative overflow-hidden">
               {loading ? (
                 <>
                   <Loader2 className="animate-spin h-4 w-4 mr-2" />
-                  Verifying...
+                  {verificationStatus === "initializing" && "Initializing..."}
+                  {verificationStatus === "waiting" &&
+                    "Waiting for verification..."}
+                  {verificationStatus === "verified" && "Sending OTP..."}
                 </>
               ) : isCooldown ? (
                 `Retry in ${cooldownTime}s`
               ) : (
                 "Send OTP"
               )}
+              {loading && (
+                <div
+                  className="absolute bottom-0 left-0 h-1 bg-blue-500 transition-all duration-300"
+                  style={{ width: `${otpSendingProgress}%` }}
+                />
+              )}
             </Button>
 
-            {/* Verification status indicator */}
-            <div className="text-center mb-2">
-              <p className={`text-sm font-medium ${getStatusColor()}`}>
-                {getStatusMessage()}
-              </p>
-            </div>
-
-            {/* Invisible element for developer mode */}
-            <div id="invisible-recaptcha" style={{ display: "none" }}></div>
-
-            {/* Developer mode toggle (double click to activate) */}
-            <div
-              className="text-xs text-center text-gray-400 cursor-default"
-              onDoubleClick={() => setDeveloperMode(!developerMode)}>
-              {process.env.NODE_ENV === "development"
-                ? "Development Build"
-                : ""}
-            </div>
-
-            {/* Developer options (only in dev mode) */}
-            {developerMode && (
-              <div className="mt-4 p-3 border border-orange-300 rounded-md bg-orange-50">
-                <p className="text-sm font-semibold text-orange-800 mb-2">
-                  Developer Options
+            {/* Only show status message if there's an actual status to show */}
+            {verificationStatus !== "not_started" && (
+              <div className="text-center mb-2">
+                <p className={`text-sm font-medium ${getStatusColor()}`}>
+                  {getStatusMessage()}
                 </p>
-                <div className="space-y-2">
-                  <Button
-                    onClick={sendOTPDirectly}
-                    className="w-full bg-orange-600 hover:bg-orange-700 text-white"
-                    disabled={loading || !phoneNumber}>
-                    Send OTP Directly (Skip reCAPTCHA)
-                  </Button>
-                  <p className="text-xs text-orange-700">
-                    Status: {verificationStatus}, Window reCAPTCHA:{" "}
-                    {window.recaptchaVerifier ? "Exists" : "None"}
-                  </p>
-                  <p className="text-xs text-orange-700">
-                    OTP Modal: {otpModalOpen ? "Open" : "Closed"}
-                  </p>
-                  <Button
-                    onClick={() => {
-                      setPhoneModalOpen(false);
-                      setOtpModalOpen(true);
-                    }}
-                    className="w-full bg-orange-600 hover:bg-orange-700 text-white">
-                    Force Show OTP Modal
-                  </Button>
-                </div>
               </div>
             )}
+
+            {/* Invisible element for reCAPTCHA */}
+            <div id="invisible-recaptcha" style={{ display: "none" }}></div>
 
             {error && (
               <p className="text-red-500 text-sm text-center">{error}</p>
@@ -808,6 +843,7 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
     ),
     [
       phoneModalOpen,
+      otpModalOpen,
       handlePhoneModalClose,
       countryCode,
       phoneNumber,
@@ -817,12 +853,10 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
       cooldownTime,
       getStatusColor,
       getStatusMessage,
-      developerMode,
-      sendOTPDirectly,
       verificationStatus,
-      otpModalOpen,
       error,
       handlePhoneChange,
+      otpSendingProgress,
     ]
   );
 
@@ -897,6 +931,25 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
       error,
     ]
   );
+
+  // Add timeout handling for OTP verification
+  useEffect(() => {
+    let timeoutId;
+    if (otpModalOpen && !isOtpVerified) {
+      // Set a 5-minute timeout for OTP verification
+      timeoutId = setTimeout(() => {
+        setError("OTP verification timed out. Please request a new code.");
+        setOtpModalOpen(false);
+        setPhoneModalOpen(true);
+        cleanupRecaptcha();
+      }, 5 * 60 * 1000); // 5 minutes
+    }
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [otpModalOpen, isOtpVerified]);
 
   return (
     <>
