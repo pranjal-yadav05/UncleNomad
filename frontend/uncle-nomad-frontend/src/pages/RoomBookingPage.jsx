@@ -643,34 +643,48 @@ const RoomBookingPage = () => {
       try {
         // Clean up any existing recaptchaVerifier
         if (window.recaptchaVerifier) {
-          // In Firebase v9 we just need to remove references
-          window.recaptchaVerifier = null;
+          try {
+            // Safely remove the reCAPTCHA widget
+            const container = document.getElementById("recaptcha-container");
+            if (container) {
+              // Remove all child elements
+              while (container.firstChild) {
+                container.removeChild(container.firstChild);
+              }
+            }
+            window.recaptchaVerifier = null;
+          } catch (e) {
+            console.log("Error cleaning up existing reCAPTCHA:", e);
+          }
         }
 
-        // Create the reCAPTCHA verifier using Firebase v9 syntax
-        window.recaptchaVerifier = new RecaptchaVerifier(
-          auth,
-          "recaptcha-container",
-          {
-            size: "normal",
-            callback: () => {
-              console.log("reCAPTCHA solved");
-            },
-            "expired-callback": () => {
-              console.log("reCAPTCHA expired");
-              toast.error("CAPTCHA expired. Please try again.");
-            },
-          }
-        );
+        // Only create new reCAPTCHA if not already sent OTP
+        if (!isOtpSent) {
+          // Create the reCAPTCHA verifier using Firebase v9 syntax
+          window.recaptchaVerifier = new RecaptchaVerifier(
+            auth,
+            "recaptcha-container",
+            {
+              size: "normal",
+              callback: () => {
+                console.log("reCAPTCHA solved");
+              },
+              "expired-callback": () => {
+                console.log("reCAPTCHA expired");
+                toast.error("CAPTCHA expired. Please try again.");
+              },
+            }
+          );
 
-        recaptchaVerifier = window.recaptchaVerifier;
+          recaptchaVerifier = window.recaptchaVerifier;
+        }
       } catch (error) {
         console.error("Error setting up reCAPTCHA:", error);
       }
     };
 
-    // Only set up reCAPTCHA when on step 1 and not verified
-    if (step === 1 && !isOtpVerified) {
+    // Only set up reCAPTCHA when on step 1, not verified, and not sent OTP
+    if (step === 1 && !isOtpVerified && !isOtpSent) {
       setupRecaptcha();
     }
 
@@ -678,8 +692,14 @@ const RoomBookingPage = () => {
       // Clean up on unmount
       if (recaptchaVerifier) {
         try {
-          // No need to explicitly clear in Firebase v9
-          // The recaptchaVerifier will be garbage collected
+          // Safely remove the reCAPTCHA widget
+          const container = document.getElementById("recaptcha-container");
+          if (container) {
+            // Remove all child elements
+            while (container.firstChild) {
+              container.removeChild(container.firstChild);
+            }
+          }
           recaptchaVerifier = null;
           window.recaptchaVerifier = null;
         } catch (e) {
@@ -687,7 +707,7 @@ const RoomBookingPage = () => {
         }
       }
     };
-  }, [step, isOtpVerified]);
+  }, [step, isOtpVerified, isOtpSent]);
 
   // Effect to validate numberOfGuests when rooms change
   useEffect(() => {
@@ -832,8 +852,8 @@ const RoomBookingPage = () => {
                     {localStorage.getItem("authToken") && (
                       <div className="p-3 mb-4 text-sm text-green-700 bg-green-100 rounded-md border border-green-300">
                         <p>
-                          ✅ Your details are pre-filled from your profile.
-                          You can update your profile from Profile page.
+                          ✅ Your details are pre-filled from your profile. You
+                          can update your profile from Profile page.
                         </p>
                       </div>
                     )}
@@ -924,13 +944,15 @@ const RoomBookingPage = () => {
                       </div>
 
                       {/* reCAPTCHA container */}
-                      {!localStorage.getItem("authToken") && !isOtpVerified && (
-                        <div className="my-4">
-                          <div
-                            id="recaptcha-container"
-                            className="flex justify-center"></div>
-                        </div>
-                      )}
+                      {!localStorage.getItem("authToken") &&
+                        !isOtpVerified &&
+                        !isOtpSent && (
+                          <div className="my-4">
+                            <div
+                              id="recaptcha-container"
+                              className="flex justify-center"></div>
+                          </div>
+                        )}
 
                       {/* OTP field */}
                       {!localStorage.getItem("authToken") &&

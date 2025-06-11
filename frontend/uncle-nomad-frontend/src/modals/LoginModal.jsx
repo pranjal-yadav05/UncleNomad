@@ -638,79 +638,82 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
       const uid = user.uid;
 
       // Register/update the user in our backend
-      try {
-        // Create AbortController for timeout handling
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      let retryCount = 0;
+      const maxRetries = 3;
+      let success = false;
 
-        const response = await fetch(
-          `${process.env.REACT_APP_API_URL}/api/users/create-phone-user`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-api-key": process.env.REACT_APP_API_KEY || "",
-            },
-            body: JSON.stringify({
-              phone: phoneNumber,
-              firebaseUid: uid,
-            }),
-            signal: controller.signal,
+      while (retryCount < maxRetries && !success) {
+        try {
+          // Create AbortController for timeout handling
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 15000); // Increased to 15 seconds
+
+          const response = await fetch(
+            `${process.env.REACT_APP_API_URL}/api/users/create-phone-user`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "x-api-key": process.env.REACT_APP_API_KEY || "",
+              },
+              body: JSON.stringify({
+                phone: phoneNumber,
+                firebaseUid: uid,
+              }),
+              signal: controller.signal,
+            }
+          );
+
+          clearTimeout(timeoutId);
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
           }
-        );
 
-        clearTimeout(timeoutId);
+          const data = await response.json();
 
-        const data = await response.json();
+          if (data.success && data.token) {
+            // Store user info from backend response
+            localStorage.setItem("userPhone", phoneNumber);
+            localStorage.setItem("userName", data.user.name);
+            localStorage.setItem("authToken", data.token);
 
-        if (data.success && data.token) {
-          // Store user info from backend response
-          localStorage.setItem("userPhone", phoneNumber);
-          localStorage.setItem("userName", data.user.name);
-          localStorage.setItem("authToken", data.token);
+            // Set OTP as verified
+            setIsOtpVerified(true);
 
-          // Set OTP as verified
-          setIsOtpVerified(true);
+            // Clean up reCAPTCHA before proceeding
+            cleanupRecaptcha();
 
-          // Clean up reCAPTCHA before proceeding
-          cleanupRecaptcha();
-
-          // Use the processAuthSuccess helper function to store token and user data
-          processAuthSuccess(data);
-
-          // Trigger a storage event to notify other components (like Header)
-          // that authentication state has changed
-          window.dispatchEvent(new Event("storage"));
-
-          // Show success message
-          toast.success(`Welcome, ${data.user.name}! You are now logged in.`);
-        } else {
-          toast.error("Failed to complete registration. Please try again.");
-          setError("Registration failed. Please try again.");
-          setLoading(false);
+            // Use the processAuthSuccess helper function to store token and user data
+            processAuthSuccess(data);
+            success = true;
+          } else {
+            throw new Error(data.message || "Failed to complete registration");
+          }
+        } catch (error) {
+          console.error(`Attempt ${retryCount + 1} failed:`, error);
+          if (error.name === "AbortError") {
+            console.log("Request timed out, retrying...");
+          }
+          retryCount++;
+          if (retryCount < maxRetries) {
+            // Wait for 1 second before retrying
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+          } else {
+            throw new Error(
+              "Failed to complete registration after multiple attempts"
+            );
+          }
         }
-      } catch (backendError) {
-        console.error("Backend error:", backendError);
-
-        if (backendError.name === "AbortError") {
-          toast.error("Request timed out. Please try again.");
-          setError("Connection timeout. Please try again.");
-        } else {
-          toast.error("Server error. Please try again later.");
-          setError("Server error. Please try again later.");
-        }
-
-        setLoading(false);
-      } finally {
-        // Make sure to clean up reCAPTCHA even if there was an error
-        cleanupRecaptcha();
       }
     } catch (error) {
-      console.error("Authentication error:", error);
-      toast.error("Authentication failed. Please try again.");
-      setError("Authentication failed. Please try again.");
-      setLoading(false);
-      cleanupRecaptcha();
+      console.error("Error in handlePhoneVerificationComplete:", error);
+      setError("Failed to complete registration. Please try again.");
+      toast.error("Registration failed. Please try again.");
+      // Reset the verification state
+      setIsOtpVerified(false);
+      setOtpModalOpen(false);
+      setPhoneModalOpen(true);
     }
   };
 

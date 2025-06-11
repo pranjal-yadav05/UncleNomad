@@ -5,12 +5,11 @@ import bcrypt from "bcrypt";
 const userSchema = new mongoose.Schema({
   email: {
     type: String,
-    required: function () {
-      return !this.phone; // Email is required only if phone is not provided
-    },
-    unique: true,
+    required: false,
     trim: true,
     lowercase: true,
+    sparse: true, // This allows null values to be stored without triggering unique constraint
+    unique: true,
   },
   name: {
     type: String,
@@ -20,9 +19,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     trim: true,
     unique: true,
-    required: function () {
-      return !this.email; // Phone is required only if email is not provided
-    },
+    required: true, // Phone is now always required
   },
   hashedPassword: {
     type: String,
@@ -35,6 +32,34 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+});
+
+// Drop and recreate indexes on model initialization
+userSchema.pre("save", async function (next) {
+  try {
+    // Drop existing indexes
+    await this.constructor.collection.dropIndexes();
+
+    // Create new indexes with correct options
+    await this.constructor.collection.createIndex(
+      { email: 1 },
+      {
+        unique: true,
+        sparse: true,
+      }
+    );
+    await this.constructor.collection.createIndex(
+      { phone: 1 },
+      {
+        unique: true,
+      }
+    );
+
+    next();
+  } catch (error) {
+    // If indexes already exist or other error, continue
+    next();
+  }
 });
 
 // Generate a random password for auto-created accounts

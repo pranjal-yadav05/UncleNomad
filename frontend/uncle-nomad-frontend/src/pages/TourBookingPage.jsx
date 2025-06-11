@@ -119,38 +119,59 @@ const TourBookingPage = () => {
   useEffect(() => {
     let recaptchaVerifier = null;
 
+    // Skip reCAPTCHA setup if user is already logged in
+    const authToken = localStorage.getItem("authToken");
+    if (authToken) {
+      console.log("User already logged in, skipping reCAPTCHA setup");
+      return;
+    }
+
     const setupRecaptcha = () => {
       try {
         // Clean up any existing reCAPTCHA instances
         if (window.recaptchaVerifier) {
           try {
-            window.recaptchaVerifier.clear();
+            // Safely remove the reCAPTCHA widget
+            const container = document.getElementById("recaptcha-container");
+            if (container) {
+              // Remove all child elements
+              while (container.firstChild) {
+                container.removeChild(container.firstChild);
+              }
+            }
+            window.recaptchaVerifier = null;
           } catch (e) {
-            console.log("Error clearing recaptcha:", e);
+            console.log("Error cleaning up existing reCAPTCHA:", e);
           }
-          window.recaptchaVerifier = null;
         }
 
-        // Create new invisible reCAPTCHA instance
-        recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
-          size: "invisible",
-          callback: () => {
-            console.log("reCAPTCHA verified");
-          },
-          "expired-callback": () => {
-            console.log("reCAPTCHA expired");
-            toast.error("CAPTCHA verification expired. Please try again.");
-          },
-        });
+        // Only create new reCAPTCHA if not already sent OTP
+        if (!isOtpSent) {
+          // Create new reCAPTCHA instance
+          recaptchaVerifier = new RecaptchaVerifier(
+            auth,
+            "recaptcha-container",
+            {
+              size: "normal",
+              callback: () => {
+                console.log("reCAPTCHA verified");
+              },
+              "expired-callback": () => {
+                console.log("reCAPTCHA expired");
+                toast.error("CAPTCHA verification expired. Please try again.");
+              },
+            }
+          );
 
-        window.recaptchaVerifier = recaptchaVerifier;
+          window.recaptchaVerifier = recaptchaVerifier;
+        }
       } catch (error) {
         console.error("Error setting up reCAPTCHA:", error);
       }
     };
 
-    // Only set up reCAPTCHA when on step 2 and not verified
-    if (step === 2 && !isOtpVerified) {
+    // Only set up reCAPTCHA when on step 2, not verified, and not sent OTP
+    if (step === 2 && !isOtpVerified && !isOtpSent) {
       setupRecaptcha();
     }
 
@@ -158,13 +179,22 @@ const TourBookingPage = () => {
       // Clean up on unmount
       if (recaptchaVerifier) {
         try {
-          recaptchaVerifier.clear();
+          // Safely remove the reCAPTCHA widget
+          const container = document.getElementById("recaptcha-container");
+          if (container) {
+            // Remove all child elements
+            while (container.firstChild) {
+              container.removeChild(container.firstChild);
+            }
+          }
+          recaptchaVerifier = null;
+          window.recaptchaVerifier = null;
         } catch (e) {
           console.log("Error clearing recaptcha on unmount:", e);
         }
       }
     };
-  }, [step, isOtpVerified]);
+  }, [step, isOtpVerified, isOtpSent]);
 
   // Scroll to top on page load
   useEffect(() => {
@@ -819,7 +849,13 @@ const TourBookingPage = () => {
     <AnimatedSection animation="fade-in" duration={800}>
       <Header />
       {/* Invisible reCAPTCHA container */}
-      <div id="recaptcha-container"></div>
+      <div
+        id="recaptcha-container"
+        className={
+          !localStorage.getItem("authToken") && !isOtpVerified && !isOtpSent
+            ? "block"
+            : "hidden"
+        }></div>
 
       <div className="bg-gray-50 min-h-screen">
         {/* Page content */}
@@ -1166,7 +1202,8 @@ const TourBookingPage = () => {
                             <div className="p-3 mb-4 text-sm text-green-700 bg-green-100 rounded-md border border-green-300">
                               <p>
                                 ✅ Your details are pre-filled from your
-                                profile. You can update your profile from Profile page. 
+                                profile. You can update your profile from
+                                Profile page.
                               </p>
                             </div>
                           )}

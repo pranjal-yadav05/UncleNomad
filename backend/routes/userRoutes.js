@@ -61,49 +61,52 @@ router.post("/create-phone-user", validateApiKey, async (req, res) => {
         },
         token,
       });
-    } else {
-      // Create new user with phone as primary identifier
-      console.log("Creating new user with phone:", phone);
+    }
 
-      const newUser = new User({
-        phone,
-        name,
-        firebaseUid,
-        lastLogin: new Date(),
-      });
+    // Create new user with phone as primary identifier
+    console.log("Creating new user with phone:", phone);
 
-      await newUser.save();
-      console.log("Created new user:", {
+    // Generate default name from phone number if not provided
+    const defaultName = name || `User-${phone.replace(/\D/g, "").slice(-6)}`;
+
+    const newUser = new User({
+      phone,
+      name: defaultName,
+      firebaseUid,
+      lastLogin: new Date(),
+    });
+
+    await newUser.save();
+    console.log("Created new user:", {
+      id: newUser._id,
+      phone: newUser.phone,
+      name: newUser.name,
+    });
+
+    // Generate JWT token
+    const tokenPayload = {
+      id: newUser._id.toString(),
+      phone: newUser.phone,
+      name: newUser.name,
+    };
+    console.log("Token payload for new user:", tokenPayload);
+
+    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+      algorithm: "HS256",
+    });
+    console.log("Token generated for new user, length:", token.length);
+
+    return res.status(201).json({
+      success: true,
+      message: "User created successfully",
+      user: {
         id: newUser._id,
         phone: newUser.phone,
         name: newUser.name,
-      });
-
-      // Generate JWT token
-      const tokenPayload = {
-        id: newUser._id.toString(),
-        phone: newUser.phone,
-        name: newUser.name,
-      };
-      console.log("Token payload for new user:", tokenPayload);
-
-      const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
-        expiresIn: "7d",
-        algorithm: "HS256",
-      });
-      console.log("Token generated for new user, length:", token.length);
-
-      return res.status(201).json({
-        success: true,
-        message: "User created successfully",
-        user: {
-          id: newUser._id,
-          phone: newUser.phone,
-          name: newUser.name,
-        },
-        token,
-      });
-    }
+      },
+      token,
+    });
   } catch (error) {
     console.error("Error creating/updating user:", error);
     res.status(500).json({
