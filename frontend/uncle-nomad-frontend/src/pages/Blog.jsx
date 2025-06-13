@@ -238,7 +238,9 @@ const Blog = () => {
                                     className="w-full h-auto max-h-96 object-contain"
                                   />
                                   {section.imageAlt && (
-                                    <p className="text-sm text-gray-500 italic mt-2 text-center">
+                                    <p
+                                      className="text-sm text-gray-500 italic mt-2 text-center max-w-xs mx-auto truncate overflow-hidden"
+                                      title={section.imageAlt}>
                                       {section.imageAlt.replace(
                                         /\.jpg$|\.jpeg$|\.png$|\.gif$/i,
                                         ""

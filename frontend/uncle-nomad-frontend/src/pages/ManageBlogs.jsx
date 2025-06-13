@@ -641,7 +641,7 @@ const ManageBlogs = () => {
                           <div className="text-sm font-medium text-gray-900">
                             {blog.title}
                           </div>
-                          <div className="text-sm text-gray-500 line-clamp-1">
+                          <div className="text-sm text-gray-500 max-w-xs truncate overflow-hidden">
                             {blog.content[0]?.type === "text"
                               ? blog.content[0].content
                               : "Image content"}
